@@ -1,23 +1,19 @@
 {% extends "base.html" %}
 {% load finance %}
 
-{% block title %}{{ customer.full_name }} · Clientes{% endblock %}
+{% block title %}{{ customer.full_name }} · Historial{% endblock %}
 
 {% block content %}
 <a class="back-link" href="{% url 'core:customer_list' %}">‹ Volver al listado</a>
 
-<section class="profile-hero">
+<section class="profile-hero customer-history-hero">
     <div class="profile-avatar" aria-hidden="true">
         {{ customer.first_name|first|upper }}{{ customer.last_name|first|upper }}
     </div>
     <div class="profile-main">
         <div class="title-with-badge">
             <h1>{{ customer.full_name }}</h1>
-            {% if customer.is_active %}
-                <span class="badge badge-success">Activo</span>
-            {% else %}
-                <span class="badge badge-neutral">Archivado</span>
-            {% endif %}
+            {% if customer.is_active %}<span class="badge badge-success">Activo</span>{% else %}<span class="badge badge-neutral">Archivado</span>{% endif %}
         </div>
         <p>
             {% if customer.dni %}DNI {{ customer.dni }}{% else %}DNI no informado{% endif %}
@@ -27,36 +23,34 @@
     </div>
     <div class="profile-actions">
         <a class="btn btn-secondary" href="{% url 'core:customer_edit' customer.pk %}">Editar datos</a>
-        {% if customer.is_active %}
-            <a class="btn btn-primary" href="{% url 'core:sale_create' %}?cliente={{ customer.pk }}">Nueva venta</a>
-        {% endif %}
+        {% if customer.is_active %}<a class="btn btn-primary" href="{% url 'core:sale_create' %}?cliente={{ customer.pk }}">Nueva venta</a>{% endif %}
     </div>
 </section>
 
-<div class="detail-grid">
+<section class="customer-kpis">
+    <article><span>Total financiado</span><strong>{{ total_financed|ars }}</strong><small>{{ product_count }} producto{{ product_count|pluralize }}</small></article>
+    <article class="is-success"><span>Total abonado</span><strong>{{ total_paid|ars }}</strong><small>Pagos no anulados</small></article>
+    <article class="{% if total_balance > 0 %}is-warning{% endif %}"><span>Saldo pendiente</span><strong>{{ total_balance|ars }}</strong><small>{{ active_sales }} venta{{ active_sales|pluralize }} activa{{ active_sales|pluralize }}</small></article>
+    <article class="{% if overdue_installments %}is-danger{% endif %}"><span>Cuotas atrasadas</span><strong>{{ overdue_installments }}</strong><small>{{ paid_installments }} cuota{{ paid_installments|pluralize }} pagada{{ paid_installments|pluralize }}</small></article>
+</section>
+
+<nav class="section-nav" aria-label="Secciones del historial">
+    <a href="#datos">Datos</a>
+    <a href="#ventas">Ventas</a>
+    <a href="#cuotas">Cuotas</a>
+    <a href="#pagos">Pagos</a>
+    <a href="#actividad">Actividad</a>
+</nav>
+
+<div class="detail-grid" id="datos">
     <section class="panel detail-card">
         <div class="panel-header compact"><h2>Datos de contacto</h2></div>
         <dl class="detail-list">
-            <div>
-                <dt>Teléfono</dt>
-                <dd>{{ customer.phone|default:"No informado" }}</dd>
-            </div>
-            <div>
-                <dt>Dirección</dt>
-                <dd>{{ customer.address }}</dd>
-            </div>
-            <div>
-                <dt>Barrio</dt>
-                <dd>{{ customer.neighborhood|default:"No informado" }}</dd>
-            </div>
-            <div>
-                <dt>Referencia</dt>
-                <dd>{{ customer.address_reference|default:"Sin referencia" }}</dd>
-            </div>
-            <div class="detail-wide">
-                <dt>Observaciones</dt>
-                <dd>{{ customer.notes|default:"Sin observaciones"|linebreaksbr }}</dd>
-            </div>
+            <div><dt>Teléfono</dt><dd>{{ customer.phone|default:"No informado" }}</dd></div>
+            <div><dt>Dirección</dt><dd>{{ customer.address }}</dd></div>
+            <div><dt>Barrio</dt><dd>{{ customer.neighborhood|default:"No informado" }}</dd></div>
+            <div><dt>Referencia</dt><dd>{{ customer.address_reference|default:"Sin referencia" }}</dd></div>
+            <div class="detail-wide"><dt>Observaciones</dt><dd>{{ customer.notes|default:"Sin observaciones"|linebreaksbr }}</dd></div>
         </dl>
     </section>
 
@@ -65,9 +59,9 @@
         <h2>{% if customer.is_active %}Archivar cliente{% else %}Reactivar cliente{% endif %}</h2>
         <p>
             {% if customer.is_active %}
-                Dejará de aparecer al crear nuevas ventas. Su historial permanecerá intacto.
+                Dejará de aparecer en ventas nuevas. El historial permanecerá intacto.
             {% else %}
-                Volverá a estar disponible al registrar nuevas ventas.
+                Volverá a estar disponible para nuevas ventas.
             {% endif %}
         </p>
         <form method="post" action="{% url 'core:customer_toggle' customer.pk %}">
@@ -79,43 +73,27 @@
     </aside>
 </div>
 
-<section class="panel">
+<section class="panel" id="ventas">
     <div class="panel-header">
-        <div>
-            <p class="eyebrow">Historial comercial</p>
-            <h2>Productos y ventas</h2>
-        </div>
-        {% if customer.is_active %}
-            <a class="btn btn-primary btn-compact" href="{% url 'core:sale_create' %}?cliente={{ customer.pk }}">＋ Nueva venta</a>
-        {% endif %}
+        <div><p class="eyebrow">Historial comercial</p><h2>Productos y ventas</h2></div>
+        {% if customer.is_active %}<a class="btn btn-primary btn-compact" href="{% url 'core:sale_create' %}?cliente={{ customer.pk }}">＋ Nueva venta</a>{% endif %}
     </div>
     {% if sale_rows %}
     <div class="table-wrap">
         <table class="data-table responsive-table">
-            <thead>
-                <tr>
-                    <th>Entrega</th>
-                    <th>Producto</th>
-                    <th>Plan</th>
-                    <th>Estado</th>
-                    <th class="align-right">Financiado</th>
-                    <th class="align-right">Saldo</th>
-                    <th></th>
-                </tr>
-            </thead>
+            <thead><tr><th>Entrega</th><th>Producto</th><th>Plan</th><th>Estado</th><th class="align-right">Financiado</th><th class="align-right">Saldo exigible</th><th></th></tr></thead>
             <tbody>
                 {% for row in sale_rows %}
                 <tr>
                     <td data-label="Entrega">{{ row.sale.delivery_date|date:"d/m/Y" }}</td>
-                    <td data-label="Producto">
-                        <a class="table-primary" href="{% url 'core:sale_detail' row.sale.pk %}">
-                            {{ row.sale.product_description }}
-                        </a>
-                    </td>
-                    <td data-label="Plan">{{ row.sale.installment_count }} cuotas · {{ row.sale.get_frequency_display }}</td>
+                    <td data-label="Producto"><a class="table-primary" href="{% url 'core:sale_detail' row.sale.pk %}">{{ row.sale.product_description }}</a></td>
+                    <td data-label="Plan">{{ row.sale.installment_count }} cuotas<small>{{ row.sale.get_frequency_display }}</small></td>
                     <td data-label="Estado"><span class="badge badge-{{ row.sale.status }}">{{ row.sale.get_status_display }}</span></td>
                     <td data-label="Financiado" class="money-cell">{{ row.sale.financed_amount|ars }}</td>
-                    <td data-label="Saldo" class="money-cell">{{ row.balance.total_due|ars }}</td>
+                    <td data-label="Saldo" class="money-cell">
+                        {{ row.exigible_total|ars }}
+                        {% if row.sale.status == "cancelled" %}<small>No exigible</small>{% endif %}
+                    </td>
                     <td class="row-action"><a class="icon-button" href="{% url 'core:sale_detail' row.sale.pk %}">›</a></td>
                 </tr>
                 {% endfor %}
@@ -123,11 +101,89 @@
         </table>
     </div>
     {% else %}
-    <div class="empty-state compact">
-        <span class="empty-icon" aria-hidden="true">▤</span>
-        <h3>Sin ventas registradas</h3>
-        <p>La actividad del cliente aparecerá aquí.</p>
+    <div class="empty-state compact"><span class="empty-icon" aria-hidden="true">▤</span><h3>Sin ventas registradas</h3><p>La actividad comercial aparecerá aquí.</p></div>
+    {% endif %}
+</section>
+
+<section class="panel" id="cuotas">
+    <div class="panel-header">
+        <div><p class="eyebrow">Cronogramas consolidados</p><h2>Todas las cuotas</h2></div>
+        <span class="record-count">{{ installment_rows|length }} cuota{{ installment_rows|length|pluralize }}</span>
     </div>
+    {% if installment_rows %}
+    <div class="table-wrap history-table-wrap">
+        <table class="data-table responsive-table">
+            <thead><tr><th>Producto</th><th>Cuota</th><th>Vencimiento</th><th>Estado</th><th class="align-right">Original</th><th class="align-right">Recargos</th><th class="align-right">Saldo</th></tr></thead>
+            <tbody>
+                {% for row in installment_rows %}
+                <tr>
+                    <td data-label="Producto"><a class="table-primary" href="{% url 'core:sale_detail' row.sale.pk %}">{{ row.sale.product_description }}</a></td>
+                    <td data-label="Cuota">{{ row.installment.number }}/{{ row.sale.installment_count }}</td>
+                    <td data-label="Vencimiento">{{ row.installment.due_date|date:"d/m/Y" }}</td>
+                    <td data-label="Estado"><span class="badge badge-history-{{ row.status }}">{{ row.status_label }}</span></td>
+                    <td data-label="Original" class="money-cell">{{ row.installment.original_amount|ars }}</td>
+                    <td data-label="Recargos" class="money-cell">{{ row.balance.late_fees_due|ars }}</td>
+                    <td data-label="Saldo" class="money-cell">{{ row.balance.total_due|ars }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state compact"><span class="empty-icon" aria-hidden="true">□</span><h3>Sin cuotas</h3><p>Se crearán automáticamente con la primera venta.</p></div>
+    {% endif %}
+</section>
+
+<section class="panel" id="pagos">
+    <div class="panel-header">
+        <div><p class="eyebrow">Dinero recibido</p><h2>Pagos realizados</h2></div>
+        <span class="record-count">{{ payments|length }} pago{{ payments|length|pluralize }}</span>
+    </div>
+    {% if payments %}
+    <div class="table-wrap">
+        <table class="data-table responsive-table">
+            <thead><tr><th>Fecha</th><th>Producto</th><th>Método</th><th>Estado</th><th>Observaciones</th><th class="align-right">Importe</th></tr></thead>
+            <tbody>
+                {% for payment in payments %}
+                <tr>
+                    <td data-label="Fecha">{{ payment.payment_date|date:"d/m/Y" }}</td>
+                    <td data-label="Producto"><a class="table-primary" href="{% url 'core:sale_detail' payment.sale_id %}">{{ payment.sale.product_description }}</a></td>
+                    <td data-label="Método">{{ payment.payment_method }}</td>
+                    <td data-label="Estado">
+                        {% if payment.status == "registered" %}<span class="badge badge-success">Registrado</span>{% else %}<span class="badge badge-danger">Anulado</span><small>{{ payment.void_reason }}</small>{% endif %}
+                    </td>
+                    <td data-label="Observaciones">{{ payment.notes|default:"—" }}</td>
+                    <td data-label="Importe" class="money-cell">{{ payment.amount|ars }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state compact"><span class="empty-icon" aria-hidden="true">$</span><h3>Sin pagos</h3><p>Los pagos completos y parciales aparecerán aquí.</p></div>
+    {% endif %}
+</section>
+
+<section class="panel activity-panel" id="actividad">
+    <div class="panel-header">
+        <div><p class="eyebrow">Trazabilidad</p><h2>Actividad completa</h2></div>
+        <span class="record-count">{{ events|length }} evento{{ events|length|pluralize }}</span>
+    </div>
+    {% if events %}
+    <div class="activity-timeline">
+        {% for event in events %}
+        <article class="activity-{{ event.kind }}">
+            <time><strong>{{ event.date|date:"d" }}</strong><span>{{ event.date|date:"M Y" }}</span></time>
+            <i aria-hidden="true"></i>
+            <div>
+                <div><strong>{{ event.title }}</strong>{% if event.amount %}<span>{{ event.amount|ars }}</span>{% endif %}</div>
+                <p>{{ event.detail }} · <a href="{% url 'core:sale_detail' event.sale.pk %}">{{ event.sale.product_description }}</a></p>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state compact"><span class="empty-icon" aria-hidden="true">⌁</span><h3>Sin actividad</h3><p>Ventas, pagos y visitas formarán esta línea de tiempo.</p></div>
     {% endif %}
 </section>
 {% endblock %}

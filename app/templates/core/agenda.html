@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% load finance %}
+
+{% block title %}Agenda diaria · Gestión Financiera{% endblock %}
+
+{% block content %}
+<header class="page-header agenda-header">
+    <div>
+        <p class="eyebrow">Planificación semanal</p>
+        <h1>Agenda del {{ selected_date|date:"d/m/Y" }}</h1>
+        <p class="page-subtitle">Vencimientos programados y arrastre pendiente para organizar el recorrido.</p>
+    </div>
+    <form class="date-picker" method="get">
+        <label for="agenda-date">Seleccionar fecha</label>
+        <div>
+            <input id="agenda-date" class="form-control" type="date" name="fecha"
+                   value="{{ selected_date|date:'Y-m-d' }}">
+            <button class="btn btn-secondary" type="submit">Ir</button>
+        </div>
+    </form>
+</header>
+
+<div class="agenda-week-nav">
+    <a class="day-arrow" href="?fecha={{ previous_week|date:'Y-m-d' }}" aria-label="Semana anterior">‹</a>
+    {% for day in week_days %}
+        <a class="agenda-day {% if day.is_selected %}is-selected{% endif %}"
+           href="?fecha={{ day.date|date:'Y-m-d' }}">
+            <span>{{ day.date|date:"D" }}</span>
+            <strong>{{ day.date|date:"d" }}</strong>
+            <small>{{ day.date|date:"M" }}</small>
+        </a>
+    {% endfor %}
+    <a class="day-arrow" href="?fecha={{ next_week|date:'Y-m-d' }}" aria-label="Semana siguiente">›</a>
+</div>
+
+<section class="agenda-summary">
+    <article><span>Clientes en recorrido</span><strong>{{ client_count }}</strong></article>
+    <article><span>Cuotas programadas</span><strong>{{ scheduled_installments }}</strong></article>
+    <article><span>Monto programado</span><strong>{{ scheduled_amount|ars }}</strong></article>
+    <article class="agenda-total"><span>Total del recorrido</span><strong>{{ route_total|ars }}</strong></article>
+</section>
+
+{% if neighborhoods %}
+<div class="neighborhood-strip">
+    <span>Barrios:</span>
+    {% for item in neighborhoods %}
+        <i>{{ item.name }} <strong>{{ item.count }}</strong></i>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="agenda-layout">
+    <section class="panel">
+        <div class="panel-header">
+            <div><p class="eyebrow">Fecha seleccionada</p><h2>Programadas</h2></div>
+            <span class="record-count">{{ scheduled_rows|length }} venta{{ scheduled_rows|length|pluralize }}</span>
+        </div>
+        {% if scheduled_rows %}
+        <div class="agenda-list">
+            {% for row in scheduled_rows %}
+            <article>
+                <time>{{ row.oldest_installment.due_date|date:"d/m" }}</time>
+                <div>
+                    <a href="{% url 'core:customer_detail' row.customer.pk %}">{{ row.customer.full_name }}</a>
+                    <span>{{ row.customer.address }}{% if row.customer.neighborhood %} · {{ row.customer.neighborhood }}{% endif %}</span>
+                </div>
+                <div><strong>{{ row.sale.product_description }}</strong><small>{{ row.due_installment_count }} cuota{{ row.due_installment_count|pluralize }} exigible{{ row.due_installment_count|pluralize }}</small></div>
+                {% if row.days_overdue %}<span class="badge badge-danger">Incluye atraso</span>{% else %}<span class="badge badge-success">En fecha</span>{% endif %}
+                <strong class="money-cell">{{ row.total_due|ars }}</strong>
+                <a class="icon-button" href="{% url 'core:sale_detail' row.sale.pk %}">›</a>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state compact">
+            <span class="empty-icon" aria-hidden="true">□</span>
+            <h3>Sin vencimientos programados</h3>
+            <p>No hay cuotas con vencimiento exacto en esta fecha.</p>
+        </div>
+        {% endif %}
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <div><p class="eyebrow">Pendientes anteriores</p><h2>Arrastre</h2></div>
+            <span class="record-count">{{ carryover_rows|length }} venta{{ carryover_rows|length|pluralize }}</span>
+        </div>
+        {% if carryover_rows %}
+        <div class="agenda-list compact-list">
+            {% for row in carryover_rows %}
+            <article>
+                <time class="late">{{ row.days_overdue }}d</time>
+                <div>
+                    <a href="{% url 'core:customer_detail' row.customer.pk %}">{{ row.customer.full_name }}</a>
+                    <span>{{ row.customer.address }}</span>
+                </div>
+                <div><strong>{{ row.sale.product_description }}</strong><small>Desde {{ row.oldest_installment.due_date|date:"d/m/Y" }}</small></div>
+                <strong class="money-cell">{{ row.total_due|ars }}</strong>
+                <a class="icon-button" href="{% url 'core:sale_detail' row.sale.pk %}">›</a>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state compact">
+            <span class="empty-icon" aria-hidden="true">✓</span>
+            <h3>Sin arrastre anterior</h3>
+            <p>No hay ventas pendientes de fechas anteriores.</p>
+        </div>
+        {% endif %}
+    </section>
+</div>
+
+<div class="agenda-footer-actions">
+    {% if selected_date == today %}
+        <a class="btn btn-primary" href="{% url 'core:collection_list' %}">Abrir cobranza de hoy</a>
+    {% else %}
+        <a class="btn btn-secondary" href="{% url 'core:collection_list' %}?fecha={{ selected_date|date:'Y-m-d' }}">Ver cobranza de la fecha</a>
+    {% endif %}
+</div>
+{% endblock %}
+

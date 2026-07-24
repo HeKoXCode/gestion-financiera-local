@@ -12,9 +12,9 @@ Estado al 23/07/2026:
 - Paso 2 terminado: modelos, restricciones, configuración y motor base.
 - Paso 3 terminado: clientes, productos, ventas, cuotas e interfaz responsive.
 - Paso 4 terminado: recargos automáticos, cobranza, pagos, anulaciones y visitas.
-- Paso 5 adelantado parcialmente: resumen y agenda por fecha.
+- Paso 5 terminado: dashboard, agenda semanal e historial consolidado.
 - Paso 7 adelantado parcialmente: backup al iniciar, manual y al cerrar.
-- Próximo paso: Paso 5, dashboard, agenda e historial consolidado.
+- Próximo paso: Paso 6, impresión A4 y reportes.
 
 ## 1. Cambio de enfoque
 
@@ -582,5 +582,5 @@ El MVP estará terminado cuando:
 
 ## 13. Próximo paso
 
-Completar el Paso 5: dashboard definitivo, agenda diaria, historial consolidado
-del cliente y accesos rápidos de navegación.
+Completar el Paso 6: planilla diaria A4, controles de impresión y reportes
+operativos.

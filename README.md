@@ -3,10 +3,11 @@
 Aplicación local y monousuario para administrar clientes, ventas financiadas,
 cuotas, recargos y cobranzas.
 
-Estado actual: Fases 0 a 4 terminadas. La aplicación ya permite administrar
+Estado actual: Fases 0 a 5 terminadas. La aplicación ya permite administrar
 clientes, productos y ventas; generar cuotas y recargos; consultar la cobranza;
-registrar pagos completos o parciales; anularlos y conservar las visitas.
-Próximo paso: agenda, historial consolidado y dashboard final.
+registrar pagos completos o parciales; anularlos; conservar las visitas; revisar
+el dashboard, planificar la agenda semanal y consultar el historial consolidado.
+Próximo paso: impresión A4 y reportes.
 
 La aplicación se ejecutará localmente con Python/Django y SQLite. La versión
 final se entregará como una carpeta portable que podrá abrirse mediante acceso
@@ -74,5 +75,6 @@ Documentos:
 - [Modelos y motor base de la Fase 2](docs/FASE_2_MODELOS_Y_MOTOR.md).
 - [Interfaz y flujos de la Fase 3](docs/FASE_3_INTERFAZ_COMERCIAL.md).
 - [Cobranza y pagos de la Fase 4](docs/FASE_4_COBRANZA_Y_PAGOS.md).
+- [Dashboard, agenda e historial de la Fase 5](docs/FASE_5_DASHBOARD_AGENDA_HISTORIAL.md).
 - [Auditoría del equipo](docs/ENTORNO_Y_PORTABILIDAD.md).
 - [Plan empresarial anterior, conservado como referencia](docs/PLAN_MAESTRO.md).

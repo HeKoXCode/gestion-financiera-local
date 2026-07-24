@@ -32,8 +32,8 @@ def test_daily_screen_is_available_without_records(client):
     response = client.get(reverse("core:home"), {"fecha": "2026-08-18"})
 
     assert response.status_code == 200
-    assert "Agenda de cobranza" in response.content.decode()
-    assert "No hay cobranzas para esta fecha" in response.content.decode()
+    assert "Resumen del 18/08/2026" in response.content.decode()
+    assert "No queda cobranza pendiente" in response.content.decode()
 
 
 def test_daily_screen_shows_due_and_overdue_installments(client):
@@ -45,9 +45,8 @@ def test_daily_screen_shows_due_and_overdue_installments(client):
 
     assert response.status_code == 200
     assert sale.customer.full_name in content
-    assert "Vence hoy" in content
     assert "7 días tarde" in content
-    assert "$ 20.000,00" in content
+    assert "$ 40.000,00" in content
 
 
 def test_customer_can_be_created_searched_edited_and_archived(client):

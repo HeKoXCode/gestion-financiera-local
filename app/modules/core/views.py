@@ -1,6 +1,6 @@
 import logging
+from collections import Counter
 from datetime import timedelta
-from decimal import Decimal
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
@@ -37,11 +37,12 @@ from modules.core.services.balances import (
     get_sale_balance,
 )
 from modules.core.services.collection import build_collection_rows
+from modules.core.services.customer_history import build_customer_history
+from modules.core.services.dashboard import build_dashboard
 from modules.core.services.installments import create_installments
 from modules.core.services.late_fees import generate_missing_late_fees
 from modules.core.services.money import ZERO, as_money, format_ars
 from modules.core.services.payments import register_payment, void_payment
-from modules.core.services.whatsapp import build_payment_reminder_url
 
 logger = logging.getLogger(__name__)
 PAGE_SIZE = 20
@@ -56,20 +57,15 @@ def _paginate(request, queryset):
     return Paginator(queryset, PAGE_SIZE).get_page(request.GET.get("pagina"))
 
 
-def _installment_row(installment: Installment, selected_date):
-    balance = get_installment_balance(installment, as_of=selected_date)
-    return {
-        "installment": installment,
-        "sale": installment.sale,
-        "customer": installment.sale.customer,
-        "balance": balance,
-        "is_overdue": installment.due_date < selected_date,
-        "whatsapp_url": build_payment_reminder_url(
-            customer=installment.sale.customer,
-            amount=balance.total_due,
-            due_date=installment.due_date,
-        ),
-    }
+def _week_days(selected_date):
+    monday = selected_date - timedelta(days=selected_date.weekday())
+    return [
+        {
+            "date": monday + timedelta(days=offset),
+            "is_selected": monday + timedelta(days=offset) == selected_date,
+        }
+        for offset in range(6)
+    ]
 
 
 def _add_validation_error(form, error: ValidationError) -> None:
@@ -90,66 +86,74 @@ def _collection_redirect(selected_date):
 @require_GET
 def home(request):
     selected_date = _selected_date(request)
-    if selected_date == timezone.localdate():
-        generate_missing_late_fees(as_of=selected_date)
-    active_installments = Installment.objects.select_related(
-        "sale",
-        "sale__customer",
-        "sale__product",
-    ).filter(due_date__lte=selected_date).exclude(sale__status=Sale.Status.CANCELLED)
-
-    due_rows = []
-    overdue_rows = []
-    for installment in active_installments:
-        row = _installment_row(installment, selected_date)
-        if row["balance"].total_due <= ZERO:
-            continue
-        if installment.due_date == selected_date:
-            due_rows.append(row)
-        else:
-            overdue_rows.append(row)
-
-    overdue_rows.sort(
-        key=lambda row: (
-            -row["balance"].days_overdue,
-            row["customer"].last_name,
-            row["customer"].first_name,
-        )
-    )
-    collection_rows = overdue_rows + due_rows
-    expected_amount = as_money(
-        sum((row["balance"].total_due for row in due_rows), Decimal("0.00"))
-    )
-    overdue_amount = as_money(
-        sum((row["balance"].total_due for row in overdue_rows), Decimal("0.00"))
-    )
-    customer_ids = {row["customer"].pk for row in collection_rows}
-    overdue_customer_ids = {row["customer"].pk for row in overdue_rows}
-
-    monday = selected_date - timedelta(days=selected_date.weekday())
-    week_days = [
-        {
-            "date": monday + timedelta(days=offset),
-            "is_selected": monday + timedelta(days=offset) == selected_date,
-        }
-        for offset in range(6)
-    ]
+    today = timezone.localdate()
+    generate_missing_late_fees(as_of=min(selected_date, today))
+    dashboard = build_dashboard(as_of=selected_date)
 
     return render(
         request,
         "core/home.html",
         {
             "selected_date": selected_date,
-            "previous_date": selected_date - timedelta(days=1),
-            "next_date": selected_date + timedelta(days=1),
-            "week_days": week_days,
-            "due_rows": due_rows,
-            "overdue_rows": overdue_rows,
-            "collection_rows": collection_rows,
-            "clients_to_collect": len(customer_ids),
-            "expected_amount": expected_amount,
-            "overdue_customers": len(overdue_customer_ids),
-            "overdue_amount": overdue_amount,
+            "today": today,
+            "week_days": _week_days(selected_date),
+            **dashboard,
+        },
+    )
+
+
+@require_GET
+def agenda(request):
+    selected_date = _selected_date(request)
+    today = timezone.localdate()
+    generate_missing_late_fees(as_of=min(selected_date, today))
+    rows = build_collection_rows(as_of=selected_date)
+    scheduled_rows = [row for row in rows if row["has_installment_today"]]
+    carryover_rows = [
+        row for row in rows if not row["has_installment_today"] and row["days_overdue"] > 0
+    ]
+
+    exact_installments = (
+        Installment.objects.select_related("sale", "sale__customer")
+        .filter(due_date=selected_date)
+        .exclude(sale__status=Sale.Status.CANCELLED)
+    )
+    scheduled_amount = ZERO
+    scheduled_installments = 0
+    for installment in exact_installments:
+        balance = get_installment_balance(installment, as_of=selected_date)
+        if balance.total_due > ZERO:
+            scheduled_amount += balance.total_due
+            scheduled_installments += 1
+
+    neighborhood_counts = Counter(
+        (row["customer"].neighborhood or "Sin barrio") for row in rows
+    )
+    neighborhoods = [
+        {"name": name, "count": count}
+        for name, count in sorted(
+            neighborhood_counts.items(),
+            key=lambda item: (-item[1], item[0]),
+        )
+    ]
+
+    return render(
+        request,
+        "core/agenda.html",
+        {
+            "selected_date": selected_date,
+            "today": today,
+            "week_days": _week_days(selected_date),
+            "previous_week": selected_date - timedelta(days=7),
+            "next_week": selected_date + timedelta(days=7),
+            "rows": rows,
+            "scheduled_rows": scheduled_rows,
+            "carryover_rows": carryover_rows,
+            "scheduled_installments": scheduled_installments,
+            "scheduled_amount": as_money(scheduled_amount),
+            "route_total": as_money(sum((row["total_due"] for row in rows), ZERO)),
+            "client_count": len({row["customer"].pk for row in rows}),
+            "neighborhoods": neighborhoods,
         },
     )
 
@@ -212,19 +216,16 @@ def customer_create(request):
 @require_GET
 def customer_detail(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
-    sale_rows = [
-        {
-            "sale": sale,
-            "balance": get_sale_balance(sale, as_of=timezone.localdate()),
-        }
-        for sale in customer.sales.select_related("product").prefetch_related("installments")
-    ]
+    today = timezone.localdate()
+    generate_missing_late_fees(as_of=today)
+    history = build_customer_history(customer=customer, as_of=today)
     return render(
         request,
         "core/customers/detail.html",
         {
             "customer": customer,
-            "sale_rows": sale_rows,
+            "today": today,
+            **history,
         },
     )
 

@@ -1,0 +1,16 @@
+{% if page.paginator.num_pages > 1 %}
+<nav class="pagination" aria-label="Paginación">
+    {% if page.has_previous %}
+        <a href="?q={{ query|urlencode }}&estado={{ state }}&pagina={{ page.previous_page_number }}">‹ Anterior</a>
+    {% else %}
+        <span>‹ Anterior</span>
+    {% endif %}
+    <strong>Página {{ page.number }} de {{ page.paginator.num_pages }}</strong>
+    {% if page.has_next %}
+        <a href="?q={{ query|urlencode }}&estado={{ state }}&pagina={{ page.next_page_number }}">Siguiente ›</a>
+    {% else %}
+        <span>Siguiente ›</span>
+    {% endif %}
+</nav>
+{% endif %}
+

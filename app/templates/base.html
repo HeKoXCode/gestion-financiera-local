@@ -4,18 +4,96 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#123a32">
     <title>{% block title %}Gestión Financiera{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
 <body>
-    <header class="app-header">
-        <div class="container">
-            <a class="brand" href="{% url 'core:home' %}">Gestión Financiera</a>
+    {% with current=request.resolver_match.url_name %}
+    <div class="app-shell">
+        <aside class="sidebar">
+            <a class="brand" href="{% url 'core:home' %}">
+                <span class="brand-mark" aria-hidden="true">GF</span>
+                <span>
+                    <strong>{{ app_settings.business_name }}</strong>
+                    <small>Control de cobranzas</small>
+                </span>
+            </a>
+
+            <nav class="main-nav" aria-label="Navegación principal">
+                <span class="nav-section-label">Operación</span>
+                <a class="nav-link {% if current == 'home' %}is-active{% endif %}"
+                   href="{% url 'core:home' %}">
+                    <span class="nav-icon" aria-hidden="true">⌂</span>
+                    <span>Resumen del día</span>
+                </a>
+                <a class="nav-link {% if 'customer' in current %}is-active{% endif %}"
+                   href="{% url 'core:customer_list' %}">
+                    <span class="nav-icon" aria-hidden="true">◎</span>
+                    <span>Clientes</span>
+                </a>
+                <a class="nav-link {% if 'product' in current %}is-active{% endif %}"
+                   href="{% url 'core:product_list' %}">
+                    <span class="nav-icon" aria-hidden="true">◇</span>
+                    <span>Productos</span>
+                </a>
+                <a class="nav-link {% if 'sale' in current %}is-active{% endif %}"
+                   href="{% url 'core:sale_list' %}">
+                    <span class="nav-icon" aria-hidden="true">▤</span>
+                    <span>Ventas</span>
+                </a>
+
+                <span class="nav-section-label nav-section-secondary">Siguiente etapa</span>
+                <span class="nav-link is-disabled" title="Se habilitará en la Fase 4">
+                    <span class="nav-icon" aria-hidden="true">$</span>
+                    <span>Cobranza</span>
+                    <small>Próximo</small>
+                </span>
+                <span class="nav-link is-disabled" title="Se habilitará en la Fase 5">
+                    <span class="nav-icon" aria-hidden="true">⌁</span>
+                    <span>Reportes</span>
+                    <small>Próximo</small>
+                </span>
+            </nav>
+
+            <div class="sidebar-footer">
+                <span class="local-indicator"><i></i> Programa local</span>
+                <small>Los datos permanecen en este equipo.</small>
+            </div>
+        </aside>
+
+        <div class="main-area">
+            <header class="topbar">
+                <div>
+                    <span class="topbar-kicker">{% now "l" %}</span>
+                    <strong>{% now "d \d\e F \d\e Y" %}</strong>
+                </div>
+                <div class="topbar-actions">
+                    <span class="offline-pill"><i></i> Sincronizado localmente</span>
+                    <a class="btn btn-primary btn-compact" href="{% url 'core:sale_create' %}">
+                        <span aria-hidden="true">＋</span> Nueva venta
+                    </a>
+                </div>
+            </header>
+
+            <main class="page-content">
+                {% if messages %}
+                    <div class="messages" aria-live="polite">
+                        {% for message in messages %}
+                            <div class="message message-{{ message.tags|default:'info' }}">
+                                <span>{{ message }}</span>
+                                <button type="button" aria-label="Cerrar aviso"
+                                        onclick="this.parentElement.remove()">×</button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% block content %}{% endblock %}
+            </main>
         </div>
-    </header>
-    <main class="container">
-        {% block content %}{% endblock %}
-    </main>
+    </div>
+    {% endwith %}
+    {% block scripts %}{% endblock %}
 </body>
 </html>
 

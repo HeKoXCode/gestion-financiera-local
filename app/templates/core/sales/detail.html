@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% load finance %}
+
+{% block title %}Venta de {{ sale.product_description }} · Gestión Financiera{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'core:sale_list' %}">‹ Volver a ventas</a>
+
+<section class="sale-hero">
+    <div>
+        <p class="eyebrow">Venta #{{ sale.pk }}</p>
+        <div class="title-with-badge">
+            <h1>{{ sale.product_description }}</h1>
+            <span class="badge badge-{{ sale.status }}">{{ sale.get_status_display }}</span>
+        </div>
+        <p>
+            Para <a href="{% url 'core:customer_detail' sale.customer.pk %}">{{ sale.customer.full_name }}</a>
+            <span class="dot-separator">•</span>
+            Entregada el {{ sale.delivery_date|date:"d/m/Y" }}
+        </p>
+    </div>
+    <div class="profile-actions">
+        {% if sale.status == "active" %}
+            <a class="btn btn-danger-ghost" href="{% url 'core:sale_cancel' sale.pk %}">Cancelar venta</a>
+        {% endif %}
+    </div>
+</section>
+
+{% if sale.status == "cancelled" %}
+<div class="cancelled-notice">
+    <strong>Operación cancelada el {{ sale.cancelled_on|date:"d/m/Y" }}</strong>
+    <p>{{ sale.cancellation_reason }}</p>
+</div>
+{% endif %}
+
+<section class="sale-summary-grid">
+    <article>
+        <span>Precio contado</span>
+        <strong>{{ sale.cash_price|ars }}</strong>
+    </article>
+    <article class="highlight">
+        <span>Monto financiado</span>
+        <strong>{{ sale.financed_amount|ars }}</strong>
+    </article>
+    <article>
+        <span>Total pendiente</span>
+        <strong>{{ balance.total_due|ars }}</strong>
+    </article>
+    <article>
+        <span>Total abonado</span>
+        <strong>{{ balance.total_paid|ars }}</strong>
+    </article>
+</section>
+
+<div class="detail-grid sale-detail-grid">
+    <section class="panel detail-card">
+        <div class="panel-header compact"><h2>Condiciones acordadas</h2></div>
+        <dl class="detail-list">
+            <div><dt>Producto original</dt><dd>{{ sale.product.name }}</dd></div>
+            <div><dt>Frecuencia</dt><dd>{{ sale.get_frequency_display }}</dd></div>
+            <div><dt>Cantidad de cuotas</dt><dd>{{ sale.installment_count }}</dd></div>
+            <div><dt>Primer vencimiento</dt><dd>{{ sale.first_due_date|date:"d/m/Y" }}</dd></div>
+            <div><dt>Recargo diario</dt><dd>{{ sale.daily_late_fee|ars }}</dd></div>
+            <div><dt>Creada</dt><dd>{{ sale.created_at|date:"d/m/Y H:i" }}</dd></div>
+        </dl>
+    </section>
+    <aside class="panel balance-card">
+        <p class="eyebrow">Estado financiero</p>
+        <div><span>Capital pendiente</span><strong>{{ balance.principal_due|ars }}</strong></div>
+        <div><span>Recargos pendientes</span><strong>{{ balance.late_fees_due|ars }}</strong></div>
+        <div class="balance-total"><span>Total</span><strong>{{ balance.total_due|ars }}</strong></div>
+    </aside>
+</div>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Cronograma</p>
+            <h2>{{ installment_rows|length }} cuotas generadas</h2>
+        </div>
+        <span class="record-count">{{ sale.get_frequency_display }}</span>
+    </div>
+    <div class="table-wrap">
+        <table class="data-table responsive-table">
+            <thead>
+                <tr>
+                    <th>Cuota</th>
+                    <th>Vencimiento</th>
+                    <th>Estado</th>
+                    <th class="align-right">Importe original</th>
+                    <th class="align-right">Recargos</th>
+                    <th class="align-right">Saldo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in installment_rows %}
+                <tr>
+                    <td data-label="Cuota"><strong>{{ row.installment.number }} de {{ sale.installment_count }}</strong></td>
+                    <td data-label="Vencimiento">{{ row.installment.due_date|date:"d/m/Y" }}</td>
+                    <td data-label="Estado">
+                        {% if row.balance.total_due == 0 %}
+                            <span class="badge badge-success">Pagada</span>
+                        {% elif row.installment.due_date < today %}
+                            <span class="badge badge-danger">{{ row.balance.days_overdue }} días tarde</span>
+                        {% elif row.installment.due_date == today %}
+                            <span class="badge badge-warning">Vence hoy</span>
+                        {% else %}
+                            <span class="badge badge-neutral">Pendiente</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Importe" class="money-cell">{{ row.installment.original_amount|ars }}</td>
+                    <td data-label="Recargos" class="money-cell">{{ row.balance.late_fees_due|ars }}</td>
+                    <td data-label="Saldo" class="money-cell"><strong>{{ row.balance.total_due|ars }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+

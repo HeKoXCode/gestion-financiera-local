@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Productos · Gestión Financiera{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <div>
+        <p class="eyebrow">Catálogo comercial</p>
+        <h1>Productos</h1>
+        <p class="page-subtitle">Un catálogo breve para registrar ventas con rapidez.</p>
+    </div>
+    <a class="btn btn-primary" href="{% url 'core:product_create' %}">
+        <span aria-hidden="true">＋</span> Nuevo producto
+    </a>
+</header>
+
+<section class="toolbar-card">
+    <form class="search-form" method="get">
+        <label class="sr-only" for="product-search">Buscar productos</label>
+        <div class="search-input">
+            <span aria-hidden="true">⌕</span>
+            <input id="product-search" name="q" value="{{ query }}" placeholder="Buscar por nombre o descripción">
+        </div>
+        <input type="hidden" name="estado" value="{{ state }}">
+        <button class="btn btn-secondary" type="submit">Buscar</button>
+        {% if query %}<a class="btn btn-ghost" href="?estado={{ state }}">Limpiar</a>{% endif %}
+    </form>
+    <div class="segmented-control">
+        <a class="{% if state == 'active' %}is-active{% endif %}" href="?q={{ query|urlencode }}&estado=active">Activos</a>
+        <a class="{% if state == 'archived' %}is-active{% endif %}" href="?q={{ query|urlencode }}&estado=archived">Archivados</a>
+        <a class="{% if state == 'all' %}is-active{% endif %}" href="?q={{ query|urlencode }}&estado=all">Todos</a>
+    </div>
+</section>
+
+{% if page.object_list %}
+<section class="product-grid">
+    {% for product in page %}
+    <article class="product-card">
+        <div class="product-card-top">
+            <span class="product-symbol" aria-hidden="true">{{ product.name|first|upper }}</span>
+            {% if product.is_active %}
+                <span class="badge badge-success">Activo</span>
+            {% else %}
+                <span class="badge badge-neutral">Archivado</span>
+            {% endif %}
+        </div>
+        <h2>{{ product.name }}</h2>
+        <p>{{ product.description|default:"Sin descripción adicional."|truncatechars:130 }}</p>
+        <div class="product-meta">
+            <span><strong>{{ product.sales_count }}</strong> venta{{ product.sales_count|pluralize }}</span>
+            <span>Actualizado {{ product.updated_at|date:"d/m/Y" }}</span>
+        </div>
+        <div class="card-actions">
+            <a class="btn btn-secondary btn-compact" href="{% url 'core:product_edit' product.pk %}">Editar</a>
+            <form method="post" action="{% url 'core:product_toggle' product.pk %}">
+                {% csrf_token %}
+                <button class="btn btn-ghost btn-compact" type="submit">
+                    {% if product.is_active %}Archivar{% else %}Reactivar{% endif %}
+                </button>
+            </form>
+        </div>
+    </article>
+    {% endfor %}
+</section>
+{% include "core/partials/pagination.html" %}
+{% else %}
+<section class="panel empty-state">
+    <span class="empty-icon" aria-hidden="true">◇</span>
+    <h3>{% if query %}No encontramos productos{% else %}Creá tu primer producto{% endif %}</h3>
+    <p>{% if query %}Probá con otro término de búsqueda.{% else %}Después podrás seleccionarlo al registrar una venta.{% endif %}</p>
+    {% if not query %}<a class="btn btn-primary" href="{% url 'core:product_create' %}">Nuevo producto</a>{% endif %}
+</section>
+{% endif %}
+{% endblock %}
+

@@ -10,8 +10,10 @@ Estado al 23/07/2026:
 - Paso 0 terminado: reglas financieras documentadas.
 - Paso 1 terminado: base local portable.
 - Paso 2 terminado: modelos, restricciones, configuración y motor base.
+- Paso 3 terminado: clientes, productos, ventas, cuotas e interfaz responsive.
+- Paso 5 adelantado parcialmente: resumen y agenda por fecha.
 - Paso 7 adelantado parcialmente: backup al iniciar, manual y al cerrar.
-- Próximo paso: Paso 3, clientes, productos y ventas.
+- Próximo paso: Paso 4, cobranza y pagos.
 
 ## 1. Cambio de enfoque
 
@@ -579,5 +581,6 @@ El MVP estará terminado cuando:
 
 ## 13. Próximo paso
 
-Comenzar el Paso 3 y construir las pantallas de clientes, productos y ventas,
-incluyendo la previsualización y creación automática del cronograma de cuotas.
+Comenzar el Paso 4 y construir el flujo de cobranza: aplicación automática de
+recargos faltantes, pagos completos y parciales, anulación de pagos, intentos
+de cobranza y acceso manual a WhatsApp.

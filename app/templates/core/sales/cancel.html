@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load finance %}
+
+{% block title %}Cancelar venta · Gestión Financiera{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'core:sale_detail' sale.pk %}">‹ Volver al detalle</a>
+
+<div class="confirm-layout">
+    <section class="confirm-card">
+        <span class="confirm-icon" aria-hidden="true">!</span>
+        <p class="eyebrow">Acción administrativa</p>
+        <h1>Cancelar esta venta</h1>
+        <p>
+            La operación dejará de aparecer en la cobranza y no generará nuevos
+            recargos. El cliente, las cuotas y el historial no se eliminarán.
+        </p>
+
+        <dl class="confirm-summary">
+            <div><dt>Cliente</dt><dd>{{ sale.customer.full_name }}</dd></div>
+            <div><dt>Producto</dt><dd>{{ sale.product_description }}</dd></div>
+            <div><dt>Monto financiado</dt><dd>{{ sale.financed_amount|ars }}</dd></div>
+        </dl>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% include "core/partials/form_errors.html" %}
+            <div class="field">
+                <label for="{{ form.reason.id_for_label }}">Motivo de cancelación</label>
+                {{ form.reason }}
+                {% for error in form.reason.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="form-actions">
+                <a class="btn btn-ghost" href="{% url 'core:sale_detail' sale.pk %}">Conservar venta</a>
+                <button class="btn btn-danger" type="submit">Confirmar cancelación</button>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}
+

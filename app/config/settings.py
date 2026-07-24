@@ -67,6 +67,7 @@ TEMPLATES = [
             "context_processors": [
                 "django.template.context_processors.request",
                 "django.contrib.messages.context_processors.messages",
+                "modules.core.context_processors.application_settings",
             ],
         },
     },
@@ -125,4 +126,3 @@ LOGGING = {
         "level": LOG_LEVEL,
     },
 }
-

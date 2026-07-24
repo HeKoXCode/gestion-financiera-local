@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} · Gestión Financiera{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <div>
+        <a class="back-link" href="{% if customer %}{% url 'core:customer_detail' customer.pk %}{% else %}{% url 'core:customer_list' %}{% endif %}">‹ Volver a clientes</a>
+        <p class="eyebrow">Ficha personal</p>
+        <h1>{{ title }}</h1>
+        <p class="page-subtitle">{{ subtitle }}</p>
+    </div>
+</header>
+
+<form method="post" class="form-layout" novalidate>
+    {% csrf_token %}
+    {% include "core/partials/form_errors.html" %}
+
+    <section class="form-card">
+        <div class="form-section-heading">
+            <span>01</span>
+            <div>
+                <h2>Información personal</h2>
+                <p>El DNI es opcional; el nombre y apellido son suficientes.</p>
+            </div>
+        </div>
+        <div class="form-grid two-columns">
+            <div class="field">
+                <label for="{{ form.first_name.id_for_label }}">Nombre</label>
+                {{ form.first_name }}
+                {% for error in form.first_name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="field">
+                <label for="{{ form.last_name.id_for_label }}">Apellido</label>
+                {{ form.last_name }}
+                {% for error in form.last_name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="field">
+                <label for="{{ form.dni.id_for_label }}">DNI <span>Opcional</span></label>
+                {{ form.dni }}
+                {% for error in form.dni.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="field">
+                <label for="{{ form.phone.id_for_label }}">Teléfono <span>Opcional</span></label>
+                {{ form.phone }}
+                {% for error in form.phone.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <section class="form-card">
+        <div class="form-section-heading">
+            <span>02</span>
+            <div>
+                <h2>Domicilio</h2>
+                <p>Información práctica para organizar el recorrido de cobranza.</p>
+            </div>
+        </div>
+        <div class="form-grid two-columns">
+            <div class="field span-2">
+                <label for="{{ form.address.id_for_label }}">Dirección</label>
+                {{ form.address }}
+                {% for error in form.address.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="field">
+                <label for="{{ form.neighborhood.id_for_label }}">Barrio <span>Opcional</span></label>
+                {{ form.neighborhood }}
+                {% for error in form.neighborhood.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="field">
+                <label for="{{ form.address_reference.id_for_label }}">Referencia <span>Opcional</span></label>
+                {{ form.address_reference }}
+                {% for error in form.address_reference.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="field span-2">
+                <label for="{{ form.notes.id_for_label }}">Observaciones <span>Opcional</span></label>
+                {{ form.notes }}
+                {% for error in form.notes.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <div class="form-actions">
+        <a class="btn btn-ghost" href="{% if customer %}{% url 'core:customer_detail' customer.pk %}{% else %}{% url 'core:customer_list' %}{% endif %}">Cancelar</a>
+        <button class="btn btn-primary" type="submit">{{ submit_label }}</button>
+    </div>
+</form>
+{% endblock %}
+

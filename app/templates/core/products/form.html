@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} · Productos{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <div>
+        <a class="back-link" href="{% url 'core:product_list' %}">‹ Volver a productos</a>
+        <p class="eyebrow">Catálogo comercial</p>
+        <h1>{{ title }}</h1>
+        <p class="page-subtitle">{{ subtitle }}</p>
+    </div>
+</header>
+
+<form method="post" class="narrow-form" novalidate>
+    {% csrf_token %}
+    {% include "core/partials/form_errors.html" %}
+    <section class="form-card">
+        <div class="field">
+            <label for="{{ form.name.id_for_label }}">Nombre</label>
+            {{ form.name }}
+            {% for error in form.name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="field">
+            <label for="{{ form.description.id_for_label }}">Descripción <span>Opcional</span></label>
+            {{ form.description }}
+            <p class="field-help">Podrás personalizar esta descripción dentro de cada venta.</p>
+            {% for error in form.description.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+        </div>
+    </section>
+    <div class="form-actions">
+        <a class="btn btn-ghost" href="{% url 'core:product_list' %}">Cancelar</a>
+        <button class="btn btn-primary" type="submit">{{ submit_label }}</button>
+    </div>
+</form>
+{% endblock %}
+

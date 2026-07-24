@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Clientes · Gestión Financiera{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <div>
+        <p class="eyebrow">Personas y domicilios</p>
+        <h1>Clientes</h1>
+        <p class="page-subtitle">Encontrá rápidamente sus datos, ventas e historial.</p>
+    </div>
+    <a class="btn btn-primary" href="{% url 'core:customer_create' %}">
+        <span aria-hidden="true">＋</span> Nuevo cliente
+    </a>
+</header>
+
+<section class="toolbar-card">
+    <form class="search-form" method="get">
+        <label class="sr-only" for="customer-search">Buscar clientes</label>
+        <div class="search-input">
+            <span aria-hidden="true">⌕</span>
+            <input id="customer-search" name="q" value="{{ query }}"
+                   placeholder="Buscar por nombre, DNI, teléfono o domicilio">
+        </div>
+        <input type="hidden" name="estado" value="{{ state }}">
+        <button class="btn btn-secondary" type="submit">Buscar</button>
+        {% if query %}
+            <a class="btn btn-ghost" href="?estado={{ state }}">Limpiar</a>
+        {% endif %}
+    </form>
+    <div class="segmented-control" aria-label="Filtrar por estado">
+        <a class="{% if state == 'active' %}is-active{% endif %}"
+           href="?q={{ query|urlencode }}&estado=active">Activos</a>
+        <a class="{% if state == 'archived' %}is-active{% endif %}"
+           href="?q={{ query|urlencode }}&estado=archived">Archivados</a>
+        <a class="{% if state == 'all' %}is-active{% endif %}"
+           href="?q={{ query|urlencode }}&estado=all">Todos</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header compact">
+        <div>
+            <h2>Listado</h2>
+            <p>{{ page.paginator.count }} cliente{{ page.paginator.count|pluralize }} encontrado{{ page.paginator.count|pluralize }}</p>
+        </div>
+    </div>
+
+    {% if page.object_list %}
+    <div class="table-wrap">
+        <table class="data-table responsive-table">
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>Contacto</th>
+                    <th>Domicilio</th>
+                    <th>Ventas</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for customer in page %}
+                <tr>
+                    <td data-label="Cliente">
+                        <a class="table-primary" href="{% url 'core:customer_detail' customer.pk %}">
+                            {{ customer.full_name }}
+                        </a>
+                        <small>{% if customer.dni %}DNI {{ customer.dni }}{% else %}Sin DNI informado{% endif %}</small>
+                    </td>
+                    <td data-label="Contacto">
+                        {% if customer.phone %}{{ customer.phone }}{% else %}<span class="muted">Sin teléfono</span>{% endif %}
+                    </td>
+                    <td data-label="Domicilio">
+                        {{ customer.address }}
+                        {% if customer.neighborhood %}<small>{{ customer.neighborhood }}</small>{% endif %}
+                    </td>
+                    <td data-label="Ventas">{{ customer.sales_count }}</td>
+                    <td data-label="Estado">
+                        {% if customer.is_active %}
+                            <span class="badge badge-success">Activo</span>
+                        {% else %}
+                            <span class="badge badge-neutral">Archivado</span>
+                        {% endif %}
+                    </td>
+                    <td class="row-action">
+                        <a class="icon-button" href="{% url 'core:customer_detail' customer.pk %}"
+                           aria-label="Ver {{ customer.full_name }}">›</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include "core/partials/pagination.html" %}
+    {% else %}
+    <div class="empty-state">
+        <span class="empty-icon" aria-hidden="true">◎</span>
+        <h3>{% if query %}No encontramos coincidencias{% else %}Todavía no hay clientes{% endif %}</h3>
+        <p>{% if query %}Probá con otro nombre, DNI o dirección.{% else %}Creá el primero para comenzar a registrar ventas.{% endif %}</p>
+        {% if not query %}
+            <a class="btn btn-primary" href="{% url 'core:customer_create' %}">Crear primer cliente</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+

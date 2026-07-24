@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load finance %}
+
+{% block title %}Ventas · Gestión Financiera{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <div>
+        <p class="eyebrow">Financiaciones</p>
+        <h1>Ventas</h1>
+        <p class="page-subtitle">Consultá las condiciones y el cronograma de cada operación.</p>
+    </div>
+    <a class="btn btn-primary" href="{% url 'core:sale_create' %}">
+        <span aria-hidden="true">＋</span> Nueva venta
+    </a>
+</header>
+
+<section class="toolbar-card">
+    <form class="search-form" method="get">
+        <label class="sr-only" for="sale-search">Buscar ventas</label>
+        <div class="search-input">
+            <span aria-hidden="true">⌕</span>
+            <input id="sale-search" name="q" value="{{ query }}" placeholder="Buscar por cliente, DNI o producto">
+        </div>
+        <input type="hidden" name="estado" value="{{ state }}">
+        <button class="btn btn-secondary" type="submit">Buscar</button>
+        {% if query %}<a class="btn btn-ghost" href="?estado={{ state }}">Limpiar</a>{% endif %}
+    </form>
+    <div class="segmented-control">
+        <a class="{% if state == 'active' %}is-active{% endif %}" href="?q={{ query|urlencode }}&estado=active">Activas</a>
+        <a class="{% if state == 'completed' %}is-active{% endif %}" href="?q={{ query|urlencode }}&estado=completed">Finalizadas</a>
+        <a class="{% if state == 'cancelled' %}is-active{% endif %}" href="?q={{ query|urlencode }}&estado=cancelled">Canceladas</a>
+        <a class="{% if state == 'all' %}is-active{% endif %}" href="?q={{ query|urlencode }}&estado=all">Todas</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header compact">
+        <div>
+            <h2>Operaciones</h2>
+            <p>{{ page.paginator.count }} venta{{ page.paginator.count|pluralize }}</p>
+        </div>
+    </div>
+    {% if page.object_list %}
+    <div class="table-wrap">
+        <table class="data-table responsive-table sales-table">
+            <thead>
+                <tr>
+                    <th>Cliente y producto</th>
+                    <th>Entrega</th>
+                    <th>Plan</th>
+                    <th>Estado</th>
+                    <th class="align-right">Financiado</th>
+                    <th class="align-right">Cuota estimada</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sale in page %}
+                <tr>
+                    <td data-label="Venta">
+                        <a class="table-primary" href="{% url 'core:sale_detail' sale.pk %}">
+                            {{ sale.customer.full_name }}
+                        </a>
+                        <small>{{ sale.product_description }}</small>
+                    </td>
+                    <td data-label="Entrega">{{ sale.delivery_date|date:"d/m/Y" }}</td>
+                    <td data-label="Plan">
+                        {{ sale.installment_count }} cuotas
+                        <small>{{ sale.get_frequency_display }}</small>
+                    </td>
+                    <td data-label="Estado">
+                        <span class="badge badge-{{ sale.status }}">{{ sale.get_status_display }}</span>
+                    </td>
+                    <td data-label="Financiado" class="money-cell">{{ sale.financed_amount|ars }}</td>
+                    <td data-label="Cuota estimada" class="money-cell">
+                        {{ sale.financed_amount|installment_estimate:sale.installment_count|ars }}
+                    </td>
+                    <td class="row-action"><a class="icon-button" href="{% url 'core:sale_detail' sale.pk %}">›</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include "core/partials/pagination.html" %}
+    {% else %}
+    <div class="empty-state">
+        <span class="empty-icon" aria-hidden="true">▤</span>
+        <h3>{% if query %}No encontramos ventas{% else %}Todavía no hay ventas{% endif %}</h3>
+        <p>{% if query %}Probá con otro cliente o producto.{% else %}Registrá la primera y generaremos sus cuotas automáticamente.{% endif %}</p>
+        {% if not query %}<a class="btn btn-primary" href="{% url 'core:sale_create' %}">Registrar primera venta</a>{% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

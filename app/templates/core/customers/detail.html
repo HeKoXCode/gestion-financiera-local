@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% load finance %}
+
+{% block title %}{{ customer.full_name }} · Clientes{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'core:customer_list' %}">‹ Volver al listado</a>
+
+<section class="profile-hero">
+    <div class="profile-avatar" aria-hidden="true">
+        {{ customer.first_name|first|upper }}{{ customer.last_name|first|upper }}
+    </div>
+    <div class="profile-main">
+        <div class="title-with-badge">
+            <h1>{{ customer.full_name }}</h1>
+            {% if customer.is_active %}
+                <span class="badge badge-success">Activo</span>
+            {% else %}
+                <span class="badge badge-neutral">Archivado</span>
+            {% endif %}
+        </div>
+        <p>
+            {% if customer.dni %}DNI {{ customer.dni }}{% else %}DNI no informado{% endif %}
+            <span class="dot-separator">•</span>
+            Cliente desde {{ customer.created_at|date:"d/m/Y" }}
+        </p>
+    </div>
+    <div class="profile-actions">
+        <a class="btn btn-secondary" href="{% url 'core:customer_edit' customer.pk %}">Editar datos</a>
+        {% if customer.is_active %}
+            <a class="btn btn-primary" href="{% url 'core:sale_create' %}?cliente={{ customer.pk }}">Nueva venta</a>
+        {% endif %}
+    </div>
+</section>
+
+<div class="detail-grid">
+    <section class="panel detail-card">
+        <div class="panel-header compact"><h2>Datos de contacto</h2></div>
+        <dl class="detail-list">
+            <div>
+                <dt>Teléfono</dt>
+                <dd>{{ customer.phone|default:"No informado" }}</dd>
+            </div>
+            <div>
+                <dt>Dirección</dt>
+                <dd>{{ customer.address }}</dd>
+            </div>
+            <div>
+                <dt>Barrio</dt>
+                <dd>{{ customer.neighborhood|default:"No informado" }}</dd>
+            </div>
+            <div>
+                <dt>Referencia</dt>
+                <dd>{{ customer.address_reference|default:"Sin referencia" }}</dd>
+            </div>
+            <div class="detail-wide">
+                <dt>Observaciones</dt>
+                <dd>{{ customer.notes|default:"Sin observaciones"|linebreaksbr }}</dd>
+            </div>
+        </dl>
+    </section>
+
+    <aside class="panel action-card">
+        <p class="eyebrow">Administración</p>
+        <h2>{% if customer.is_active %}Archivar cliente{% else %}Reactivar cliente{% endif %}</h2>
+        <p>
+            {% if customer.is_active %}
+                Dejará de aparecer al crear nuevas ventas. Su historial permanecerá intacto.
+            {% else %}
+                Volverá a estar disponible al registrar nuevas ventas.
+            {% endif %}
+        </p>
+        <form method="post" action="{% url 'core:customer_toggle' customer.pk %}">
+            {% csrf_token %}
+            <button class="btn {% if customer.is_active %}btn-danger-ghost{% else %}btn-secondary{% endif %}" type="submit">
+                {% if customer.is_active %}Archivar{% else %}Reactivar{% endif %}
+            </button>
+        </form>
+    </aside>
+</div>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Historial comercial</p>
+            <h2>Productos y ventas</h2>
+        </div>
+        {% if customer.is_active %}
+            <a class="btn btn-primary btn-compact" href="{% url 'core:sale_create' %}?cliente={{ customer.pk }}">＋ Nueva venta</a>
+        {% endif %}
+    </div>
+    {% if sale_rows %}
+    <div class="table-wrap">
+        <table class="data-table responsive-table">
+            <thead>
+                <tr>
+                    <th>Entrega</th>
+                    <th>Producto</th>
+                    <th>Plan</th>
+                    <th>Estado</th>
+                    <th class="align-right">Financiado</th>
+                    <th class="align-right">Saldo</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in sale_rows %}
+                <tr>
+                    <td data-label="Entrega">{{ row.sale.delivery_date|date:"d/m/Y" }}</td>
+                    <td data-label="Producto">
+                        <a class="table-primary" href="{% url 'core:sale_detail' row.sale.pk %}">
+                            {{ row.sale.product_description }}
+                        </a>
+                    </td>
+                    <td data-label="Plan">{{ row.sale.installment_count }} cuotas · {{ row.sale.get_frequency_display }}</td>
+                    <td data-label="Estado"><span class="badge badge-{{ row.sale.status }}">{{ row.sale.get_status_display }}</span></td>
+                    <td data-label="Financiado" class="money-cell">{{ row.sale.financed_amount|ars }}</td>
+                    <td data-label="Saldo" class="money-cell">{{ row.balance.total_due|ars }}</td>
+                    <td class="row-action"><a class="icon-button" href="{% url 'core:sale_detail' row.sale.pk %}">›</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state compact">
+        <span class="empty-icon" aria-hidden="true">▤</span>
+        <h3>Sin ventas registradas</h3>
+        <p>La actividad del cliente aparecerá aquí.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+

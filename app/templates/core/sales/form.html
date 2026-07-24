@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% load static finance %}
+
+{% block title %}Nueva venta · Gestión Financiera{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <div>
+        <a class="back-link" href="{% url 'core:sale_list' %}">‹ Volver a ventas</a>
+        <p class="eyebrow">Nueva financiación</p>
+        <h1>Registrar venta</h1>
+        <p class="page-subtitle">Completá las condiciones y revisá las cuotas antes de confirmar.</p>
+    </div>
+    <div class="config-note">
+        <span>Recargo diario</span>
+        <strong>{{ settings.daily_late_fee|ars }}</strong>
+        <small>Quedará congelado en esta venta</small>
+    </div>
+</header>
+
+{% if not form.fields.customer.queryset.exists or not form.fields.product.queryset.exists %}
+<div class="dependency-alert">
+    <div>
+        <strong>Antes de registrar una venta necesitás un cliente y un producto activos.</strong>
+        <p>Podés crearlos ahora y volver a esta pantalla.</p>
+    </div>
+    <div>
+        <a class="btn btn-secondary btn-compact" href="{% url 'core:customer_create' %}">Nuevo cliente</a>
+        <a class="btn btn-secondary btn-compact" href="{% url 'core:product_create' %}">Nuevo producto</a>
+    </div>
+</div>
+{% endif %}
+
+<form method="post" id="sale-form" class="sale-form-layout" novalidate>
+    {% csrf_token %}
+    <div class="sale-form-main">
+        {% include "core/partials/form_errors.html" %}
+
+        <section class="form-card">
+            <div class="form-section-heading">
+                <span>01</span>
+                <div>
+                    <h2>Cliente y producto</h2>
+                    <p>La descripción queda guardada aunque el producto cambie después.</p>
+                </div>
+            </div>
+            <div class="form-grid two-columns">
+                <div class="field">
+                    <label for="{{ form.customer.id_for_label }}">Cliente</label>
+                    {{ form.customer }}
+                    {% for error in form.customer.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                    <a class="field-link" href="{% url 'core:customer_create' %}">＋ Crear cliente</a>
+                </div>
+                <div class="field">
+                    <label for="{{ form.product.id_for_label }}">Producto</label>
+                    {{ form.product }}
+                    {% for error in form.product.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                    <a class="field-link" href="{% url 'core:product_create' %}">＋ Crear producto</a>
+                </div>
+                <div class="field span-2">
+                    <label for="{{ form.product_description.id_for_label }}">Descripción en esta venta</label>
+                    {{ form.product_description }}
+                    {% for error in form.product_description.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <section class="form-card">
+            <div class="form-section-heading">
+                <span>02</span>
+                <div>
+                    <h2>Importes</h2>
+                    <p>Ingresá valores sin el símbolo $. Podés usar coma para los centavos.</p>
+                </div>
+            </div>
+            <div class="form-grid two-columns">
+                <div class="field">
+                    <label for="{{ form.cash_price.id_for_label }}">Precio contado</label>
+                    <div class="money-input"><span>$</span>{{ form.cash_price }}</div>
+                    {% for error in form.cash_price.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="field">
+                    <label for="{{ form.financed_amount.id_for_label }}">Monto financiado</label>
+                    <div class="money-input"><span>$</span>{{ form.financed_amount }}</div>
+                    {% for error in form.financed_amount.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <section class="form-card">
+            <div class="form-section-heading">
+                <span>03</span>
+                <div>
+                    <h2>Entrega y plan de cuotas</h2>
+                    <p>La primera fecha define el día habitual de cobranza.</p>
+                </div>
+            </div>
+            <div class="form-grid two-columns">
+                <div class="field">
+                    <label for="{{ form.delivery_date.id_for_label }}">Fecha de entrega</label>
+                    {{ form.delivery_date }}
+                    {% for error in form.delivery_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="field">
+                    <label for="{{ form.first_due_date.id_for_label }}">Primer día de cobro</label>
+                    {{ form.first_due_date }}
+                    {% for error in form.first_due_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="field">
+                    <label for="{{ form.frequency.id_for_label }}">Frecuencia</label>
+                    {{ form.frequency }}
+                    {% for error in form.frequency.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="field">
+                    <label for="{{ form.installment_count.id_for_label }}">Cantidad de cuotas</label>
+                    {{ form.installment_count }}
+                    {% if form.installment_count.help_text %}<p class="field-help">{{ form.installment_count.help_text }}</p>{% endif %}
+                    {% for error in form.installment_count.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <div class="form-actions">
+            <a class="btn btn-ghost" href="{% url 'core:sale_list' %}">Cancelar</a>
+            <button class="btn btn-primary" id="sale-submit" type="submit"
+                    {% if not form.fields.customer.queryset.exists or not form.fields.product.queryset.exists %}disabled{% endif %}>
+                Confirmar y generar cuotas
+            </button>
+        </div>
+    </div>
+
+    <aside class="preview-card" aria-live="polite">
+        <div class="preview-heading">
+            <div>
+                <p class="eyebrow">Vista previa</p>
+                <h2>Plan de cuotas</h2>
+            </div>
+            <span id="preview-frequency" class="badge badge-neutral">Sin datos</span>
+        </div>
+        <div class="preview-total">
+            <span>Monto financiado</span>
+            <strong id="preview-total">$ 0,00</strong>
+            <small id="preview-caption">Completá monto, cantidad y primera fecha.</small>
+        </div>
+        <div id="preview-empty" class="preview-empty">
+            <span aria-hidden="true">⌁</span>
+            <p>Las fechas e importes aparecerán aquí antes de guardar.</p>
+        </div>
+        <div id="preview-table-wrap" class="preview-table-wrap" hidden>
+            <table class="preview-table">
+                <thead><tr><th>Cuota</th><th>Vencimiento</th><th>Importe</th></tr></thead>
+                <tbody id="preview-rows"></tbody>
+            </table>
+        </div>
+        <div class="preview-rule">
+            <span aria-hidden="true">i</span>
+            <p>La última cuota absorbe cualquier diferencia de centavos.</p>
+        </div>
+    </aside>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/sale-form.js' %}" defer></script>
+{% endblock %}
+

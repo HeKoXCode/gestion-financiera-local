@@ -1,28 +1,143 @@
 {% extends "base.html" %}
+{% load finance %}
 
-{% block title %}Inicio · Gestión Financiera{% endblock %}
+{% block title %}Resumen del día · Gestión Financiera{% endblock %}
 
 {% block content %}
-<section class="status-card">
-    <p class="eyebrow">Aplicación local</p>
-    <h1>Base financiera operativa</h1>
-    <p>
-        SQLite, archivos locales, reglas financieras, cuotas, saldos y recargos
-        están listos para incorporar las pantallas de clientes y ventas.
-    </p>
-    <dl class="status-list">
+<header class="page-header day-header">
+    <div>
+        <p class="eyebrow">Agenda de cobranza</p>
+        <h1>{{ selected_date|date:"l d \d\e F" }}</h1>
+        <p class="page-subtitle">
+            Vencimientos programados y cuotas anteriores que todavía tienen saldo.
+        </p>
+    </div>
+    <form class="date-picker" method="get">
+        <label for="day-selector">Ir a una fecha</label>
         <div>
-            <dt>Estado</dt>
-            <dd><span class="status-dot"></span> En funcionamiento</dd>
+            <input id="day-selector" class="form-control" type="date" name="fecha"
+                   value="{{ selected_date|date:'Y-m-d' }}">
+            <button class="btn btn-secondary" type="submit">Ver día</button>
         </div>
+    </form>
+</header>
+
+<nav class="day-strip" aria-label="Días de la semana">
+    <a class="day-arrow" href="?fecha={{ previous_date|date:'Y-m-d' }}" aria-label="Día anterior">‹</a>
+    {% for day in week_days %}
+        <a class="day-chip {% if day.is_selected %}is-selected{% endif %}"
+           href="?fecha={{ day.date|date:'Y-m-d' }}">
+            <small>{{ day.date|date:"D" }}</small>
+            <strong>{{ day.date|date:"d" }}</strong>
+        </a>
+    {% endfor %}
+    <a class="day-arrow" href="?fecha={{ next_date|date:'Y-m-d' }}" aria-label="Día siguiente">›</a>
+</nav>
+
+<section class="stats-grid" aria-label="Resumen de la fecha">
+    <article class="stat-card stat-primary">
+        <div class="stat-icon" aria-hidden="true">◎</div>
         <div>
-            <dt>Conexión</dt>
-            <dd>Solo este equipo</dd>
+            <span>Clientes a visitar</span>
+            <strong>{{ clients_to_collect }}</strong>
+            <small>Entre vencimientos y atrasos</small>
         </div>
+    </article>
+    <article class="stat-card">
+        <div class="stat-icon" aria-hidden="true">$</div>
         <div>
-            <dt>Próximo módulo</dt>
-            <dd>Clientes y ventas</dd>
+            <span>Monto programado</span>
+            <strong>{{ expected_amount|ars }}</strong>
+            <small>Cuotas que vencen este día</small>
         </div>
-    </dl>
+    </article>
+    <article class="stat-card stat-warning">
+        <div class="stat-icon" aria-hidden="true">!</div>
+        <div>
+            <span>Clientes atrasados</span>
+            <strong>{{ overdue_customers }}</strong>
+            <small>Requieren seguimiento</small>
+        </div>
+    </article>
+    <article class="stat-card stat-dark">
+        <div class="stat-icon" aria-hidden="true">≋</div>
+        <div>
+            <span>Deuda atrasada</span>
+            <strong>{{ overdue_amount|ars }}</strong>
+            <small>Saldo anterior a la fecha</small>
+        </div>
+    </article>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Recorrido sugerido</p>
+            <h2>Cobranzas del día</h2>
+        </div>
+        <span class="record-count">{{ collection_rows|length }} cuota{{ collection_rows|length|pluralize }}</span>
+    </div>
+
+    {% if collection_rows %}
+        <div class="table-wrap">
+            <table class="data-table responsive-table">
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Domicilio</th>
+                        <th>Producto</th>
+                        <th>Vencimiento</th>
+                        <th>Estado</th>
+                        <th class="align-right">Debe</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in collection_rows %}
+                    <tr>
+                        <td data-label="Cliente">
+                            <a class="table-primary" href="{% url 'core:customer_detail' row.customer.pk %}">
+                                {{ row.customer.full_name }}
+                            </a>
+                            {% if row.customer.phone %}<small>{{ row.customer.phone }}</small>{% endif %}
+                        </td>
+                        <td data-label="Domicilio">
+                            {{ row.customer.address }}
+                            {% if row.customer.neighborhood %}<small>{{ row.customer.neighborhood }}</small>{% endif %}
+                        </td>
+                        <td data-label="Producto">
+                            <a href="{% url 'core:sale_detail' row.sale.pk %}">
+                                {{ row.sale.product_description }}
+                            </a>
+                            <small>Cuota {{ row.installment.number }}/{{ row.sale.installment_count }}</small>
+                        </td>
+                        <td data-label="Vencimiento">{{ row.installment.due_date|date:"d/m/Y" }}</td>
+                        <td data-label="Estado">
+                            {% if row.is_overdue %}
+                                <span class="badge badge-danger">
+                                    {{ row.balance.days_overdue }} día{{ row.balance.days_overdue|pluralize }} tarde
+                                </span>
+                            {% else %}
+                                <span class="badge badge-success">Vence hoy</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="Debe" class="money-cell">{{ row.balance.total_due|ars }}</td>
+                        <td class="row-action">
+                            <a class="icon-button" href="{% url 'core:sale_detail' row.sale.pk %}"
+                               aria-label="Ver venta">›</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <span class="empty-icon" aria-hidden="true">✓</span>
+            <h3>No hay cobranzas para esta fecha</h3>
+            <p>Cuando registres ventas, sus cuotas aparecerán automáticamente aquí.</p>
+            <a class="btn btn-primary" href="{% url 'core:sale_create' %}">Registrar una venta</a>
+        </div>
+    {% endif %}
 </section>
 {% endblock %}

@@ -3,9 +3,9 @@
 Aplicación local y monousuario para administrar clientes, ventas financiadas,
 cuotas, recargos y cobranzas.
 
-Estado actual: Fases 0, 1 y 2 terminadas. La base local, las reglas financieras,
-los modelos relacionales, los cronogramas de cuotas, los saldos y los recargos
-idempotentes están operativos. Próximo paso: clientes, productos y ventas.
+Estado actual: Fases 0 a 3 terminadas. La aplicación ya permite consultar el
+resumen de un día, administrar clientes y productos, registrar ventas y generar
+automáticamente sus cuotas. Próximo paso: cobranza, pagos y recargos diarios.
 
 La aplicación se ejecutará localmente con Python/Django y SQLite. La versión
 final se entregará como una carpeta portable que podrá abrirse mediante acceso
@@ -70,5 +70,6 @@ Documentos:
 - [Reglas financieras de la Fase 0](docs/FASE_0_REGLAS_FINANCIERAS.md).
 - [Base técnica implementada](docs/FASE_1_BASE_LOCAL.md).
 - [Modelos y motor base de la Fase 2](docs/FASE_2_MODELOS_Y_MOTOR.md).
+- [Interfaz y flujos de la Fase 3](docs/FASE_3_INTERFAZ_COMERCIAL.md).
 - [Auditoría del equipo](docs/ENTORNO_Y_PORTABILIDAD.md).
 - [Plan empresarial anterior, conservado como referencia](docs/PLAN_MAESTRO.md).

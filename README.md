@@ -44,10 +44,11 @@ El lanzador:
 - crea un backup de inicio;
 - abre `http://127.0.0.1:8765/`;
 - muestra una pequeña ventana de control;
-- permite abrir el navegador, crear un backup o cerrar y respaldar.
+- permite abrir el navegador o cerrar y respaldar.
 
 La sección “Datos y respaldo” del menú permite crear y descargar backups SQLite
-y exportar un ZIP de CSV compatible con Excel.
+y exportar un ZIP de CSV compatible con Excel. Al cerrar se actualiza una sola
+copia por día y se conservan hasta 90 días de cierres.
 
 Para restaurar una copia, primero cerrar el programa y hacer doble clic en:
 

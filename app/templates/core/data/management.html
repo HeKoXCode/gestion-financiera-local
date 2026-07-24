@@ -27,7 +27,7 @@
     <article>
         <span>Backups disponibles</span>
         <strong>{{ backup_count }}</strong>
-        <small>Copias SQLite restaurables</small>
+        <small>Cantidad actual, no es un límite</small>
     </article>
     <article>
         <span>Exportaciones</span>
@@ -152,5 +152,6 @@
 <aside class="data-safety-note">
     <strong>Qué archivo usar en cada caso</strong>
     <p><b>SQLite (.sqlite3)</b> recupera el programa completo. <b>ZIP/CSV</b> sirve para consultar, filtrar o analizar datos en Excel, pero no reemplaza al backup.</p>
+    <p>Al cerrar se conserva una sola copia por día. Si cerrás varias veces el mismo día, esa copia se actualiza. Se guardan hasta 90 días de cierres.</p>
 </aside>
 {% endblock %}

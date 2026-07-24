@@ -16,10 +16,16 @@ from wsgiref.simple_server import WSGIServer, make_server
 if not getattr(sys, "frozen", False):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from launcher.backup import BackupError, create_backup, validate_application_database
+from launcher.backup import (
+    BackupError,
+    create_backup,
+    create_daily_backup,
+    validate_application_database,
+)
 
 HOST = "127.0.0.1"
 PORT = 8765
+CLOSE_BACKUP_RETENTION_DAYS = 90
 
 
 class ThreadingServer(ThreadingMixIn, WSGIServer):
@@ -167,32 +173,16 @@ class LocalApplication:
         finally:
             self.stop_server()
 
-        create_backup(
+        create_daily_backup(
             self.database_path,
             self.backup_path,
             label="close",
-            retention=30,
+            retention_days=CLOSE_BACKUP_RETENTION_DAYS,
         )
         validate_application_database(self.database_path)
 
     def open_browser(self) -> None:
         webbrowser.open(f"http://{HOST}:{PORT}/")
-
-    def create_manual_backup(self) -> None:
-        try:
-            backup = create_backup(
-                self.database_path,
-                self.backup_path,
-                label="manual",
-                retention=30,
-            )
-        except BackupError as exc:
-            messagebox.showerror("No se pudo respaldar", str(exc))
-            return
-
-        if backup:
-            self.status.set(f"Backup creado: {backup.name}")
-            messagebox.showinfo("Backup completo", f"Se creó:\n{backup}")
 
     def close_and_backup(self) -> None:
         if self.closing:
@@ -202,11 +192,11 @@ class LocalApplication:
 
         try:
             self.stop_server()
-            backup = create_backup(
+            backup = create_daily_backup(
                 self.database_path,
                 self.backup_path,
                 label="close",
-                retention=30,
+                retention_days=CLOSE_BACKUP_RETENTION_DAYS,
             )
             if backup:
                 self.status.set(f"Backup final: {backup.name}")
@@ -246,9 +236,6 @@ class LocalApplication:
         actions = Frame(content)
         actions.pack(anchor="w")
         Button(actions, text="Abrir sistema", command=self.open_browser, width=16).pack(
-            side=LEFT, padx=(0, 8)
-        )
-        Button(actions, text="Crear backup", command=self.create_manual_backup, width=16).pack(
             side=LEFT, padx=(0, 8)
         )
         Button(

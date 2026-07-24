@@ -266,7 +266,7 @@ def data_management(request):
         request,
         "core/data/management.html",
         {
-            "backups": all_backups[:30],
+            "backups": all_backups,
             "backup_count": len(all_backups),
             "exports": all_exports[:20],
             "export_count": len(all_exports),

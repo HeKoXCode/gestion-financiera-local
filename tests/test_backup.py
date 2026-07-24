@@ -1,5 +1,6 @@
 import sqlite3
 from contextlib import closing
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -7,6 +8,7 @@ import pytest
 from launcher.backup import (
     BackupError,
     create_backup,
+    create_daily_backup,
     list_backups,
     resolve_backup_path,
     restore_database,
@@ -68,6 +70,52 @@ def test_backup_rotation_keeps_requested_number(tmp_path):
         create_backup(source, destination, label="close", retention=2)
 
     assert len(list(destination.glob("gestion_close_*.sqlite3"))) == 2
+
+
+def test_daily_backup_updates_same_day_and_keeps_requested_days(tmp_path):
+    source = tmp_path / "source.sqlite3"
+    destination = tmp_path / "backups"
+    create_sample_database(source, "primera versión")
+
+    first = create_daily_backup(
+        source,
+        destination,
+        label="close",
+        retention_days=2,
+        day=date(2026, 7, 22),
+    )
+    with closing(sqlite3.connect(source)) as connection:
+        connection.execute("UPDATE sample SET value = 'versión actualizada'")
+        connection.commit()
+    repeated = create_daily_backup(
+        source,
+        destination,
+        label="close",
+        retention_days=2,
+        day=date(2026, 7, 22),
+    )
+
+    assert repeated == first
+    assert len(list(destination.glob("gestion_close_*.sqlite3"))) == 1
+    with closing(sqlite3.connect(repeated)) as connection:
+        assert connection.execute("SELECT value FROM sample").fetchone() == (
+            "versión actualizada",
+        )
+
+    for day_number in (23, 24):
+        create_daily_backup(
+            source,
+            destination,
+            label="close",
+            retention_days=2,
+            day=date(2026, 7, day_number),
+        )
+
+    names = {path.name for path in destination.glob("gestion_close_*.sqlite3")}
+    assert names == {
+        "gestion_close_2026-07-23.sqlite3",
+        "gestion_close_2026-07-24.sqlite3",
+    }
 
 
 def test_validate_rejects_non_database(tmp_path):

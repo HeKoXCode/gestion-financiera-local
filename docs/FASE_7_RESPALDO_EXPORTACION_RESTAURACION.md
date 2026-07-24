@@ -53,10 +53,12 @@ se realiza primero en un archivo temporal y después se reemplaza atómicamente.
 | Inicio | Al abrir el programa | 5 |
 | Antes de actualizar | Antes de aplicar migraciones | 5 |
 | Recuperación | Al iniciar y después de cada alta o cambio importante | 1 fija |
-| Cierre | Al usar “Cerrar y respaldar” | 30 |
+| Cierre | Al usar “Cerrar y respaldar” | 1 por día, 90 días |
 | Preventiva | Antes de una restauración | 10 |
 
-Las copias manuales conservan las 30 más recientes.
+Las copias manuales conservan las 30 más recientes. Si el programa se cierra
+varias veces durante el mismo día, la copia de cierre de esa fecha se actualiza
+en lugar de crear archivos repetidos.
 
 La copia fija:
 
@@ -190,4 +192,3 @@ Resultado al cerrar la fase:
 - La exportación genera CSV legibles por Excel: cumplido.
 - Restaurar recupera datos y conserva primero la base anterior: cumplido.
 - La restauración solo se ejecuta con la aplicación cerrada: cumplido.
-

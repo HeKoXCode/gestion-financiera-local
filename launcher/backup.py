@@ -3,7 +3,7 @@ from __future__ import annotations
 import sqlite3
 from contextlib import closing
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 APPLICATION_TABLES = {
@@ -104,10 +104,29 @@ def create_backup(
             temporary.unlink()
         raise BackupError(f"No se pudo crear el backup {destination.name}") from exc
 
-    if retention is not None and fixed_name is None:
+    if retention is not None:
         _rotate_backups(backup_directory, label=label, retention=retention)
 
     return destination
+
+
+def create_daily_backup(
+    database_path: Path,
+    backup_directory: Path,
+    *,
+    label: str,
+    retention_days: int,
+    day: date | None = None,
+) -> Path | None:
+    """Create or update one backup per calendar day."""
+    backup_day = day or date.today()
+    return create_backup(
+        database_path,
+        backup_directory,
+        label=label,
+        retention=retention_days,
+        fixed_name=f"gestion_{label}_{backup_day.isoformat()}.sqlite3",
+    )
 
 
 def list_backups(backup_directory: Path) -> list[BackupInfo]:

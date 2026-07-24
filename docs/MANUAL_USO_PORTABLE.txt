@@ -31,6 +31,8 @@ Cobranza > seleccionar fecha > Imprimir planilla.
 No cierres solamente la pestaña del navegador.
 En la ventana pequeña de Gestión Financiera presioná “Cerrar y respaldar”.
 El programa detendrá el servidor y guardará una copia final.
+Se guarda una copia por día durante 90 días. Si cerrás varias veces en la misma
+fecha, se actualiza la copia de ese día sin ocupar otro lugar.
 
 4. UBICACIÓN DE LOS DATOS
 
@@ -69,4 +71,3 @@ Reiniciá Windows si otra ejecución quedó bloqueando el puerto local.
 No borres data ni backups.
 Si el problema continúa, conservá la carpeta completa y el backup más reciente
 antes de reemplazar o volver a copiar el programa.
-

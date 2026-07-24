@@ -283,13 +283,13 @@ que podría estar siendo escrito.
 - al iniciar, si no existe una copia reciente;
 - después de una operación financiera importante, actualizando una copia de
   recuperación;
-- al presionar “Crear backup”;
+- al crear una copia manual desde “Datos y respaldo”;
 - al presionar “Cerrar y respaldar”;
 - antes de restaurar otra copia.
 
 ### 7.3 Retención
 
-- conservar las últimas 30 copias de cierre;
+- conservar una copia de cierre por día durante 90 días;
 - conservar una copia de recuperación reciente;
 - no borrar automáticamente exportaciones del usuario;
 - mostrar fecha y tamaño del último backup.
@@ -493,7 +493,7 @@ Acciones:
 
 1. Implementar API de backup SQLite.
 2. Crear copia de recuperación.
-3. Crear “Crear backup”.
+3. Crear el backup manual dentro de “Datos y respaldo”.
 4. Crear “Cerrar y respaldar”.
 5. Rotar copias.
 6. Exportar ZIP de CSV.

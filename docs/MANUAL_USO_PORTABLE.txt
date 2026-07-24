@@ -1,0 +1,72 @@
+GESTIÓN FINANCIERA — MANUAL RÁPIDO
+==================================
+
+1. ABRIR EL PROGRAMA
+
+Conservá completa la carpeta GestionFinanciera.
+Hacé doble clic en INICIAR.bat o GestionFinanciera.exe.
+Se abrirá una ventana pequeña de control y luego el navegador.
+El sistema funciona en este equipo mediante http://127.0.0.1:8765/.
+No necesita Internet, Docker ni Python instalado.
+
+Si Windows muestra una advertencia la primera vez, comprobá que el archivo
+provenga de tu paquete y elegí “Más información” > “Ejecutar de todas formas”.
+
+2. TRABAJO DIARIO
+
+Resumen del día: muestra cobranzas, atrasos y total pendiente.
+Clientes: alta, edición, búsqueda, historial y archivado.
+Productos: catálogo usado al registrar ventas.
+Ventas: carga una financiación y genera sus cuotas.
+Cobranza: registra pagos, pagos parciales o que el cliente no pagó.
+Agenda: consulta cualquier fecha o la semana.
+Reportes: revisa lo cobrado y la cartera pendiente.
+Datos y respaldo: crea backups y exportaciones.
+
+Para imprimir la hoja del cobrador:
+Cobranza > seleccionar fecha > Imprimir planilla.
+
+3. CERRAR CORRECTAMENTE
+
+No cierres solamente la pestaña del navegador.
+En la ventana pequeña de Gestión Financiera presioná “Cerrar y respaldar”.
+El programa detendrá el servidor y guardará una copia final.
+
+4. UBICACIÓN DE LOS DATOS
+
+data\      Base principal. No borrar.
+backups\   Copias SQLite restaurables.
+exports\   ZIP de CSV para Excel.
+media\     Logo y archivos locales.
+
+Para trasladar el programa, copiá la carpeta GestionFinanciera completa.
+No muevas solamente GestionFinanciera.exe ni la carpeta _internal.
+
+5. CREAR UN BACKUP O EXPORTAR
+
+Dentro del sistema abrí “Datos y respaldo”.
+“Crear backup SQLite” produce una copia restaurable.
+“Descargar ZIP de CSV” crea archivos para consultar en Excel.
+El ZIP/CSV no reemplaza al backup SQLite.
+
+Conviene copiar periódicamente un backup .sqlite3 a otro disco o pendrive.
+
+6. RESTAURAR UNA COPIA
+
+1) Cerrá el programa con “Cerrar y respaldar”.
+2) Ejecutá RESTAURAR_DATOS.bat o Restaurador.exe.
+3) Seleccioná un archivo .sqlite3 de la carpeta backups.
+4) Confirmá la operación.
+5) Abrí nuevamente el programa y comprobá los datos.
+
+Antes de reemplazar la base, el restaurador guarda automáticamente otra copia
+preventiva. No intentes restaurar mientras el programa está abierto.
+
+7. SI EL PROGRAMA NO ABRE
+
+Comprobá que GestionFinanciera.exe y la carpeta _internal sigan juntas.
+Reiniciá Windows si otra ejecución quedó bloqueando el puerto local.
+No borres data ni backups.
+Si el problema continúa, conservá la carpeta completa y el backup más reciente
+antes de reemplazar o volver a copiar el programa.
+

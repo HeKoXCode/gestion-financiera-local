@@ -5,7 +5,7 @@ Objetivo: MVP funcional y portable en 2–3 días de trabajo concentrado
 Usuario: una sola persona  
 Modo de uso: local, manual y principalmente offline
 
-Estado al 23/07/2026:
+Estado al 24/07/2026:
 
 - Paso 0 terminado: reglas financieras documentadas.
 - Paso 1 terminado: base local portable.
@@ -16,7 +16,9 @@ Estado al 23/07/2026:
 - Paso 6 terminado: planilla A4, reportes operativos y configuración visual.
 - Paso 7 terminado: backups automáticos y manuales, recuperación reciente,
   exportación ZIP/CSV y restauración segura.
-- Próximo paso: Paso 8, pruebas finales y paquete portable.
+- Paso 8 terminado: 20 casos de aceptación, ejecutables, prueba aislada,
+  manifiesto, ZIP portable y manual.
+- Estado final: MVP terminado.
 
 ## 1. Cambio de enfoque
 
@@ -120,6 +122,7 @@ GestionFinanciera/
 |   `-- manage.py
 |-- launcher/
 |   |-- launcher.py
+|   |-- restorer.py
 |   `-- backup.py
 |-- data/
 |   `-- gestion_financiera.sqlite3
@@ -131,9 +134,12 @@ GestionFinanciera/
 |   |-- Iniciar.bat
 |   |-- Desarrollo.ps1
 |   |-- Probar.ps1
+|   |-- ProbarPortable.ps1
 |   `-- ConstruirPortable.ps1
+|-- portable_assets/
 |-- tests/
 |-- docs/
+|-- GestionFinanciera.spec
 |-- requirements.lock
 |-- pyproject.toml
 `-- README.md
@@ -583,7 +589,17 @@ El MVP estará terminado cuando:
 - funcione desde una carpeta portable;
 - pase los 20 casos obligatorios.
 
-## 13. Próximo paso
+## 13. Estado final y evolución opcional
 
-Completar el Paso 8: ejecutar los casos finales, simular el uso portable,
-construir el paquete PyInstaller y redactar el manual breve de entrega.
+El MVP terminó las ocho fases. El siguiente paso no es otra fase obligatoria,
+sino usar una copia portable con datos reales durante algunos días y registrar
+ajustes de comodidad.
+
+Mejoras opcionales posteriores:
+
+- importación asistida desde planillas anteriores;
+- instalador o acceso directo con icono;
+- firma digital de los ejecutables;
+- gráficos adicionales;
+- recordatorios de WhatsApp más elaborados;
+- sincronización externa de backups elegida por el usuario.

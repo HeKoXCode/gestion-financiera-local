@@ -7,6 +7,23 @@ Fecha de auditoría: 23 de julio de 2026.
 > operativo, pero ya no será necesario para el uso diario ni para abrir la
 > versión portable. Ver [PLAN_MVP_LOCAL.md](PLAN_MVP_LOCAL.md).
 
+## Decisión final aplicada
+
+La arquitectura empresarial descrita más abajo se conserva solamente como
+registro de la auditoría inicial. La implementación final usa:
+
+- Django 5.2 y SQLite;
+- servidor exclusivo en `127.0.0.1`;
+- HTML y CSS incluidos localmente;
+- PyInstaller en modo carpeta;
+- datos, backups, exportaciones y media fuera del ejecutable;
+- `GestionFinanciera.exe` y `Restaurador.exe`;
+- funcionamiento sin Docker, WSL, PostgreSQL ni Python instalado.
+
+El paquete fue construido y probado desde una copia aislada el 24/07/2026. La
+documentación vigente es
+[FASE_8_PRUEBAS_Y_PAQUETE_PORTABLE.md](FASE_8_PRUEBAS_Y_PAQUETE_PORTABLE.md).
+
 ## Resultado
 
 El equipo está aprobado para desarrollar y ejecutar el sistema. Tiene recursos
@@ -73,7 +90,7 @@ No es necesario actualizar el BIOS solamente para habilitar SVM. La versión
 instalada ya es reciente; la actualización de firmware es una operación
 separada y no forma parte de la preparación del proyecto.
 
-## Política de portabilidad del programa
+## Política empresarial inicial, reemplazada por el MVP local
 
 La portabilidad significará que el código y la configuración podrán trasladarse
 a otra computadora o servidor sin depender de rutas, programas o configuraciones

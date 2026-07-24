@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import socket
 import sys
+import traceback
 from pathlib import Path
 from tkinter import BOTH, Button, Frame, Label, StringVar, Tk, filedialog, messagebox
 
@@ -26,6 +27,18 @@ def local_application_is_running() -> bool:
             return True
     except OSError:
         return False
+
+
+def run_smoke_test() -> None:
+    """Validate and restore the isolated portable database without showing Tk."""
+    root_path = portable_root()
+    database_path = root_path / "data" / "gestion_financiera.sqlite3"
+    backup_directory = root_path / "backups"
+    recovery = backup_directory / "gestion_recovery.sqlite3"
+    validate_application_database(database_path)
+    validate_application_database(recovery)
+    restore_database(recovery, database_path, backup_directory)
+    validate_application_database(database_path)
 
 
 class RestorerApplication:
@@ -154,7 +167,26 @@ class RestorerApplication:
 
 
 def main() -> None:
-    RestorerApplication().run()
+    if "--smoke-test" in sys.argv:
+        try:
+            run_smoke_test()
+        except Exception:
+            failure_log = portable_root() / "smoke-test-restorer-error.txt"
+            failure_log.write_text(traceback.format_exc(), encoding="utf-8")
+            raise SystemExit(1) from None
+        return
+    try:
+        RestorerApplication().run()
+    except Exception as exc:
+        try:
+            root = Tk()
+            root.withdraw()
+            messagebox.showerror("No se pudo abrir el restaurador", str(exc))
+            root.destroy()
+        except Exception:
+            if sys.stderr:
+                print(f"No se pudo abrir el restaurador: {exc}", file=sys.stderr)
+        raise SystemExit(1) from None
 
 
 if __name__ == "__main__":

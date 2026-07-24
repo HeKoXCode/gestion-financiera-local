@@ -9,8 +9,7 @@ if (-not (Test-Path -LiteralPath ".venv\Scripts\python.exe")) {
 
 & ".venv\Scripts\python.exe" -m pip install --upgrade pip
 & ".venv\Scripts\python.exe" -m pip install pip-tools==7.6.0
-& ".venv\Scripts\python.exe" -m piptools compile --generate-hashes `
+& ".venv\Scripts\python.exe" -m piptools compile --generate-hashes --allow-unsafe `
     --output-file requirements.lock requirements.in
-& ".venv\Scripts\python.exe" -m piptools compile --generate-hashes `
+& ".venv\Scripts\python.exe" -m piptools compile --generate-hashes --allow-unsafe `
     --output-file requirements-dev.lock requirements-dev.in
-

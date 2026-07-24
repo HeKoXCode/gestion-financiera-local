@@ -3,13 +3,21 @@
 Aplicación local y monousuario para administrar clientes, ventas financiadas,
 cuotas, recargos y cobranzas.
 
-Estado actual: Fases 0 a 7 terminadas. La aplicación ya permite administrar
+Estado actual: Fases 0 a 8 terminadas. El MVP está terminado y permite administrar
 clientes, productos y ventas; generar cuotas y recargos; consultar la cobranza;
 registrar pagos completos o parciales; anularlos; conservar las visitas; revisar
 el dashboard, planificar la agenda semanal, consultar el historial consolidado,
 imprimir la planilla A4, analizar reportes de cobranza y cartera, crear y
 descargar backups, exportar CSV y restaurar una copia de forma segura.
-Próximo paso: pruebas finales y construcción del paquete portable.
+
+La entrega portable validada se encuentra en:
+
+```text
+portable\GestionFinanciera\
+portable\GestionFinanciera-portable.zip
+```
+
+Para utilizarla no es necesario instalar Python, Docker ni PostgreSQL.
 
 La aplicación se ejecutará localmente con Python/Django y SQLite. La versión
 final se entregará como una carpeta portable que podrá abrirse mediante acceso
@@ -62,6 +70,21 @@ Para ejecutar controles y pruebas:
 powershell -ExecutionPolicy Bypass -File scripts\Probar.ps1
 ```
 
+## Paquete portable
+
+Para construir nuevamente la entrega:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\ConstruirPortable.ps1
+```
+
+El proceso ejecuta las pruebas, genera los dos ejecutables, prueba una copia
+aislada, crea un manifiesto de integridad y produce el ZIP.
+
+La carpeta portable comienza sin datos reales. Para trasladar una base
+existente, cerrá el programa de origen, copiá un backup `.sqlite3` a `backups`
+del paquete y ejecutá `RESTAURAR_DATOS.bat`.
+
 ## Datos locales
 
 ```text
@@ -92,5 +115,7 @@ Documentos:
 - [Dashboard, agenda e historial de la Fase 5](docs/FASE_5_DASHBOARD_AGENDA_HISTORIAL.md).
 - [Impresión, reportes y configuración de la Fase 6](docs/FASE_6_IMPRESION_Y_REPORTES.md).
 - [Respaldo, exportación y restauración de la Fase 7](docs/FASE_7_RESPALDO_EXPORTACION_RESTAURACION.md).
+- [Pruebas y paquete portable de la Fase 8](docs/FASE_8_PRUEBAS_Y_PAQUETE_PORTABLE.md).
+- [Manual rápido incluido en la entrega](docs/MANUAL_USO_PORTABLE.txt).
 - [Auditoría del equipo](docs/ENTORNO_Y_PORTABILIDAD.md).
 - [Plan empresarial anterior, conservado como referencia](docs/PLAN_MAESTRO.md).

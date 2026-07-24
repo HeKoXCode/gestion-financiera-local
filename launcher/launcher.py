@@ -4,18 +4,19 @@ import os
 import signal
 import sys
 import threading
+import traceback
 import webbrowser
 from pathlib import Path
 from socketserver import ThreadingMixIn
 from tkinter import BOTH, LEFT, Button, Frame, Label, StringVar, Tk, messagebox
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 from wsgiref.simple_server import WSGIServer, make_server
 
 if not getattr(sys, "frozen", False):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from launcher.backup import BackupError, create_backup
+from launcher.backup import BackupError, create_backup, validate_application_database
 
 HOST = "127.0.0.1"
 PORT = 8765
@@ -41,7 +42,7 @@ def portable_root() -> Path:
 
 def application_code_root(root: Path) -> Path:
     if getattr(sys, "_MEIPASS", None):
-        return Path(sys._MEIPASS) / "app"
+        return Path(sys._MEIPASS)
     return root / "app"
 
 
@@ -129,6 +130,51 @@ class LocalApplication:
                 threading.Event().wait(0.1)
         return False
 
+    def stop_server(self) -> None:
+        if self.server:
+            self.server.shutdown()
+            self.server.server_close()
+            self.server = None
+        if self.server_thread:
+            self.server_thread.join(timeout=5)
+            self.server_thread = None
+
+    def run_smoke_test(self) -> None:
+        """Exercise the frozen application without opening windows or a browser."""
+        self.configure_django()
+        self.start_server()
+        try:
+            if not self.wait_until_ready():
+                raise RuntimeError("El servidor portable no respondió a tiempo")
+            for path in (
+                "/",
+                "/clientes/",
+                "/cobranza/",
+                "/reportes/",
+                "/datos/",
+                "/static/css/app.css",
+            ):
+                try:
+                    with urlopen(f"http://{HOST}:{PORT}{path}", timeout=5) as response:
+                        if response.status != 200 or not response.read(256):
+                            raise RuntimeError(
+                                f"La ruta portable no respondió correctamente: {path}"
+                            )
+                except HTTPError as exc:
+                    raise RuntimeError(
+                        f"La ruta portable devolvió HTTP {exc.code}: {path}"
+                    ) from exc
+        finally:
+            self.stop_server()
+
+        create_backup(
+            self.database_path,
+            self.backup_path,
+            label="close",
+            retention=30,
+        )
+        validate_application_database(self.database_path)
+
     def open_browser(self) -> None:
         webbrowser.open(f"http://{HOST}:{PORT}/")
 
@@ -155,11 +201,7 @@ class LocalApplication:
         self.status.set("Cerrando y creando backup…")
 
         try:
-            if self.server:
-                self.server.shutdown()
-                self.server.server_close()
-            if self.server_thread:
-                self.server_thread.join(timeout=5)
+            self.stop_server()
             backup = create_backup(
                 self.database_path,
                 self.backup_path,
@@ -237,6 +279,14 @@ class LocalApplication:
 
 def main() -> None:
     app = LocalApplication()
+    if "--smoke-test" in sys.argv:
+        try:
+            app.run_smoke_test()
+        except Exception:
+            failure_log = app.root_path / "smoke-test-error.txt"
+            failure_log.write_text(traceback.format_exc(), encoding="utf-8")
+            raise SystemExit(1) from None
+        return
     try:
         app.run()
     except Exception as exc:
@@ -246,8 +296,9 @@ def main() -> None:
             messagebox.showerror("No se pudo iniciar Gestión Financiera", str(exc))
             root.destroy()
         except Exception:
-            print(f"No se pudo iniciar Gestión Financiera: {exc}", file=sys.stderr)
-        raise
+            if sys.stderr:
+                print(f"No se pudo iniciar Gestión Financiera: {exc}", file=sys.stderr)
+        raise SystemExit(1) from None
 
 
 if __name__ == "__main__":

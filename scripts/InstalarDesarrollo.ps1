@@ -20,5 +20,4 @@ $requirementsFile = if (Test-Path -LiteralPath "requirements-dev.lock") {
 
 Write-Host ""
 Write-Host "Entorno de desarrollo preparado."
-Write-Host "Podés iniciar con scripts\Iniciar.bat"
-
+Write-Host "Podes iniciar con scripts\Iniciar.bat"

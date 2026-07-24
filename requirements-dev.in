@@ -1,7 +1,8 @@
 -r requirements.in
 
 coverage==7.15.2
+pyinstaller==6.21.0
 pytest==9.1.1
 pytest-django==4.12.0
 ruff==0.16.0
-
+setuptools==83.0.0

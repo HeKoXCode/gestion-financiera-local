@@ -30,9 +30,10 @@ media/*
 build/
 dist/
 portable/
+tmp/
 *.spec
+!GestionFinanciera.spec
 
 # Sistema operativo
 Thumbs.db
 .DS_Store
-

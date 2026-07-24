@@ -98,6 +98,12 @@ class LocalApplication:
             label="startup",
             retention=5,
         )
+        create_backup(
+            self.database_path,
+            self.backup_path,
+            label="recovery",
+            fixed_name="gestion_recovery.sqlite3",
+        )
 
     def start_server(self) -> None:
         self.server = make_server(

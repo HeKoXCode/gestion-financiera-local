@@ -1,18 +1,27 @@
 import logging
 from collections import Counter
 from datetime import timedelta
+from pathlib import Path
 
+from django.conf import settings as django_settings
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import connection, transaction
 from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from launcher.backup import (
+    BackupError,
+    create_backup,
+    list_backups,
+    resolve_backup_path,
+    validate_sqlite_database,
+)
 from modules.core.forms import (
     BusinessSettingsForm,
     CollectionAttemptForm,
@@ -40,14 +49,29 @@ from modules.core.services.balances import (
 from modules.core.services.collection import build_collection_rows
 from modules.core.services.customer_history import build_customer_history
 from modules.core.services.dashboard import build_dashboard
+from modules.core.services.export_data import (
+    ExportError,
+    create_data_export,
+    list_exports,
+    resolve_export_path,
+)
 from modules.core.services.installments import create_installments
 from modules.core.services.late_fees import generate_missing_late_fees
 from modules.core.services.money import ZERO, as_money, format_ars
 from modules.core.services.payments import register_payment, void_payment
+from modules.core.services.recovery import refresh_recovery_backup
 from modules.core.services.reports import build_reports
 
 logger = logging.getLogger(__name__)
 PAGE_SIZE = 20
+BACKUP_LABELS = {
+    "startup": "Inicio",
+    "close": "Cierre",
+    "manual": "Manual",
+    "recovery": "Recuperación",
+    "pre_migration": "Antes de actualizar",
+    "pre_restore": "Antes de restaurar",
+}
 
 
 def _selected_date(request):
@@ -208,6 +232,7 @@ def configuration(request):
     )
     if request.method == "POST" and form.is_valid():
         form.save()
+        refresh_recovery_backup()
         messages.success(request, "La configuración fue actualizada.")
         return redirect("core:configuration")
     return render(
@@ -217,6 +242,101 @@ def configuration(request):
             "form": form,
             "business_settings": business_settings,
         },
+    )
+
+
+@require_GET
+def data_management(request):
+    backup_directory = Path(django_settings.BACKUP_DIR)
+    export_directory = Path(django_settings.EXPORT_DIR)
+    database_path = Path(django_settings.DATABASES["default"]["NAME"])
+    all_backups = [
+        {
+            "backup": backup,
+            "label": BACKUP_LABELS.get(backup.label, backup.label.replace("_", " ").title()),
+        }
+        for backup in list_backups(backup_directory)
+    ]
+    all_exports = list_exports(export_directory)
+    recovery = next(
+        (row for row in all_backups if row["backup"].is_recovery),
+        None,
+    )
+    return render(
+        request,
+        "core/data/management.html",
+        {
+            "backups": all_backups[:30],
+            "backup_count": len(all_backups),
+            "exports": all_exports[:20],
+            "export_count": len(all_exports),
+            "recovery_backup": recovery,
+            "database_size": database_path.stat().st_size if database_path.is_file() else 0,
+            "database_exists": database_path.is_file(),
+        },
+    )
+
+
+@require_POST
+def backup_create(request):
+    try:
+        backup = create_backup(
+            Path(django_settings.DATABASES["default"]["NAME"]),
+            Path(django_settings.BACKUP_DIR),
+            label="manual",
+            retention=30,
+        )
+    except BackupError as exc:
+        messages.error(request, str(exc))
+    else:
+        if backup:
+            messages.success(request, f"Backup creado: {backup.name}")
+        else:
+            messages.error(request, "Todavía no existe una base para respaldar.")
+    return redirect("core:data_management")
+
+
+@require_GET
+def backup_download(request, name):
+    try:
+        backup = resolve_backup_path(Path(django_settings.BACKUP_DIR), name)
+        validate_sqlite_database(backup)
+    except BackupError as exc:
+        raise Http404(str(exc)) from exc
+    return FileResponse(
+        backup.open("rb"),
+        as_attachment=True,
+        filename=backup.name,
+        content_type="application/vnd.sqlite3",
+    )
+
+
+@require_POST
+def data_export_create(request):
+    try:
+        export = create_data_export()
+    except ExportError as exc:
+        messages.error(request, str(exc))
+        return redirect("core:data_management")
+    return FileResponse(
+        export.open("rb"),
+        as_attachment=True,
+        filename=export.name,
+        content_type="application/zip",
+    )
+
+
+@require_GET
+def data_export_download(request, name):
+    try:
+        export = resolve_export_path(Path(django_settings.EXPORT_DIR), name)
+    except ExportError as exc:
+        raise Http404(str(exc)) from exc
+    return FileResponse(
+        export.open("rb"),
+        as_attachment=True,
+        filename=export.name,
+        content_type="application/zip",
     )
 
 
@@ -260,6 +380,7 @@ def customer_create(request):
     form = CustomerForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         customer = form.save()
+        refresh_recovery_backup()
         messages.success(request, f"Cliente {customer.full_name} creado correctamente.")
         return redirect("core:customer_detail", pk=customer.pk)
 
@@ -298,6 +419,7 @@ def customer_edit(request, pk):
     form = CustomerForm(request.POST or None, instance=customer)
     if request.method == "POST" and form.is_valid():
         customer = form.save()
+        refresh_recovery_backup()
         messages.success(request, f"Datos de {customer.full_name} actualizados.")
         return redirect("core:customer_detail", pk=customer.pk)
 
@@ -319,6 +441,7 @@ def customer_toggle(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
     customer.is_active = not customer.is_active
     customer.save(update_fields=["is_active", "updated_at"])
+    refresh_recovery_backup()
     action = "reactivado" if customer.is_active else "archivado"
     messages.success(request, f"{customer.full_name} fue {action}.")
     return redirect("core:customer_detail", pk=customer.pk)
@@ -359,6 +482,7 @@ def product_create(request):
     form = ProductForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         product = form.save()
+        refresh_recovery_backup()
         messages.success(request, f"Producto {product.name} creado correctamente.")
         return redirect("core:product_list")
 
@@ -380,6 +504,7 @@ def product_edit(request, pk):
     form = ProductForm(request.POST or None, instance=product)
     if request.method == "POST" and form.is_valid():
         product = form.save()
+        refresh_recovery_backup()
         messages.success(request, f"Producto {product.name} actualizado.")
         return redirect("core:product_list")
 
@@ -401,6 +526,7 @@ def product_toggle(request, pk):
     product = get_object_or_404(Product, pk=pk)
     product.is_active = not product.is_active
     product.save(update_fields=["is_active", "updated_at"])
+    refresh_recovery_backup()
     action = "reactivado" if product.is_active else "archivado"
     messages.success(request, f"{product.name} fue {action}.")
     return redirect("core:product_list")
@@ -463,6 +589,7 @@ def sale_create(request):
         except ValidationError as exc:
             form.add_error(None, exc)
         else:
+            refresh_recovery_backup()
             messages.success(
                 request,
                 f"Venta registrada con {sale.installment_count} cuotas.",
@@ -535,6 +662,7 @@ def sale_cancel(request, pk):
                 "updated_at",
             ]
         )
+        refresh_recovery_backup()
         messages.success(request, "La venta fue cancelada sin eliminar su historial.")
         return redirect("core:sale_detail", pk=sale.pk)
 
@@ -620,6 +748,7 @@ def payment_create(request, pk):
             _add_validation_error(form, exc)
         else:
             if result.created:
+                refresh_recovery_backup()
                 messages.success(
                     request,
                     f"Pago de {format_ars(result.payment.amount)} registrado correctamente.",
@@ -660,6 +789,7 @@ def collection_did_not_pay(request, pk):
         defaults={"notes": ""},
     )
     if created:
+        refresh_recovery_backup()
         messages.warning(request, f"Se registró que {sale.customer.full_name} no pagó.")
     else:
         messages.info(request, "Ese resultado ya estaba registrado para la fecha.")
@@ -684,6 +814,7 @@ def collection_attempt_create(request, pk):
         if not created and form.cleaned_data["notes"].strip():
             attempt.notes = form.cleaned_data["notes"].strip()
             attempt.save(update_fields=["notes", "updated_at"])
+        refresh_recovery_backup()
         messages.success(request, "Resultado de la visita guardado.")
         return redirect("core:sale_detail", pk=sale.pk)
 
@@ -714,6 +845,7 @@ def payment_void(request, pk):
         except ValidationError as exc:
             _add_validation_error(form, exc)
         else:
+            refresh_recovery_backup()
             messages.success(request, "El pago fue anulado y el saldo se recalculó.")
             return redirect("core:sale_detail", pk=payment.sale_id)
 

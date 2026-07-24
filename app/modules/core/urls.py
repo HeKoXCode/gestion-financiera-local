@@ -9,6 +9,23 @@ urlpatterns = [
     path("agenda/", views.agenda, name="agenda"),
     path("reportes/", views.reports, name="reports"),
     path("configuracion/", views.configuration, name="configuration"),
+    path("datos/", views.data_management, name="data_management"),
+    path("datos/backups/crear/", views.backup_create, name="backup_create"),
+    path(
+        "datos/backups/<str:name>/",
+        views.backup_download,
+        name="backup_download",
+    ),
+    path(
+        "datos/exportaciones/crear/",
+        views.data_export_create,
+        name="data_export_create",
+    ),
+    path(
+        "datos/exportaciones/<str:name>/",
+        views.data_export_download,
+        name="data_export_download",
+    ),
     path("health/", views.health, name="health"),
     path("clientes/", views.customer_list, name="customer_list"),
     path("clientes/nuevo/", views.customer_create, name="customer_create"),

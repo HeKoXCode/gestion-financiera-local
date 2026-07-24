@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Datos y respaldo · Gestión Financiera{% endblock %}
+
+{% block content %}
+<header class="page-header data-header">
+    <div>
+        <p class="eyebrow">Protección local</p>
+        <h1>Datos y respaldo</h1>
+        <p class="page-subtitle">
+            Copias restaurables de SQLite y exportaciones relacionadas para Excel.
+        </p>
+    </div>
+</header>
+
+<section class="data-kpi-grid">
+    <article>
+        <span>Base activa</span>
+        <strong>{% if database_exists %}Disponible{% else %}No encontrada{% endif %}</strong>
+        <small>{{ database_size|filesizeformat }}</small>
+    </article>
+    <article class="{% if recovery_backup %}is-success{% endif %}">
+        <span>Copia de recuperación</span>
+        <strong>{% if recovery_backup %}Actualizada{% else %}Pendiente{% endif %}</strong>
+        <small>{% if recovery_backup %}{{ recovery_backup.backup.created_at|date:"d/m/Y H:i" }}{% else %}Se crea al guardar operaciones{% endif %}</small>
+    </article>
+    <article>
+        <span>Backups disponibles</span>
+        <strong>{{ backup_count }}</strong>
+        <small>Copias SQLite restaurables</small>
+    </article>
+    <article>
+        <span>Exportaciones</span>
+        <strong>{{ export_count }}</strong>
+        <small>Paquetes ZIP guardados</small>
+    </article>
+</section>
+
+<div class="data-action-grid">
+    <section class="data-action-card">
+        <span class="data-action-icon">DB</span>
+        <div>
+            <p class="eyebrow">Copia completa</p>
+            <h2>Crear backup ahora</h2>
+            <p>Conserva tablas, relaciones, cuotas, pagos y configuración en un único archivo restaurable.</p>
+        </div>
+        <form method="post" action="{% url 'core:backup_create' %}">
+            {% csrf_token %}
+            <button class="btn btn-primary" type="submit">Crear backup SQLite</button>
+        </form>
+    </section>
+
+    <section class="data-action-card">
+        <span class="data-action-icon is-accent">CSV</span>
+        <div>
+            <p class="eyebrow">Consulta y análisis</p>
+            <h2>Exportar todos los datos</h2>
+            <p>Genera un ZIP con CSV UTF-8 para clientes, ventas, cuotas, recargos, pagos y demás relaciones.</p>
+        </div>
+        <form method="post" action="{% url 'core:data_export_create' %}">
+            {% csrf_token %}
+            <button class="btn btn-secondary" type="submit">Descargar ZIP de CSV</button>
+        </form>
+    </section>
+
+    <section class="data-action-card restore-card">
+        <span class="data-action-icon is-warning">↺</span>
+        <div>
+            <p class="eyebrow">Recuperación segura</p>
+            <h2>Restaurar una copia</h2>
+            <p>Cerrá el programa y ejecutá el restaurador externo. Antes de reemplazar la base actual creará otra copia preventiva.</p>
+            <code>scripts\Restaurar.bat</code>
+        </div>
+        <span class="restore-note">El ZIP de CSV no se restaura. Elegí un archivo <strong>.sqlite3</strong>.</span>
+    </section>
+</div>
+
+<section class="panel data-history-panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Recuperación</p>
+            <h2>Backups SQLite</h2>
+        </div>
+        <span class="record-count">{{ backup_count }} copia{{ backup_count|pluralize }}</span>
+    </div>
+    {% if backups %}
+    <div class="table-wrap">
+        <table class="data-table responsive-table backup-table">
+            <thead>
+                <tr><th>Tipo</th><th>Fecha</th><th>Archivo</th><th class="align-right">Tamaño</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for row in backups %}
+                <tr>
+                    <td data-label="Tipo">
+                        {% if row.backup.is_recovery %}
+                            <span class="badge badge-success">{{ row.label }}</span>
+                        {% else %}
+                            <span class="badge badge-neutral">{{ row.label }}</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Fecha">{{ row.backup.created_at|date:"d/m/Y H:i:s" }}</td>
+                    <td data-label="Archivo"><code>{{ row.backup.name }}</code></td>
+                    <td data-label="Tamaño" class="money-cell">{{ row.backup.size|filesizeformat }}</td>
+                    <td class="row-action">
+                        <a class="mini-action" href="{% url 'core:backup_download' row.backup.name %}">Descargar</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state compact">
+        <span class="empty-icon">DB</span>
+        <h3>Todavía no hay backups</h3>
+        <p>Creá la primera copia manual desde el botón superior.</p>
+    </div>
+    {% endif %}
+</section>
+
+<section class="panel data-history-panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Archivos para Excel</p>
+            <h2>Exportaciones CSV</h2>
+        </div>
+        <span class="record-count">{{ export_count }} archivo{{ export_count|pluralize }}</span>
+    </div>
+    {% if exports %}
+    <div class="export-list">
+        {% for export in exports %}
+        <article>
+            <span class="export-file-icon">ZIP</span>
+            <div>
+                <strong>{{ export.name }}</strong>
+                <small>{{ export.created_at|date:"d/m/Y H:i:s" }} · {{ export.size|filesizeformat }}</small>
+            </div>
+            <a class="mini-action" href="{% url 'core:data_export_download' export.name %}">Descargar</a>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state compact">
+        <span class="empty-icon">CSV</span>
+        <h3>Sin exportaciones guardadas</h3>
+        <p>La primera exportación aparecerá aquí después de descargarla.</p>
+    </div>
+    {% endif %}
+</section>
+
+<aside class="data-safety-note">
+    <strong>Qué archivo usar en cada caso</strong>
+    <p><b>SQLite (.sqlite3)</b> recupera el programa completo. <b>ZIP/CSV</b> sirve para consultar, filtrar o analizar datos en Excel, pero no reemplaza al backup.</p>
+</aside>
+{% endblock %}

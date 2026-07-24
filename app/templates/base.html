@@ -64,6 +64,11 @@
                     <span class="nav-icon" aria-hidden="true">⚙</span>
                     <span>Configuración</span>
                 </a>
+                <a class="nav-link {% if 'backup' in current or 'export' in current or current == 'data_management' %}is-active{% endif %}"
+                   href="{% url 'core:data_management' %}">
+                    <span class="nav-icon" aria-hidden="true">▣</span>
+                    <span>Datos y respaldo</span>
+                </a>
             </nav>
 
             <div class="sidebar-footer">

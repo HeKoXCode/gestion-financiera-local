@@ -14,8 +14,9 @@ Estado al 23/07/2026:
 - Paso 4 terminado: recargos automáticos, cobranza, pagos, anulaciones y visitas.
 - Paso 5 terminado: dashboard, agenda semanal e historial consolidado.
 - Paso 6 terminado: planilla A4, reportes operativos y configuración visual.
-- Paso 7 adelantado parcialmente: backup al iniciar, manual y al cerrar.
-- Próximo paso: Paso 7, exportación CSV y restauración segura.
+- Paso 7 terminado: backups automáticos y manuales, recuperación reciente,
+  exportación ZIP/CSV y restauración segura.
+- Próximo paso: Paso 8, pruebas finales y paquete portable.
 
 ## 1. Cambio de enfoque
 
@@ -302,6 +303,7 @@ export_2026-07-24_183000.zip
 |-- pagos.csv
 |-- aplicaciones_pago.csv
 |-- intentos_cobranza.csv
+|-- configuracion.csv
 `-- resumen.txt
 ```
 
@@ -583,5 +585,5 @@ El MVP estará terminado cuando:
 
 ## 13. Próximo paso
 
-Completar el Paso 7: exportación ZIP/CSV, rotación de backups y restauración
-segura desde una herramienta externa.
+Completar el Paso 8: ejecutar los casos finales, simular el uso portable,
+construir el paquete PyInstaller y redactar el manual breve de entrega.

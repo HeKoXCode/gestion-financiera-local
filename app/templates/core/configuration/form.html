@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Configuración · Gestión Financiera{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <div>
+        <p class="eyebrow">Preferencias del programa</p>
+        <h1>Configuración</h1>
+        <p class="page-subtitle">
+            Personalizá el negocio, las cobranzas y los datos que aparecen en las impresiones.
+        </p>
+    </div>
+</header>
+
+<form method="post" enctype="multipart/form-data" class="configuration-form" novalidate>
+    {% csrf_token %}
+    {% include "core/partials/form_errors.html" %}
+
+    <div class="configuration-layout">
+        <div class="configuration-main">
+            <section class="form-card">
+                <div class="form-section-heading">
+                    <span>01</span>
+                    <div><h2>Negocio e impresión</h2><p>Nombre y logo utilizados en el programa y la planilla A4.</p></div>
+                </div>
+                <div class="form-grid two-columns">
+                    <div class="field">
+                        <label for="{{ form.business_name.id_for_label }}">Nombre del negocio</label>
+                        {{ form.business_name }}
+                        {% for error in form.business_name.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                    </div>
+                    <div class="field">
+                        <label for="{{ form.logo.id_for_label }}">Logo <span>Opcional</span></label>
+                        {{ form.logo }}
+                        <p class="field-help">PNG, JPG o WEBP de hasta 2 MB.</p>
+                        {% for error in form.logo.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                    </div>
+                </div>
+            </section>
+
+            <section class="form-card">
+                <div class="form-section-heading">
+                    <span>02</span>
+                    <div><h2>Condiciones financieras</h2><p>Los cambios de recargo se aplican a ventas nuevas.</p></div>
+                </div>
+                <div class="form-grid two-columns">
+                    <div class="field">
+                        <label for="{{ form.daily_late_fee.id_for_label }}">Recargo diario</label>
+                        {{ form.daily_late_fee }}
+                        {% for error in form.daily_late_fee.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                    </div>
+                    <div class="field">
+                        <label for="{{ form.max_installments.id_for_label }}">Cantidad máxima de cuotas</label>
+                        {{ form.max_installments }}
+                        {% for error in form.max_installments.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                    </div>
+                    <div class="field span-2">
+                        <label>Días habilitados para cobranza</label>
+                        <div class="choice-grid day-choice-grid">{{ form.collection_days }}</div>
+                        {% for error in form.collection_days.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                    </div>
+                    <div class="field">
+                        <label>Frecuencias disponibles</label>
+                        <div class="choice-grid">{{ form.available_frequencies }}</div>
+                        {% for error in form.available_frequencies.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                    </div>
+                    <div class="field">
+                        <label for="{{ form.payment_methods_text.id_for_label }}">Métodos de pago</label>
+                        {{ form.payment_methods_text }}
+                        <p class="field-help">{{ form.payment_methods_text.help_text }}</p>
+                        {% for error in form.payment_methods_text.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                    </div>
+                </div>
+            </section>
+
+            <section class="form-card">
+                <div class="form-section-heading">
+                    <span>03</span>
+                    <div><h2>Comportamiento</h2><p>Reglas generales para nuevas operaciones y recordatorios.</p></div>
+                </div>
+                <div class="toggle-list">
+                    <label>{{ form.charge_sundays }} <span><strong>Generar recargos los domingos</strong><small>Cuenta el domingo como un día de atraso.</small></span></label>
+                    <label>{{ form.late_fee_after_partial_payment }} <span><strong>Continuar recargo tras un pago parcial</strong><small>Se mantiene mientras quede saldo en la cuota.</small></span></label>
+                    <label>{{ form.allow_advance_payments }} <span><strong>Permitir pagos adelantados</strong><small>Autoriza aplicar dinero a cuotas que aún no vencieron.</small></span></label>
+                </div>
+                <div class="field">
+                    <label for="{{ form.whatsapp_message.id_for_label }}">Mensaje de WhatsApp</label>
+                    {{ form.whatsapp_message }}
+                    <p class="field-help">Podés usar: {nombre}, {monto} y {vencimiento}.</p>
+                    {% for error in form.whatsapp_message.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
+            </section>
+        </div>
+
+        <aside class="configuration-preview">
+            <section class="panel brand-preview">
+                <p class="eyebrow">Vista de impresión</p>
+                {% if business_settings.logo %}
+                    <img src="{{ business_settings.logo.url }}" alt="Logo actual">
+                {% else %}
+                    <span class="brand-preview-placeholder">GF</span>
+                {% endif %}
+                <h2>{{ business_settings.business_name }}</h2>
+                <p>El encabezado de la planilla diaria usará esta identidad.</p>
+                <a class="btn btn-secondary btn-compact" href="{% url 'core:collection_print' %}" target="_blank">Ver planilla</a>
+            </section>
+        </aside>
+    </div>
+
+    <div class="form-actions">
+        <a class="btn btn-ghost" href="{% url 'core:home' %}">Cancelar</a>
+        <button class="btn btn-primary" type="submit">Guardar configuración</button>
+    </div>
+</form>
+{% endblock %}

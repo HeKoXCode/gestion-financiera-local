@@ -7,6 +7,8 @@ app_name = "core"
 urlpatterns = [
     path("", views.home, name="home"),
     path("agenda/", views.agenda, name="agenda"),
+    path("reportes/", views.reports, name="reports"),
+    path("configuracion/", views.configuration, name="configuration"),
     path("health/", views.health, name="health"),
     path("clientes/", views.customer_list, name="customer_list"),
     path("clientes/nuevo/", views.customer_create, name="customer_create"),
@@ -22,6 +24,11 @@ urlpatterns = [
     path("ventas/<int:pk>/", views.sale_detail, name="sale_detail"),
     path("ventas/<int:pk>/cancelar/", views.sale_cancel, name="sale_cancel"),
     path("cobranza/", views.collection_list, name="collection_list"),
+    path(
+        "cobranza/planilla/",
+        views.collection_print,
+        name="collection_print",
+    ),
     path(
         "cobranza/ventas/<int:pk>/pagar/",
         views.payment_create,

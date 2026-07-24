@@ -1,0 +1,93 @@
+{% load static finance %}
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Planilla de cobranza · {{ selected_date|date:"d-m-Y" }}</title>
+    <link rel="stylesheet" href="{% static 'css/print.css' %}">
+</head>
+<body>
+    <nav class="print-toolbar">
+        <a href="{% url 'core:collection_list' %}?fecha={{ selected_date|date:'Y-m-d' }}">‹ Volver a cobranza</a>
+        <div>
+            <span>Vista preparada para hoja A4</span>
+            <button type="button" onclick="window.print()">Imprimir</button>
+        </div>
+    </nav>
+
+    <main class="print-sheet">
+        <header class="print-header">
+            <div class="print-brand">
+                {% if app_settings.logo %}
+                    <img src="{{ app_settings.logo.url }}" alt="Logo de {{ app_settings.business_name }}">
+                {% else %}
+                    <span>GF</span>
+                {% endif %}
+                <div>
+                    <strong>{{ app_settings.business_name }}</strong>
+                    <small>Control de ventas financiadas</small>
+                </div>
+            </div>
+            <div class="print-title">
+                <p>Planilla diaria</p>
+                <h1>Cobranza del {{ selected_date|date:"l"|upper }}</h1>
+                <time>{{ selected_date|date:"d/m/Y" }}</time>
+            </div>
+        </header>
+
+        <section class="print-summary">
+            <div><span>Clientes</span><strong>{{ client_count }}</strong></div>
+            <div><span>Registros</span><strong>{{ rows|length }}</strong></div>
+            <div><span>Total esperado</span><strong>{{ total_expected|ars }}</strong></div>
+        </section>
+
+        <section class="print-list">
+            {% for row in rows %}
+            <article class="print-entry">
+                <span class="entry-number">{{ forloop.counter|stringformat:"02d" }}</span>
+                <div class="entry-main">
+                    <div class="entry-person">
+                        <div>
+                            <small>Cliente</small>
+                            <h2>{{ row.customer.full_name }}</h2>
+                        </div>
+                        {% if row.days_overdue %}
+                            <strong class="entry-late">{{ row.days_overdue }} día{{ row.days_overdue|pluralize }} de atraso</strong>
+                        {% else %}
+                            <strong class="entry-current">Vence en la fecha</strong>
+                        {% endif %}
+                    </div>
+                    <div class="entry-details">
+                        <div><small>Dirección</small><strong>{{ row.customer.address }}</strong>{% if row.customer.neighborhood %}<span>{{ row.customer.neighborhood }}</span>{% endif %}</div>
+                        <div><small>Producto</small><strong>{{ row.sale.product_description }}</strong><span>Desde cuota {{ row.oldest_installment.number }}/{{ row.sale.installment_count }}</span></div>
+                        <div><small>Debe</small><strong class="entry-amount">{{ row.total_due|ars }}</strong><span>Recargos: {{ row.late_fees_due|ars }}</span></div>
+                    </div>
+                    {% if row.customer.address_reference or row.customer.phone %}
+                    <p class="entry-reference">
+                        {% if row.customer.phone %}Tel. {{ row.customer.phone }}{% endif %}
+                        {% if row.customer.phone and row.customer.address_reference %} · {% endif %}
+                        {{ row.customer.address_reference }}
+                    </p>
+                    {% endif %}
+                    <div class="entry-writing">
+                        <div><span>Firma</span><i></i></div>
+                        <div><span>Observaciones</span><i></i></div>
+                    </div>
+                </div>
+            </article>
+            {% empty %}
+            <section class="print-empty">
+                <strong>Sin cobranzas pendientes</strong>
+                <p>No existen ventas con deuda exigible para esta fecha.</p>
+            </section>
+            {% endfor %}
+        </section>
+
+        <footer class="print-footer">
+            <span>{{ app_settings.business_name }}</span>
+            <span>Planilla {{ selected_date|date:"d/m/Y" }} · generada el {% now "d/m/Y H:i" %}</span>
+        </footer>
+    </main>
+</body>
+</html>

@@ -14,6 +14,7 @@ from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from modules.core.forms import (
+    BusinessSettingsForm,
     CollectionAttemptForm,
     CustomerForm,
     PaymentForm,
@@ -43,6 +44,7 @@ from modules.core.services.installments import create_installments
 from modules.core.services.late_fees import generate_missing_late_fees
 from modules.core.services.money import ZERO, as_money, format_ars
 from modules.core.services.payments import register_payment, void_payment
+from modules.core.services.reports import build_reports
 
 logger = logging.getLogger(__name__)
 PAGE_SIZE = 20
@@ -154,6 +156,66 @@ def agenda(request):
             "route_total": as_money(sum((row["total_due"] for row in rows), ZERO)),
             "client_count": len({row["customer"].pk for row in rows}),
             "neighborhoods": neighborhoods,
+        },
+    )
+
+
+@require_GET
+def reports(request):
+    selected_date = _selected_date(request)
+    today = timezone.localdate()
+    generate_missing_late_fees(as_of=min(selected_date, today))
+    report_data = build_reports(as_of=selected_date)
+    return render(
+        request,
+        "core/reports/index.html",
+        {
+            "selected_date": selected_date,
+            "today": today,
+            **report_data,
+        },
+    )
+
+
+@require_GET
+def collection_print(request):
+    selected_date = _selected_date(request)
+    today = timezone.localdate()
+    generate_missing_late_fees(as_of=min(selected_date, today))
+    rows = build_collection_rows(as_of=selected_date)
+    return render(
+        request,
+        "core/print/daily_collection.html",
+        {
+            "selected_date": selected_date,
+            "today": today,
+            "rows": rows,
+            "client_count": len({row["customer"].pk for row in rows}),
+            "total_expected": as_money(
+                sum((row["total_due"] for row in rows), ZERO)
+            ),
+        },
+    )
+
+
+@require_http_methods(["GET", "POST"])
+def configuration(request):
+    business_settings = BusinessSettings.get_solo()
+    form = BusinessSettingsForm(
+        request.POST or None,
+        request.FILES or None,
+        instance=business_settings,
+    )
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "La configuración fue actualizada.")
+        return redirect("core:configuration")
+    return render(
+        request,
+        "core/configuration/form.html",
+        {
+            "form": form,
+            "business_settings": business_settings,
         },
     )
 

@@ -1,5 +1,6 @@
 import uuid
 from decimal import Decimal
+from pathlib import Path
 
 from django import forms
 from django.core.exceptions import ValidationError
@@ -20,7 +21,10 @@ class StyledModelForm(forms.ModelForm):
     def _apply_styles(self) -> None:
         for field in self.fields.values():
             widget = field.widget
-            if isinstance(widget, (forms.CheckboxInput, forms.RadioSelect)):
+            if isinstance(
+                widget,
+                (forms.CheckboxInput, forms.RadioSelect, forms.CheckboxSelectMultiple),
+            ):
                 continue
             current = widget.attrs.get("class", "")
             widget.attrs["class"] = f"{current} form-control".strip()
@@ -86,6 +90,108 @@ class ProductForm(StyledModelForm):
 
     def clean_name(self):
         return self.cleaned_data["name"].strip()
+
+
+class BusinessSettingsForm(StyledModelForm):
+    DAY_CHOICES = [
+        (0, "Lunes"),
+        (1, "Martes"),
+        (2, "Miércoles"),
+        (3, "Jueves"),
+        (4, "Viernes"),
+        (5, "Sábado"),
+        (6, "Domingo"),
+    ]
+
+    collection_days = forms.TypedMultipleChoiceField(
+        label="Días habilitados para cobranza",
+        choices=DAY_CHOICES,
+        coerce=int,
+        widget=forms.CheckboxSelectMultiple,
+    )
+    payment_methods_text = forms.CharField(
+        label="Métodos de pago",
+        help_text="Escribí uno por línea. Por ejemplo: Efectivo, Transferencia y Otro.",
+        widget=forms.Textarea(attrs={"rows": 4}),
+    )
+    available_frequencies = forms.MultipleChoiceField(
+        label="Frecuencias disponibles",
+        choices=Sale.Frequency.choices,
+        widget=forms.CheckboxSelectMultiple,
+    )
+
+    class Meta:
+        model = BusinessSettings
+        fields = [
+            "business_name",
+            "logo",
+            "daily_late_fee",
+            "collection_days",
+            "payment_methods_text",
+            "available_frequencies",
+            "max_installments",
+            "charge_sundays",
+            "late_fee_after_partial_payment",
+            "allow_advance_payments",
+            "whatsapp_message",
+        ]
+        widgets = {
+            "daily_late_fee": forms.TextInput(
+                attrs={"inputmode": "decimal", "data-money-input": ""}
+            ),
+            "max_installments": forms.NumberInput(attrs={"min": 1, "max": 999}),
+            "whatsapp_message": forms.Textarea(attrs={"rows": 4}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._apply_styles()
+        if self.instance and self.instance.pk:
+            self.initial["collection_days"] = self.instance.collection_days
+            self.initial["payment_methods_text"] = "\n".join(
+                self.instance.payment_methods
+            )
+            self.initial["available_frequencies"] = (
+                self.instance.available_frequencies
+            )
+
+    def clean_business_name(self):
+        return self.cleaned_data["business_name"].strip()
+
+    def clean_logo(self):
+        logo = self.cleaned_data.get("logo")
+        if not logo or not hasattr(logo, "size"):
+            return logo
+        if logo.size > 2 * 1024 * 1024:
+            raise ValidationError("El logo no puede superar los 2 MB.")
+        valid_extensions = {".png", ".jpg", ".jpeg", ".webp"}
+        if Path(logo.name).suffix.lower() not in valid_extensions:
+            raise ValidationError("Usá un logo PNG, JPG, JPEG o WEBP.")
+        return logo
+
+    def clean_payment_methods_text(self):
+        raw_value = self.cleaned_data["payment_methods_text"]
+        methods = []
+        for line in raw_value.replace(",", "\n").splitlines():
+            method = line.strip()
+            if method and method.casefold() not in {
+                existing.casefold() for existing in methods
+            }:
+                methods.append(method)
+        if not methods:
+            raise ValidationError("Indicá al menos un método de pago.")
+        return methods
+
+    def save(self, commit=True):
+        settings = super().save(commit=False)
+        settings.collection_days = self.cleaned_data["collection_days"]
+        settings.payment_methods = self.cleaned_data["payment_methods_text"]
+        settings.available_frequencies = self.cleaned_data[
+            "available_frequencies"
+        ]
+        if commit:
+            settings.save()
+        return settings
 
 
 class SaleForm(StyledModelForm):

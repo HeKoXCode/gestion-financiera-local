@@ -53,12 +53,17 @@
                     <span>Agenda</span>
                 </a>
 
-                <span class="nav-section-label nav-section-secondary">Siguiente etapa</span>
-                <span class="nav-link is-disabled" title="Se habilitará en la Fase 6">
+                <span class="nav-section-label nav-section-secondary">Análisis</span>
+                <a class="nav-link {% if current == 'reports' %}is-active{% endif %}"
+                   href="{% url 'core:reports' %}">
                     <span class="nav-icon" aria-hidden="true">⌁</span>
                     <span>Reportes</span>
-                    <small>Próximo</small>
-                </span>
+                </a>
+                <a class="nav-link {% if current == 'configuration' %}is-active{% endif %}"
+                   href="{% url 'core:configuration' %}">
+                    <span class="nav-icon" aria-hidden="true">⚙</span>
+                    <span>Configuración</span>
+                </a>
             </nav>
 
             <div class="sidebar-footer">

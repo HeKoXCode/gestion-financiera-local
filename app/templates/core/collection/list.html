@@ -12,14 +12,20 @@
             Cuotas exigibles agrupadas por venta, con sus recargos y saldo actualizado.
         </p>
     </div>
-    <form class="date-picker" method="get">
-        <label for="collection-date">Cambiar fecha</label>
-        <div>
-            <input id="collection-date" class="form-control" type="date" name="fecha"
-                   value="{{ selected_date|date:'Y-m-d' }}">
-            <button class="btn btn-secondary" type="submit">Ver</button>
-        </div>
-    </form>
+    <div class="collection-header-actions">
+        <a class="btn btn-secondary"
+           href="{% url 'core:collection_print' %}?fecha={{ selected_date|date:'Y-m-d' }}">
+            Imprimir planilla
+        </a>
+        <form class="date-picker" method="get">
+            <label for="collection-date">Cambiar fecha</label>
+            <div>
+                <input id="collection-date" class="form-control" type="date" name="fecha"
+                       value="{{ selected_date|date:'Y-m-d' }}">
+                <button class="btn btn-secondary" type="submit">Ver</button>
+            </div>
+        </form>
+    </div>
 </header>
 
 <div class="collection-date-nav">
@@ -122,4 +128,3 @@
     {% endfor %}
 </section>
 {% endblock %}
-

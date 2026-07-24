@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Entornos locales
+.venv/
+venv/
+
+# Configuración y editores
+.env
+.vscode/
+.idea/
+
+# Datos del usuario
+data/*
+!data/.gitignore
+backups/*
+!backups/.gitignore
+exports/*
+!exports/.gitignore
+media/*
+!media/.gitignore
+
+# Construcción portable
+build/
+dist/
+portable/
+*.spec
+
+# Sistema operativo
+Thumbs.db
+.DS_Store
+

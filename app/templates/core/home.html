@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio · Gestión Financiera{% endblock %}
+
+{% block content %}
+<section class="status-card">
+    <p class="eyebrow">Aplicación local</p>
+    <h1>Base técnica operativa</h1>
+    <p>
+        SQLite, archivos locales y estructura portable están listos para incorporar
+        clientes, ventas, cuotas y cobranzas.
+    </p>
+    <dl class="status-list">
+        <div>
+            <dt>Estado</dt>
+            <dd><span class="status-dot"></span> En funcionamiento</dd>
+        </div>
+        <div>
+            <dt>Conexión</dt>
+            <dd>Solo este equipo</dd>
+        </div>
+        <div>
+            <dt>Próximo módulo</dt>
+            <dd>Clientes y ventas</dd>
+        </div>
+    </dl>
+</section>
+{% endblock %}
+

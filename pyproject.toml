@@ -1,0 +1,40 @@
+[project]
+name = "gestion-financiera"
+version = "0.1.0"
+description = "Aplicación local de ventas financiadas y cobranza"
+requires-python = ">=3.12,<3.13"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+pythonpath = ["app", "."]
+testpaths = ["app/modules", "tests"]
+python_files = ["test_*.py", "*_test.py"]
+addopts = [
+    "-ra",
+    "--strict-config",
+    "--strict-markers",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["app", "launcher"]
+omit = [
+    "*/migrations/*",
+    "app/manage.py",
+    "app/config/asgi.py",
+    "app/config/wsgi.py",
+    "launcher/launcher.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 80
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["app/modules/*/migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

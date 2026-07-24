@@ -1,0 +1,112 @@
+:root {
+    color-scheme: light;
+    --bg: #f4f6f8;
+    --surface: #ffffff;
+    --text: #17212b;
+    --muted: #667085;
+    --primary: #2557a7;
+    --success: #15803d;
+    --border: #d9e0e7;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.container {
+    width: min(100% - 2rem, 72rem);
+    margin-inline: auto;
+}
+
+.app-header {
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.brand {
+    display: inline-block;
+    padding-block: 1rem;
+    color: var(--primary);
+    font-size: 1.05rem;
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.status-card {
+    max-width: 48rem;
+    margin: 8vh auto 0;
+    padding: clamp(1.5rem, 4vw, 3rem);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: var(--surface);
+    box-shadow: 0 1rem 3rem rgb(15 23 42 / 8%);
+}
+
+.eyebrow {
+    margin: 0;
+    color: var(--primary);
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+h1 {
+    margin: 0.5rem 0 0.75rem;
+    font-size: clamp(2rem, 5vw, 3rem);
+    line-height: 1.05;
+}
+
+.status-card > p:not(.eyebrow) {
+    max-width: 58ch;
+    color: var(--muted);
+    line-height: 1.65;
+}
+
+.status-list {
+    display: grid;
+    gap: 0.75rem;
+    margin: 2rem 0 0;
+}
+
+.status-list div {
+    display: grid;
+    grid-template-columns: 8rem 1fr;
+    gap: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+}
+
+.status-list dt {
+    color: var(--muted);
+}
+
+.status-list dd {
+    margin: 0;
+    font-weight: 650;
+}
+
+.status-dot {
+    display: inline-block;
+    width: 0.65rem;
+    height: 0.65rem;
+    margin-right: 0.35rem;
+    border-radius: 999px;
+    background: var(--success);
+}
+
+@media (max-width: 36rem) {
+    .status-list div {
+        grid-template-columns: 1fr;
+        gap: 0.2rem;
+    }
+}
+

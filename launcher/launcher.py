@@ -25,6 +25,14 @@ class ThreadingServer(ThreadingMixIn, WSGIServer):
     daemon_threads = True
 
 
+def build_local_wsgi_application():
+    """Serve Django and its bundled static assets from the same local process."""
+    from config.wsgi import application
+    from django.contrib.staticfiles.handlers import StaticFilesHandler
+
+    return StaticFilesHandler(application)
+
+
 def portable_root() -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
@@ -92,12 +100,10 @@ class LocalApplication:
         )
 
     def start_server(self) -> None:
-        from config.wsgi import application
-
         self.server = make_server(
             HOST,
             PORT,
-            application,
+            build_local_wsgi_application(),
             server_class=ThreadingServer,
         )
         self.server_thread = threading.Thread(

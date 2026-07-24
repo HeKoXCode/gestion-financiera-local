@@ -3,8 +3,9 @@
 Aplicación local y monousuario para administrar clientes, ventas financiadas,
 cuotas, recargos y cobranzas.
 
-Estado actual: base técnica local operativa. Próximo paso: modelos y
-configuración funcional.
+Estado actual: Fases 0, 1 y 2 terminadas. La base local, las reglas financieras,
+los modelos relacionales, los cronogramas de cuotas, los saldos y los recargos
+idempotentes están operativos. Próximo paso: clientes, productos y ventas.
 
 La aplicación se ejecutará localmente con Python/Django y SQLite. La versión
 final se entregará como una carpeta portable que podrá abrirse mediante acceso
@@ -66,6 +67,8 @@ Docker y PostgreSQL no son necesarios para este MVP.
 Documentos:
 
 - [Plan vigente del MVP local](docs/PLAN_MVP_LOCAL.md).
+- [Reglas financieras de la Fase 0](docs/FASE_0_REGLAS_FINANCIERAS.md).
 - [Base técnica implementada](docs/FASE_1_BASE_LOCAL.md).
+- [Modelos y motor base de la Fase 2](docs/FASE_2_MODELOS_Y_MOTOR.md).
 - [Auditoría del equipo](docs/ENTORNO_Y_PORTABILIDAD.md).
 - [Plan empresarial anterior, conservado como referencia](docs/PLAN_MAESTRO.md).

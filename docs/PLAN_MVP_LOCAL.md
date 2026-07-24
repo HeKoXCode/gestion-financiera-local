@@ -5,6 +5,14 @@ Objetivo: MVP funcional y portable en 2–3 días de trabajo concentrado
 Usuario: una sola persona  
 Modo de uso: local, manual y principalmente offline
 
+Estado al 23/07/2026:
+
+- Paso 0 terminado: reglas financieras documentadas.
+- Paso 1 terminado: base local portable.
+- Paso 2 terminado: modelos, restricciones, configuración y motor base.
+- Paso 7 adelantado parcialmente: backup al iniciar, manual y al cerrar.
+- Próximo paso: Paso 3, clientes, productos y ventas.
+
 ## 1. Cambio de enfoque
 
 El sistema no se diseñará como plataforma empresarial ni como servicio en la
@@ -571,7 +579,5 @@ El MVP estará terminado cuando:
 
 ## 13. Próximo paso
 
-Comenzar el Paso 1 y construir la base local portable. Antes de implementar el
-motor financiero se confirmarán las cinco reglas del Paso 0 o se usarán los
-valores predeterminados de este documento.
-
+Comenzar el Paso 3 y construir las pantallas de clientes, productos y ventas,
+incluyendo la previsualización y creación automática del cronograma de cuotas.

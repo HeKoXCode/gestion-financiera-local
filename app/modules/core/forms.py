@@ -1,9 +1,17 @@
+import uuid
 from decimal import Decimal
 
 from django import forms
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
-from modules.core.models import BusinessSettings, Customer, Product, Sale
+from modules.core.models import (
+    BusinessSettings,
+    CollectionAttempt,
+    Customer,
+    Product,
+    Sale,
+)
 
 
 class StyledModelForm(forms.ModelForm):
@@ -206,3 +214,120 @@ class SaleCancellationForm(forms.Form):
             }
         ),
     )
+
+
+class PaymentForm(forms.Form):
+    operation_key = forms.UUIDField(widget=forms.HiddenInput, initial=uuid.uuid4)
+    amount = forms.DecimalField(
+        label="Monto abonado",
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        localize=True,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "inputmode": "decimal",
+                "data-payment-amount": "",
+                "autofocus": True,
+            }
+        ),
+    )
+    payment_date = forms.DateField(
+        label="Fecha",
+        initial=timezone.localdate,
+        widget=forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+    )
+    payment_method = forms.ChoiceField(
+        label="Método de pago",
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+    notes = forms.CharField(
+        label="Observaciones",
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 3,
+                "placeholder": "Opcional",
+            }
+        ),
+    )
+
+    def __init__(
+        self,
+        *args,
+        settings: BusinessSettings,
+        sale: Sale,
+        due_amount: Decimal,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.settings = settings
+        self.sale = sale
+        self.fields["payment_method"].choices = [
+            (method, method) for method in settings.payment_methods
+        ]
+        if not self.is_bound:
+            self.initial["amount"] = due_amount
+
+    def clean_payment_date(self):
+        payment_date = self.cleaned_data["payment_date"]
+        if payment_date < self.sale.delivery_date:
+            raise ValidationError("La fecha no puede ser anterior a la entrega.")
+        if payment_date > timezone.localdate():
+            raise ValidationError("No se puede registrar un pago futuro.")
+        return payment_date
+
+
+class PaymentVoidForm(forms.Form):
+    reason = forms.CharField(
+        label="Motivo de anulación",
+        min_length=3,
+        max_length=500,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 4,
+                "autofocus": True,
+                "placeholder": "Ej. pago cargado dos veces o importe incorrecto",
+            }
+        ),
+    )
+
+
+class CollectionAttemptForm(forms.Form):
+    attempt_date = forms.DateField(
+        label="Fecha",
+        initial=timezone.localdate,
+        widget=forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+    )
+    result = forms.ChoiceField(
+        label="Resultado",
+        choices=CollectionAttempt.Result.choices,
+        initial=CollectionAttempt.Result.DID_NOT_PAY,
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+    notes = forms.CharField(
+        label="Observaciones",
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 4,
+                "placeholder": "Ej. pidió que vuelva el viernes",
+            }
+        ),
+    )
+
+    def __init__(self, *args, sale: Sale, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.sale = sale
+
+    def clean_attempt_date(self):
+        attempt_date = self.cleaned_data["attempt_date"]
+        if attempt_date < self.sale.delivery_date:
+            raise ValidationError("La fecha no puede ser anterior a la entrega.")
+        if attempt_date > timezone.localdate():
+            raise ValidationError("No se puede registrar una visita futura.")
+        return attempt_date

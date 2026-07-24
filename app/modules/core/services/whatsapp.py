@@ -1,0 +1,44 @@
+from decimal import Decimal
+from urllib.parse import quote
+
+from modules.core.models import BusinessSettings, Customer
+from modules.core.services.money import format_ars
+
+
+def normalize_argentina_whatsapp_number(phone: str) -> str:
+    digits = "".join(character for character in phone if character.isdigit())
+    if digits.startswith("00"):
+        digits = digits[2:]
+    if digits.startswith("0"):
+        digits = digits[1:]
+
+    if digits.startswith("549"):
+        return digits
+    if digits.startswith("54"):
+        local_number = digits[2:]
+        if local_number.startswith("15"):
+            local_number = local_number[2:]
+        return f"549{local_number}"
+    if digits.startswith("15"):
+        digits = digits[2:]
+    return f"549{digits}" if digits else ""
+
+
+def build_payment_reminder_url(
+    *,
+    customer: Customer,
+    amount: Decimal,
+    due_date,
+    settings: BusinessSettings | None = None,
+) -> str:
+    number = normalize_argentina_whatsapp_number(customer.phone)
+    if not number:
+        return ""
+
+    settings = settings or BusinessSettings.get_solo()
+    message = settings.whatsapp_message.format(
+        nombre=customer.first_name,
+        monto=format_ars(amount),
+        vencimiento=due_date.strftime("%d/%m/%Y"),
+    )
+    return f"https://wa.me/{number}?text={quote(message)}"

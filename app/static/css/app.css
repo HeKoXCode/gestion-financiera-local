@@ -1624,6 +1624,465 @@ textarea.form-control {
     font-weight: 750;
 }
 
+.table-actions {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.mini-action {
+    display: inline-flex;
+    min-height: 1.9rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.3rem 0.55rem;
+    border-radius: 0.52rem;
+    background: var(--surface-soft);
+    color: var(--ink-soft);
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.mini-action.primary {
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+}
+
+.mini-action.danger {
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
+.payment-action-cell {
+    width: 5rem;
+    text-align: right;
+}
+
+.collection-date-nav {
+    display: flex;
+    max-width: 32rem;
+    align-items: center;
+    justify-content: space-between;
+    margin: -0.5rem 0 1rem;
+    font-size: 0.76rem;
+    font-weight: 750;
+}
+
+.collection-date-nav a {
+    text-decoration: none;
+}
+
+.collection-date-nav .today-link {
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+}
+
+.future-notice {
+    display: flex;
+    gap: 0.7rem;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid #ecd5aa;
+    border-radius: var(--radius);
+    background: var(--accent-soft);
+    color: #74511e;
+}
+
+.future-notice span {
+    display: grid;
+    flex: 0 0 1.4rem;
+    width: 1.4rem;
+    height: 1.4rem;
+    place-items: center;
+    border-radius: 50%;
+    background: rgb(116 81 30 / 10%);
+    font-size: 0.75rem;
+    font-weight: 900;
+}
+
+.future-notice p {
+    margin-bottom: 0;
+    font-size: 0.78rem;
+}
+
+.collection-list {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.collection-card {
+    display: grid;
+    grid-template-columns: minmax(18rem, 1.2fr) minmax(13rem, 0.8fr) minmax(14rem, 0.7fr);
+    gap: 1rem;
+    align-items: center;
+    padding: 1.15rem;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--primary);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.collection-card.is-overdue {
+    border-left-color: var(--danger);
+}
+
+.collection-person {
+    display: flex;
+    min-width: 0;
+    gap: 0.8rem;
+    align-items: center;
+}
+
+.collection-avatar {
+    display: grid;
+    flex: 0 0 3rem;
+    width: 3rem;
+    height: 3rem;
+    place-items: center;
+    border-radius: 0.9rem;
+    background: var(--sidebar);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 900;
+}
+
+.collection-person h2 {
+    margin-bottom: 0;
+    font-size: 1.02rem;
+}
+
+.collection-person h2 a {
+    color: var(--ink);
+    text-decoration: none;
+}
+
+.collection-person p,
+.collection-person small {
+    display: block;
+    margin: 0.18rem 0 0;
+    color: var(--ink-soft);
+    font-size: 0.77rem;
+}
+
+.collection-person small {
+    color: var(--muted);
+    font-size: 0.68rem;
+}
+
+.collection-product > span,
+.collection-product > strong,
+.collection-product > small {
+    display: block;
+}
+
+.collection-product > span {
+    color: var(--muted);
+    font-size: 0.63rem;
+    font-weight: 850;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.collection-product > strong {
+    margin-block: 0.18rem;
+}
+
+.collection-product > small {
+    color: var(--muted);
+}
+
+.collection-breakdown {
+    display: grid;
+    gap: 0.3rem;
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    background: var(--surface-soft);
+}
+
+.collection-breakdown > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--ink-soft);
+    font-size: 0.72rem;
+}
+
+.collection-breakdown strong {
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+}
+
+.collection-breakdown .collection-total {
+    margin-top: 0.2rem;
+    padding-top: 0.45rem;
+    border-top: 1px solid var(--border);
+    color: var(--ink);
+    font-size: 0.82rem;
+    font-weight: 850;
+}
+
+.collection-total strong {
+    font-size: 1.08rem;
+}
+
+.collection-actions {
+    display: flex;
+    grid-column: 1 / -1;
+    gap: 0.45rem;
+    align-items: center;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--border);
+}
+
+.collection-actions form {
+    margin: 0;
+}
+
+.whatsapp-action,
+.detail-action {
+    padding: 0.45rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 780;
+    text-decoration: none;
+}
+
+.whatsapp-action {
+    margin-left: auto;
+    border-radius: 0.6rem;
+    background: #e5f6e8;
+    color: #24713d;
+}
+
+.detail-action {
+    color: var(--ink-soft);
+}
+
+.payment-hero {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding: clamp(1.2rem, 3vw, 1.7rem);
+    border-radius: var(--radius-lg);
+    background:
+        radial-gradient(circle at 80% -50%, rgb(255 255 255 / 14%), transparent 18rem),
+        var(--sidebar);
+    color: #fff;
+    box-shadow: var(--shadow-md);
+}
+
+.payment-hero h1 {
+    margin-bottom: 0.2rem;
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+}
+
+.payment-hero p:not(.eyebrow) {
+    margin-bottom: 0;
+    color: rgb(255 255 255 / 64%);
+}
+
+.payment-hero .eyebrow {
+    color: #8fe0c4;
+}
+
+.payment-due {
+    min-width: 14rem;
+    padding: 0.8rem 1rem;
+    border: 1px solid rgb(255 255 255 / 13%);
+    border-radius: var(--radius);
+    background: rgb(255 255 255 / 8%);
+}
+
+.payment-due span,
+.payment-due strong,
+.payment-due small {
+    display: block;
+}
+
+.payment-due span,
+.payment-due small {
+    color: rgb(255 255 255 / 62%);
+    font-size: 0.7rem;
+}
+
+.payment-due strong {
+    margin-block: 0.1rem;
+    color: #fff;
+    font-size: 1.7rem;
+}
+
+.payment-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(17rem, 0.65fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.payment-form {
+    display: grid;
+    gap: 1.2rem;
+}
+
+.payment-breakdown {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+}
+
+.payment-breakdown > div {
+    padding: 0.8rem;
+    border-radius: 0.75rem;
+    background: var(--surface-soft);
+}
+
+.payment-breakdown span,
+.payment-breakdown strong {
+    display: block;
+}
+
+.payment-breakdown span {
+    color: var(--muted);
+    font-size: 0.68rem;
+}
+
+.payment-breakdown strong {
+    margin-top: 0.15rem;
+    font-size: 1.05rem;
+}
+
+.payment-amount-field {
+    padding: 1rem;
+    border: 1px solid #badbd2;
+    border-radius: var(--radius);
+    background: var(--primary-soft);
+}
+
+.money-input.large > span {
+    left: 1rem;
+    color: var(--primary-dark);
+    font-size: 1.2rem;
+}
+
+.money-input.large .form-control {
+    min-height: 3.6rem;
+    padding-left: 2.2rem;
+    border-color: #9fcabf;
+    background: #fff;
+    font-size: 1.35rem;
+    font-weight: 800;
+}
+
+.payment-help {
+    padding: 1.2rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.payment-help ol {
+    display: grid;
+    gap: 0.8rem;
+    margin: 1rem 0;
+    padding: 0;
+    list-style: none;
+}
+
+.payment-help li {
+    display: flex;
+    gap: 0.7rem;
+    align-items: flex-start;
+}
+
+.payment-help li > span {
+    display: grid;
+    flex: 0 0 1.8rem;
+    width: 1.8rem;
+    height: 1.8rem;
+    place-items: center;
+    border-radius: 0.6rem;
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+    font-size: 0.7rem;
+    font-weight: 900;
+}
+
+.payment-help li strong,
+.payment-help li small {
+    display: block;
+}
+
+.payment-help li small {
+    margin-top: 0.12rem;
+    color: var(--muted);
+}
+
+.partial-note {
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    background: var(--accent-soft);
+    color: #77521c;
+    font-size: 0.75rem;
+}
+
+.history-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(18rem, 0.6fr);
+    gap: 1rem;
+}
+
+.history-grid .panel {
+    min-width: 0;
+}
+
+.attempt-list {
+    padding: 0.4rem 1.1rem 1rem;
+}
+
+.attempt-list article {
+    display: flex;
+    gap: 0.7rem;
+    align-items: flex-start;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.attempt-list article:last-child {
+    border-bottom: 0;
+}
+
+.attempt-date {
+    display: grid;
+    flex: 0 0 2.6rem;
+    width: 2.6rem;
+    height: 2.2rem;
+    place-items: center;
+    border-radius: 0.6rem;
+    background: var(--surface-soft);
+    color: var(--ink-soft);
+    font-size: 0.68rem;
+    font-weight: 850;
+}
+
+.attempt-list p {
+    margin: 0.15rem 0 0;
+    color: var(--muted);
+    font-size: 0.72rem;
+}
+
+.confirm-icon.neutral {
+    background: var(--primary-soft);
+    color: var(--primary);
+}
+
 @media (max-width: 74rem) {
     .stats-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1639,6 +2098,18 @@ textarea.form-control {
 
     .sale-summary-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .collection-card {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .collection-breakdown {
+        grid-column: span 2;
+    }
+
+    .history-grid {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -1705,7 +2176,8 @@ textarea.form-control {
     }
 
     .detail-grid,
-    .sale-form-layout {
+    .sale-form-layout,
+    .payment-layout {
         grid-template-columns: 1fr;
     }
 
@@ -1716,6 +2188,14 @@ textarea.form-control {
 
     .preview-table-wrap {
         max-height: 30rem;
+    }
+
+    .collection-card {
+        grid-template-columns: 1fr;
+    }
+
+    .collection-breakdown {
+        grid-column: span 1;
     }
 }
 
@@ -1864,6 +2344,30 @@ textarea.form-control {
     .date-picker > div {
         flex-wrap: wrap;
     }
+
+    .collection-actions,
+    .payment-hero {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .collection-actions .whatsapp-action {
+        margin-left: 0;
+    }
+
+    .collection-actions .btn,
+    .collection-actions form,
+    .collection-actions form .btn {
+        width: 100%;
+    }
+
+    .payment-due {
+        min-width: 0;
+    }
+
+    .payment-breakdown {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1874,4 +2378,3 @@ textarea.form-control {
         transition-duration: 0.01ms !important;
     }
 }
-

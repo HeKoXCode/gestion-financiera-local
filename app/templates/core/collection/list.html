@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% load finance %}
+
+{% block title %}Cobranza · Gestión Financiera{% endblock %}
+
+{% block content %}
+<header class="page-header collection-header">
+    <div>
+        <p class="eyebrow">Trabajo del día</p>
+        <h1>Cobranza del {{ selected_date|date:"d/m/Y" }}</h1>
+        <p class="page-subtitle">
+            Cuotas exigibles agrupadas por venta, con sus recargos y saldo actualizado.
+        </p>
+    </div>
+    <form class="date-picker" method="get">
+        <label for="collection-date">Cambiar fecha</label>
+        <div>
+            <input id="collection-date" class="form-control" type="date" name="fecha"
+                   value="{{ selected_date|date:'Y-m-d' }}">
+            <button class="btn btn-secondary" type="submit">Ver</button>
+        </div>
+    </form>
+</header>
+
+<div class="collection-date-nav">
+    <a href="?fecha={{ previous_date|date:'Y-m-d' }}">‹ Día anterior</a>
+    {% if selected_date != today %}
+        <a class="today-link" href="{% url 'core:collection_list' %}">Volver a hoy</a>
+    {% else %}
+        <span class="today-link">Hoy</span>
+    {% endif %}
+    <a href="?fecha={{ next_date|date:'Y-m-d' }}">Día siguiente ›</a>
+</div>
+
+<section class="stats-grid collection-stats">
+    <article class="stat-card stat-primary">
+        <div class="stat-icon" aria-hidden="true">◎</div>
+        <div><span>Clientes a cobrar</span><strong>{{ client_count }}</strong><small>Con deuda exigible</small></div>
+    </article>
+    <article class="stat-card">
+        <div class="stat-icon" aria-hidden="true">$</div>
+        <div><span>Total esperado</span><strong>{{ total_expected|ars }}</strong><small>Capital y recargos</small></div>
+    </article>
+    <article class="stat-card stat-warning">
+        <div class="stat-icon" aria-hidden="true">!</div>
+        <div><span>Clientes atrasados</span><strong>{{ overdue_count }}</strong><small>{{ overdue_total|ars }} pendiente</small></div>
+    </article>
+    <article class="stat-card stat-dark">
+        <div class="stat-icon" aria-hidden="true">✓</div>
+        <div><span>Cobrado en la fecha</span><strong>{{ collected_amount|ars }}</strong><small>Pagos no anulados</small></div>
+    </article>
+</section>
+
+{% if selected_date > today %}
+<div class="future-notice">
+    <span aria-hidden="true">i</span>
+    <p>Estás consultando una fecha futura. Podés revisar la agenda, pero los pagos solo se registran con fecha de hoy o anterior.</p>
+</div>
+{% endif %}
+
+<section class="collection-list">
+    {% for row in rows %}
+    <article class="collection-card {% if row.days_overdue %}is-overdue{% endif %}">
+        <div class="collection-person">
+            <div class="collection-avatar">
+                {{ row.customer.first_name|first|upper }}{{ row.customer.last_name|first|upper }}
+            </div>
+            <div>
+                <div class="title-with-badge">
+                    <h2><a href="{% url 'core:customer_detail' row.customer.pk %}">{{ row.customer.full_name }}</a></h2>
+                    {% if row.days_overdue %}
+                        <span class="badge badge-danger">{{ row.days_overdue }} día{{ row.days_overdue|pluralize }} tarde</span>
+                    {% else %}
+                        <span class="badge badge-success">Vence hoy</span>
+                    {% endif %}
+                </div>
+                <p>{{ row.customer.address }}{% if row.customer.neighborhood %} · {{ row.customer.neighborhood }}{% endif %}</p>
+                {% if row.customer.address_reference %}<small>{{ row.customer.address_reference }}</small>{% endif %}
+            </div>
+        </div>
+
+        <div class="collection-product">
+            <span>Producto</span>
+            <strong>{{ row.sale.product_description }}</strong>
+            <small>
+                Desde cuota {{ row.oldest_installment.number }}/{{ row.sale.installment_count }}
+                · {{ row.due_installment_count }} pendiente{{ row.due_installment_count|pluralize }}
+            </small>
+        </div>
+
+        <div class="collection-breakdown">
+            <div><span>Capital</span><strong>{{ row.capital_due|ars }}</strong></div>
+            <div><span>Recargos</span><strong>{{ row.late_fees_due|ars }}</strong></div>
+            <div class="collection-total"><span>Total</span><strong>{{ row.total_due|ars }}</strong></div>
+        </div>
+
+        <div class="collection-actions">
+            {% if selected_date <= today %}
+                <a class="btn btn-primary" href="{% url 'core:payment_create' row.sale.pk %}">Registrar pago</a>
+                <form method="post" action="{% url 'core:collection_did_not_pay' row.sale.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="fecha" value="{{ selected_date|date:'Y-m-d' }}">
+                    <button class="btn btn-secondary" type="submit">No pagó</button>
+                </form>
+                <a class="btn btn-ghost" href="{% url 'core:collection_attempt_create' row.sale.pk %}">Otra visita</a>
+            {% endif %}
+            {% if row.whatsapp_url %}
+                <a class="whatsapp-action" href="{{ row.whatsapp_url }}" target="_blank" rel="noopener">
+                    Abrir WhatsApp
+                </a>
+            {% endif %}
+            <a class="detail-action" href="{% url 'core:sale_detail' row.sale.pk %}">Ver detalle ›</a>
+        </div>
+    </article>
+    {% empty %}
+    <section class="panel empty-state">
+        <span class="empty-icon" aria-hidden="true">✓</span>
+        <h3>La cobranza está al día</h3>
+        <p>No hay ventas con deuda exigible para esta fecha.</p>
+        <a class="btn btn-secondary" href="{% url 'core:home' %}?fecha={{ selected_date|date:'Y-m-d' }}">Volver al resumen</a>
+    </section>
+    {% endfor %}
+</section>
+{% endblock %}
+

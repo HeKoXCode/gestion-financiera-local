@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load finance %}
+
+{% block title %}Registrar pago · {{ sale.customer.full_name }}{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'core:collection_list' %}">‹ Volver a cobranza</a>
+
+<header class="payment-hero">
+    <div>
+        <p class="eyebrow">Registrar pago</p>
+        <h1>{{ sale.customer.full_name }}</h1>
+        <p>{{ sale.product_description }} · Venta #{{ sale.pk }}</p>
+    </div>
+    <div class="payment-due">
+        <span>Deuda exigible hoy</span>
+        <strong>{{ due_balance.total_due|ars }}</strong>
+        {% if first_due %}<small>Desde el {{ first_due.due_date|date:"d/m/Y" }}</small>{% endif %}
+    </div>
+</header>
+
+<div class="payment-layout">
+    <form method="post" id="payment-form" class="form-card payment-form" novalidate>
+        {% csrf_token %}
+        {{ form.operation_key }}
+        {% include "core/partials/form_errors.html" %}
+
+        <div class="payment-breakdown">
+            <div><span>Capital pendiente</span><strong>{{ due_balance.principal_due|ars }}</strong></div>
+            <div><span>Recargos pendientes</span><strong>{{ due_balance.late_fees_due|ars }}</strong></div>
+        </div>
+
+        <div class="field payment-amount-field">
+            <label for="{{ form.amount.id_for_label }}">Monto abonado</label>
+            <div class="money-input large"><span>$</span>{{ form.amount }}</div>
+            <p class="field-help">Puede ser el total o un pago parcial. No puede superar la deuda.</p>
+            {% for error in form.amount.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+        </div>
+
+        <div class="form-grid two-columns">
+            <div class="field">
+                <label for="{{ form.payment_date.id_for_label }}">Fecha</label>
+                {{ form.payment_date }}
+                {% for error in form.payment_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="field">
+                <label for="{{ form.payment_method.id_for_label }}">Método</label>
+                {{ form.payment_method }}
+                {% for error in form.payment_method.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="field span-2">
+                <label for="{{ form.notes.id_for_label }}">Observaciones <span>Opcional</span></label>
+                {{ form.notes }}
+                {% for error in form.notes.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a class="btn btn-ghost" href="{% url 'core:collection_list' %}">Cancelar</a>
+            <button class="btn btn-primary" id="payment-submit" type="submit">Guardar pago</button>
+        </div>
+    </form>
+
+    <aside class="payment-help">
+        <p class="eyebrow">Cómo se aplicará</p>
+        <ol>
+            <li><span>1</span><div><strong>Cuota más antigua</strong><small>Se comienza por la primera deuda vencida.</small></div></li>
+            <li><span>2</span><div><strong>Recargos</strong><small>Los recargos pendientes se cancelan primero.</small></div></li>
+            <li><span>3</span><div><strong>Capital</strong><small>El resto reduce el capital de la cuota.</small></div></li>
+        </ol>
+        <div class="partial-note">
+            Si el pago es parcial, el saldo restante se recordará automáticamente.
+        </div>
+    </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelector("#payment-form")?.addEventListener("submit", function () {
+    const button = document.querySelector("#payment-submit");
+    if (button && this.checkValidity()) {
+        button.disabled = true;
+        button.textContent = "Guardando pago…";
+    }
+});
+</script>
+{% endblock %}
+

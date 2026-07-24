@@ -581,6 +581,12 @@ class CollectionAttempt(TimestampedModel):
         ordering = ["-attempt_date", "-created_at", "-pk"]
         verbose_name = "intento de cobranza"
         verbose_name_plural = "intentos de cobranza"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sale", "attempt_date", "result"],
+                name="attempt_unique_sale_date_result",
+            )
+        ]
         indexes = [
             models.Index(fields=["attempt_date"], name="attempt_date_idx"),
             models.Index(fields=["customer", "attempt_date"], name="attempt_customer_date_idx"),

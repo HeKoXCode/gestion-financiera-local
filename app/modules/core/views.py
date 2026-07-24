@@ -14,21 +14,34 @@ from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from modules.core.forms import (
+    CollectionAttemptForm,
     CustomerForm,
+    PaymentForm,
+    PaymentVoidForm,
     ProductForm,
     SaleCancellationForm,
     SaleForm,
 )
 from modules.core.models import (
     BusinessSettings,
+    CollectionAttempt,
     Customer,
     Installment,
+    Payment,
     Product,
     Sale,
 )
-from modules.core.services.balances import get_installment_balance, get_sale_balance
+from modules.core.services.balances import (
+    get_due_sale_balance,
+    get_installment_balance,
+    get_sale_balance,
+)
+from modules.core.services.collection import build_collection_rows
 from modules.core.services.installments import create_installments
-from modules.core.services.money import ZERO, as_money
+from modules.core.services.late_fees import generate_missing_late_fees
+from modules.core.services.money import ZERO, as_money, format_ars
+from modules.core.services.payments import register_payment, void_payment
+from modules.core.services.whatsapp import build_payment_reminder_url
 
 logger = logging.getLogger(__name__)
 PAGE_SIZE = 20
@@ -51,17 +64,39 @@ def _installment_row(installment: Installment, selected_date):
         "customer": installment.sale.customer,
         "balance": balance,
         "is_overdue": installment.due_date < selected_date,
+        "whatsapp_url": build_payment_reminder_url(
+            customer=installment.sale.customer,
+            amount=balance.total_due,
+            due_date=installment.due_date,
+        ),
     }
+
+
+def _add_validation_error(form, error: ValidationError) -> None:
+    if hasattr(error, "message_dict"):
+        for field, field_messages in error.message_dict.items():
+            target = field if field in form.fields else None
+            for message in field_messages:
+                form.add_error(target, message)
+        return
+    for message in error.messages:
+        form.add_error(None, message)
+
+
+def _collection_redirect(selected_date):
+    return redirect(f"/cobranza/?fecha={selected_date:%Y-%m-%d}")
 
 
 @require_GET
 def home(request):
     selected_date = _selected_date(request)
+    if selected_date == timezone.localdate():
+        generate_missing_late_fees(as_of=selected_date)
     active_installments = Installment.objects.select_related(
         "sale",
         "sale__customer",
         "sale__product",
-    ).filter(sale__status=Sale.Status.ACTIVE, due_date__lte=selected_date)
+    ).filter(due_date__lte=selected_date).exclude(sale__status=Sale.Status.CANCELLED)
 
     due_rows = []
     overdue_rows = []
@@ -392,6 +427,8 @@ def sale_detail(request, pk):
         pk=pk,
     )
     today = timezone.localdate()
+    if sale.status == Sale.Status.ACTIVE:
+        generate_missing_late_fees(as_of=today, sale=sale)
     installment_rows = [
         {
             "installment": installment,
@@ -405,7 +442,10 @@ def sale_detail(request, pk):
         {
             "sale": sale,
             "balance": get_sale_balance(sale, as_of=today),
+            "due_balance": get_due_sale_balance(sale, as_of=today),
             "installment_rows": installment_rows,
+            "payments": sale.payments.prefetch_related("allocations").all(),
+            "collection_attempts": sale.collection_attempts.all()[:10],
             "today": today,
         },
     )
@@ -440,6 +480,185 @@ def sale_cancel(request, pk):
         "core/sales/cancel.html",
         {
             "sale": sale,
+            "form": form,
+        },
+    )
+
+
+@require_GET
+def collection_list(request):
+    selected_date = _selected_date(request)
+    today = timezone.localdate()
+    generate_missing_late_fees(as_of=min(selected_date, today))
+    rows = build_collection_rows(as_of=selected_date)
+    total_expected = as_money(sum((row["total_due"] for row in rows), ZERO))
+    overdue_rows = [row for row in rows if row["days_overdue"] > 0]
+    overdue_total = as_money(sum((row["total_due"] for row in overdue_rows), ZERO))
+    collected = Payment.objects.filter(
+        payment_date=selected_date,
+        status=Payment.Status.REGISTERED,
+    )
+    collected_amount = as_money(sum(collected.values_list("amount", flat=True), ZERO))
+
+    return render(
+        request,
+        "core/collection/list.html",
+        {
+            "selected_date": selected_date,
+            "previous_date": selected_date - timedelta(days=1),
+            "next_date": selected_date + timedelta(days=1),
+            "today": today,
+            "rows": rows,
+            "client_count": len({row["customer"].pk for row in rows}),
+            "total_expected": total_expected,
+            "overdue_count": len({row["customer"].pk for row in overdue_rows}),
+            "overdue_total": overdue_total,
+            "collected_amount": collected_amount,
+        },
+    )
+
+
+@require_http_methods(["GET", "POST"])
+def payment_create(request, pk):
+    sale = get_object_or_404(
+        Sale.objects.select_related("customer", "product"),
+        pk=pk,
+    )
+    today = timezone.localdate()
+    settings = BusinessSettings.get_solo()
+    if sale.status != Sale.Status.ACTIVE:
+        messages.error(request, "Esta venta no admite nuevos pagos.")
+        return redirect("core:sale_detail", pk=sale.pk)
+
+    generate_missing_late_fees(as_of=today, settings=settings, sale=sale)
+    due_balance = get_due_sale_balance(sale, as_of=today)
+    if due_balance.total_due <= ZERO:
+        messages.info(request, "La venta no tiene deuda exigible hoy.")
+        return redirect("core:sale_detail", pk=sale.pk)
+
+    form = PaymentForm(
+        request.POST or None,
+        settings=settings,
+        sale=sale,
+        due_amount=due_balance.total_due,
+    )
+    if request.method == "POST" and form.is_valid():
+        try:
+            result = register_payment(
+                sale=sale,
+                amount=form.cleaned_data["amount"],
+                payment_date=form.cleaned_data["payment_date"],
+                payment_method=form.cleaned_data["payment_method"],
+                notes=form.cleaned_data["notes"],
+                operation_key=form.cleaned_data["operation_key"],
+                settings=settings,
+            )
+        except ValidationError as exc:
+            _add_validation_error(form, exc)
+        else:
+            if result.created:
+                messages.success(
+                    request,
+                    f"Pago de {format_ars(result.payment.amount)} registrado correctamente.",
+                )
+            else:
+                messages.info(request, "Ese pago ya había sido registrado.")
+            return redirect("core:sale_detail", pk=sale.pk)
+
+    first_due = sale.installments.filter(due_date__lte=today).order_by("due_date").first()
+    return render(
+        request,
+        "core/collection/payment_form.html",
+        {
+            "sale": sale,
+            "form": form,
+            "due_balance": due_balance,
+            "first_due": first_due,
+        },
+    )
+
+
+@require_POST
+def collection_did_not_pay(request, pk):
+    sale = get_object_or_404(Sale.objects.select_related("customer"), pk=pk)
+    if sale.status != Sale.Status.ACTIVE:
+        messages.error(request, "Solo se registran visitas en ventas activas.")
+        return redirect("core:sale_detail", pk=sale.pk)
+    selected_date = parse_date(request.POST.get("fecha", "")) or timezone.localdate()
+    if selected_date > timezone.localdate() or selected_date < sale.delivery_date:
+        messages.error(request, "La fecha del intento de cobranza no es válida.")
+        return _collection_redirect(timezone.localdate())
+
+    _, created = CollectionAttempt.objects.get_or_create(
+        sale=sale,
+        customer=sale.customer,
+        attempt_date=selected_date,
+        result=CollectionAttempt.Result.DID_NOT_PAY,
+        defaults={"notes": ""},
+    )
+    if created:
+        messages.warning(request, f"Se registró que {sale.customer.full_name} no pagó.")
+    else:
+        messages.info(request, "Ese resultado ya estaba registrado para la fecha.")
+    return _collection_redirect(selected_date)
+
+
+@require_http_methods(["GET", "POST"])
+def collection_attempt_create(request, pk):
+    sale = get_object_or_404(Sale.objects.select_related("customer"), pk=pk)
+    if sale.status != Sale.Status.ACTIVE:
+        messages.error(request, "Solo se registran visitas en ventas activas.")
+        return redirect("core:sale_detail", pk=sale.pk)
+    form = CollectionAttemptForm(request.POST or None, sale=sale)
+    if request.method == "POST" and form.is_valid():
+        attempt, created = CollectionAttempt.objects.get_or_create(
+            sale=sale,
+            customer=sale.customer,
+            attempt_date=form.cleaned_data["attempt_date"],
+            result=form.cleaned_data["result"],
+            defaults={"notes": form.cleaned_data["notes"].strip()},
+        )
+        if not created and form.cleaned_data["notes"].strip():
+            attempt.notes = form.cleaned_data["notes"].strip()
+            attempt.save(update_fields=["notes", "updated_at"])
+        messages.success(request, "Resultado de la visita guardado.")
+        return redirect("core:sale_detail", pk=sale.pk)
+
+    return render(
+        request,
+        "core/collection/attempt_form.html",
+        {
+            "sale": sale,
+            "form": form,
+        },
+    )
+
+
+@require_http_methods(["GET", "POST"])
+def payment_void(request, pk):
+    payment = get_object_or_404(
+        Payment.objects.select_related("customer", "sale"),
+        pk=pk,
+    )
+    if payment.status == Payment.Status.VOIDED:
+        messages.info(request, "El pago ya se encuentra anulado.")
+        return redirect("core:sale_detail", pk=payment.sale_id)
+
+    form = PaymentVoidForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            void_payment(payment=payment, reason=form.cleaned_data["reason"])
+        except ValidationError as exc:
+            _add_validation_error(form, exc)
+        else:
+            messages.success(request, "El pago fue anulado y el saldo se recalculó.")
+            return redirect("core:sale_detail", pk=payment.sale_id)
+
+    return render(
+        request,
+        "core/collection/payment_void.html",
+        {
+            "payment": payment,
             "form": form,
         },
     )

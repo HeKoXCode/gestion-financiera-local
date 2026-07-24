@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Registrar visita · {{ sale.customer.full_name }}{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'core:collection_list' %}">‹ Volver a cobranza</a>
+<div class="confirm-layout">
+    <form method="post" class="confirm-card" novalidate>
+        {% csrf_token %}
+        <span class="confirm-icon neutral" aria-hidden="true">◎</span>
+        <p class="eyebrow">Seguimiento de cobranza</p>
+        <h1>Registrar visita</h1>
+        <p>{{ sale.customer.full_name }} · {{ sale.product_description }}</p>
+        {% include "core/partials/form_errors.html" %}
+        <div class="form-grid two-columns">
+            <div class="field">
+                <label for="{{ form.attempt_date.id_for_label }}">Fecha</label>
+                {{ form.attempt_date }}
+                {% for error in form.attempt_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="field">
+                <label for="{{ form.result.id_for_label }}">Resultado</label>
+                {{ form.result }}
+                {% for error in form.result.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="field span-2">
+                <label for="{{ form.notes.id_for_label }}">Observaciones <span>Opcional</span></label>
+                {{ form.notes }}
+                {% for error in form.notes.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+        </div>
+        <div class="form-actions">
+            <a class="btn btn-ghost" href="{% url 'core:collection_list' %}">Cancelar</a>
+            <button class="btn btn-primary" type="submit">Guardar visita</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

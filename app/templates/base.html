@@ -42,13 +42,13 @@
                     <span class="nav-icon" aria-hidden="true">▤</span>
                     <span>Ventas</span>
                 </a>
-
-                <span class="nav-section-label nav-section-secondary">Siguiente etapa</span>
-                <span class="nav-link is-disabled" title="Se habilitará en la Fase 4">
+                <a class="nav-link {% if 'collection' in current or 'payment' in current %}is-active{% endif %}"
+                   href="{% url 'core:collection_list' %}">
                     <span class="nav-icon" aria-hidden="true">$</span>
                     <span>Cobranza</span>
-                    <small>Próximo</small>
-                </span>
+                </a>
+
+                <span class="nav-section-label nav-section-secondary">Siguiente etapa</span>
                 <span class="nav-link is-disabled" title="Se habilitará en la Fase 5">
                     <span class="nav-icon" aria-hidden="true">⌁</span>
                     <span>Reportes</span>
@@ -96,4 +96,3 @@
     {% block scripts %}{% endblock %}
 </body>
 </html>
-

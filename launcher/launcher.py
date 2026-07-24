@@ -83,6 +83,7 @@ class LocalApplication:
 
         django.setup()
         call_command("migrate", interactive=False, verbosity=0)
+        call_command("update_late_fees", verbosity=0)
         create_backup(
             self.database_path,
             self.backup_path,

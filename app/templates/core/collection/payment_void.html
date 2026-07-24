@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load finance %}
+
+{% block title %}Anular pago · Gestión Financiera{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'core:sale_detail' payment.sale_id %}">‹ Volver a la venta</a>
+<div class="confirm-layout">
+    <section class="confirm-card">
+        <span class="confirm-icon" aria-hidden="true">!</span>
+        <p class="eyebrow">Corrección de cobranza</p>
+        <h1>Anular pago</h1>
+        <p>El registro permanecerá en el historial, pero dejará de descontarse del saldo.</p>
+        <dl class="confirm-summary">
+            <div><dt>Cliente</dt><dd>{{ payment.customer.full_name }}</dd></div>
+            <div><dt>Fecha</dt><dd>{{ payment.payment_date|date:"d/m/Y" }}</dd></div>
+            <div><dt>Importe</dt><dd>{{ payment.amount|ars }}</dd></div>
+            <div><dt>Método</dt><dd>{{ payment.payment_method }}</dd></div>
+        </dl>
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% include "core/partials/form_errors.html" %}
+            <div class="field">
+                <label for="{{ form.reason.id_for_label }}">Motivo de anulación</label>
+                {{ form.reason }}
+                {% for error in form.reason.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="form-actions">
+                <a class="btn btn-ghost" href="{% url 'core:sale_detail' payment.sale_id %}">Conservar pago</a>
+                <button class="btn btn-danger" type="submit">Anular y recalcular</button>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}
+

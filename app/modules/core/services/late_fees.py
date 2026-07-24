@@ -38,6 +38,7 @@ def generate_missing_late_fees(
     *,
     as_of: date | None = None,
     settings: BusinessSettings | None = None,
+    sale: Sale | None = None,
 ) -> LateFeeGenerationResult:
     effective_date = as_of or timezone.localdate()
     settings = settings or BusinessSettings.get_solo()
@@ -49,6 +50,8 @@ def generate_missing_late_fees(
         )
         .order_by("due_date", "pk")
     )
+    if sale is not None:
+        installments = installments.filter(sale=sale)
 
     created = 0
     evaluated = 0

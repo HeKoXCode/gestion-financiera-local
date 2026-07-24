@@ -105,3 +105,25 @@ def get_sale_balance(sale: Sale, *, as_of: date | None = None) -> SaleBalance:
         total_paid=total("total_paid"),
         total_due=total("total_due"),
     )
+
+
+def get_due_sale_balance(sale: Sale, *, as_of: date) -> SaleBalance:
+    """Return only debt that is due on or before the selected date."""
+    installments = sale.installments.filter(due_date__lte=as_of)
+    balances = [
+        get_installment_balance(installment, as_of=as_of) for installment in installments
+    ]
+
+    def total(attribute: str) -> Decimal:
+        return as_money(sum((getattr(balance, attribute) for balance in balances), ZERO))
+
+    return SaleBalance(
+        principal_original=total("principal_original"),
+        principal_paid=total("principal_paid"),
+        principal_due=total("principal_due"),
+        late_fees_generated=total("late_fees_generated"),
+        late_fees_paid=total("late_fees_paid"),
+        late_fees_due=total("late_fees_due"),
+        total_paid=total("total_paid"),
+        total_due=total("total_due"),
+    )

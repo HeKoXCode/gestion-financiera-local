@@ -21,6 +21,9 @@
     </div>
     <div class="profile-actions">
         {% if sale.status == "active" %}
+            {% if due_balance.total_due > 0 %}
+                <a class="btn btn-primary" href="{% url 'core:payment_create' sale.pk %}">Registrar pago</a>
+            {% endif %}
             <a class="btn btn-danger-ghost" href="{% url 'core:sale_cancel' sale.pk %}">Cancelar venta</a>
         {% endif %}
     </div>
@@ -117,5 +120,92 @@
         </table>
     </div>
 </section>
-{% endblock %}
 
+<div class="history-grid">
+    <section class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Movimientos</p>
+                <h2>Pagos realizados</h2>
+            </div>
+            <span class="record-count">{{ payments|length }} pago{{ payments|length|pluralize }}</span>
+        </div>
+        {% if payments %}
+        <div class="table-wrap">
+            <table class="data-table responsive-table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Método</th>
+                        <th>Estado</th>
+                        <th>Observaciones</th>
+                        <th class="align-right">Importe</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                    <tr>
+                        <td data-label="Fecha">{{ payment.payment_date|date:"d/m/Y" }}</td>
+                        <td data-label="Método">{{ payment.payment_method }}</td>
+                        <td data-label="Estado">
+                            {% if payment.status == "registered" %}
+                                <span class="badge badge-success">Registrado</span>
+                            {% else %}
+                                <span class="badge badge-danger">Anulado</span>
+                                <small>{{ payment.void_reason }}</small>
+                            {% endif %}
+                        </td>
+                        <td data-label="Observaciones">{{ payment.notes|default:"—" }}</td>
+                        <td data-label="Importe" class="money-cell">{{ payment.amount|ars }}</td>
+                        <td data-label="Acciones" class="payment-action-cell">
+                            {% if payment.status == "registered" %}
+                                <a class="mini-action danger" href="{% url 'core:payment_void' payment.pk %}">Anular</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state compact">
+            <span class="empty-icon" aria-hidden="true">$</span>
+            <h3>Sin pagos registrados</h3>
+            <p>Los pagos completos y parciales aparecerán en esta sección.</p>
+        </div>
+        {% endif %}
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Seguimiento</p>
+                <h2>Visitas de cobranza</h2>
+            </div>
+            {% if sale.status == "active" %}
+                <a class="btn btn-secondary btn-compact" href="{% url 'core:collection_attempt_create' sale.pk %}">Registrar</a>
+            {% endif %}
+        </div>
+        {% if collection_attempts %}
+        <div class="attempt-list">
+            {% for attempt in collection_attempts %}
+            <article>
+                <span class="attempt-date">{{ attempt.attempt_date|date:"d/m" }}</span>
+                <div>
+                    <strong>{{ attempt.get_result_display }}</strong>
+                    <p>{{ attempt.notes|default:"Sin observaciones" }}</p>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state compact">
+            <span class="empty-icon" aria-hidden="true">◎</span>
+            <h3>Sin visitas registradas</h3>
+            <p>“No pagó”, ausencias y promesas se conservarán aquí.</p>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

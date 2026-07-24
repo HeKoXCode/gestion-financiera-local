@@ -2,20 +2,14 @@ from decimal import ROUND_DOWN, Decimal, InvalidOperation
 
 from django import template
 
+from modules.core.services.money import format_ars
+
 register = template.Library()
 
 
 @register.filter
 def ars(value) -> str:
-    try:
-        amount = Decimal(value or 0).quantize(Decimal("0.01"))
-    except (InvalidOperation, TypeError, ValueError):
-        return "$ 0,00"
-
-    formatted = f"{amount:,.2f}"
-    integer, decimals = formatted.split(".")
-    integer = integer.replace(",", ".")
-    return f"$ {integer},{decimals}"
+    return format_ars(value)
 
 
 @register.filter

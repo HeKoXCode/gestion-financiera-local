@@ -1,7 +1,10 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
+from io import StringIO
 
 import pytest
+from django.core.management import call_command
+from django.utils import timezone
 
 from modules.core.models import (
     BusinessSettings,
@@ -236,3 +239,15 @@ def test_sale_balance_aggregates_its_installments():
 
     assert balance.principal_original == Decimal("30000.00")
     assert balance.total_due == Decimal("30000.00")
+
+
+def test_management_command_generates_missing_late_fees():
+    _, installment = make_single_installment_sale(
+        due_date=timezone.localdate() - timedelta(days=1),
+    )
+    output = StringIO()
+
+    call_command("update_late_fees", verbosity=1, stdout=output)
+
+    assert "Recargos nuevos: 1" in output.getvalue()
+    assert installment.late_fees.count() == 1

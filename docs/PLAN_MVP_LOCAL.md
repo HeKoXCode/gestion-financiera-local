@@ -11,9 +11,10 @@ Estado al 23/07/2026:
 - Paso 1 terminado: base local portable.
 - Paso 2 terminado: modelos, restricciones, configuración y motor base.
 - Paso 3 terminado: clientes, productos, ventas, cuotas e interfaz responsive.
+- Paso 4 terminado: recargos automáticos, cobranza, pagos, anulaciones y visitas.
 - Paso 5 adelantado parcialmente: resumen y agenda por fecha.
 - Paso 7 adelantado parcialmente: backup al iniciar, manual y al cerrar.
-- Próximo paso: Paso 4, cobranza y pagos.
+- Próximo paso: Paso 5, dashboard, agenda e historial consolidado.
 
 ## 1. Cambio de enfoque
 
@@ -581,6 +582,5 @@ El MVP estará terminado cuando:
 
 ## 13. Próximo paso
 
-Comenzar el Paso 4 y construir el flujo de cobranza: aplicación automática de
-recargos faltantes, pagos completos y parciales, anulación de pagos, intentos
-de cobranza y acceso manual a WhatsApp.
+Completar el Paso 5: dashboard definitivo, agenda diaria, historial consolidado
+del cliente y accesos rápidos de navegación.

@@ -20,4 +20,25 @@ urlpatterns = [
     path("ventas/nueva/", views.sale_create, name="sale_create"),
     path("ventas/<int:pk>/", views.sale_detail, name="sale_detail"),
     path("ventas/<int:pk>/cancelar/", views.sale_cancel, name="sale_cancel"),
+    path("cobranza/", views.collection_list, name="collection_list"),
+    path(
+        "cobranza/ventas/<int:pk>/pagar/",
+        views.payment_create,
+        name="payment_create",
+    ),
+    path(
+        "cobranza/ventas/<int:pk>/no-pago/",
+        views.collection_did_not_pay,
+        name="collection_did_not_pay",
+    ),
+    path(
+        "cobranza/ventas/<int:pk>/visita/",
+        views.collection_attempt_create,
+        name="collection_attempt_create",
+    ),
+    path(
+        "pagos/<int:pk>/anular/",
+        views.payment_void,
+        name="payment_void",
+    ),
 ]

@@ -123,8 +123,12 @@
                         </td>
                         <td data-label="Debe" class="money-cell">{{ row.balance.total_due|ars }}</td>
                         <td class="row-action">
-                            <a class="icon-button" href="{% url 'core:sale_detail' row.sale.pk %}"
-                               aria-label="Ver venta">›</a>
+                            <div class="table-actions">
+                                <a class="mini-action primary"
+                                   href="{% url 'core:payment_create' row.sale.pk %}">Cobrar</a>
+                                <a class="icon-button" href="{% url 'core:sale_detail' row.sale.pk %}"
+                                   aria-label="Ver venta">›</a>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}

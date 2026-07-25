@@ -37,7 +37,7 @@ fecha, se actualiza la copia de ese día sin ocupar otro lugar.
 4. UBICACIÓN DE LOS DATOS
 
 data\      Base principal. No borrar.
-backups\   Copias SQLite restaurables.
+backups\   Copias SQLite comprimidas y restaurables.
 exports\   ZIP de CSV para Excel.
 media\     Logo y archivos locales.
 
@@ -47,22 +47,24 @@ No muevas solamente GestionFinanciera.exe ni la carpeta _internal.
 5. CREAR UN BACKUP O EXPORTAR
 
 Dentro del sistema abrí “Datos y respaldo”.
-“Crear backup SQLite” produce una copia restaurable.
+“Crear backup ZIP” produce una copia .sqlite3.zip restaurable.
 “Descargar ZIP de CSV” crea archivos para consultar en Excel.
-El ZIP/CSV no reemplaza al backup SQLite.
+El ZIP/CSV de exportación no reemplaza al backup .sqlite3.zip.
 
-Conviene copiar periódicamente un backup .sqlite3 a otro disco o pendrive.
+Conviene copiar periódicamente un backup .sqlite3.zip a otro disco o pendrive.
 
 6. RESTAURAR UNA COPIA
 
 1) Cerrá el programa con “Cerrar y respaldar”.
 2) Ejecutá RESTAURAR_DATOS.bat o Restaurador.exe.
-3) Seleccioná un archivo .sqlite3 de la carpeta backups.
-4) Confirmá la operación.
-5) Abrí nuevamente el programa y comprobá los datos.
+3) Revisá la copia más reciente que aparece seleccionada automáticamente.
+4) Presioná “Restaurar la copia mostrada” y confirmá.
+5) El sistema volverá a abrirse automáticamente para que compruebes los datos.
 
 Antes de reemplazar la base, el restaurador guarda automáticamente otra copia
-preventiva. No intentes restaurar mientras el programa está abierto.
+preventiva. El ZIP se valida y descomprime automáticamente. Para usar otra
+fecha, presioná “Elegir otra copia…”. También se aceptan backups .sqlite3
+anteriores. No intentes restaurar mientras el programa está abierto.
 
 7. SI EL PROGRAMA NO ABRE
 

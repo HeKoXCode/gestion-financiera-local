@@ -27,7 +27,7 @@
     <article>
         <span>Backups disponibles</span>
         <strong>{{ backup_count }}</strong>
-        <small>Cantidad actual, no es un límite</small>
+        <small>Cantidad actual · copias restaurables</small>
     </article>
     <article>
         <span>Exportaciones</span>
@@ -41,12 +41,12 @@
         <span class="data-action-icon">DB</span>
         <div>
             <p class="eyebrow">Copia completa</p>
-            <h2>Crear backup ahora</h2>
-            <p>Conserva tablas, relaciones, cuotas, pagos y configuración en un único archivo restaurable.</p>
+            <h2>Crear backup comprimido</h2>
+            <p>Conserva tablas, relaciones, cuotas, pagos y configuración en un único ZIP restaurable.</p>
         </div>
         <form method="post" action="{% url 'core:backup_create' %}">
             {% csrf_token %}
-            <button class="btn btn-primary" type="submit">Crear backup SQLite</button>
+            <button class="btn btn-primary" type="submit">Crear backup ZIP</button>
         </form>
     </section>
 
@@ -68,10 +68,10 @@
         <div>
             <p class="eyebrow">Recuperación segura</p>
             <h2>Restaurar una copia</h2>
-            <p>Cerrá el programa y ejecutá el restaurador externo. Antes de reemplazar la base actual creará otra copia preventiva.</p>
-            <code>scripts\Restaurar.bat</code>
+            <p>Cerrá el programa y abrí el restaurador. Elegirá la copia más reciente, la recuperará y volverá a abrir el sistema.</p>
+            <code>RESTAURAR_DATOS.bat · scripts\Restaurar.bat</code>
         </div>
-        <span class="restore-note">El ZIP de CSV no se restaura. Elegí un archivo <strong>.sqlite3</strong>.</span>
+        <span class="restore-note">También acepta copias antiguas <strong>.sqlite3</strong>. El ZIP de CSV no se restaura.</span>
     </section>
 </div>
 
@@ -151,7 +151,7 @@
 
 <aside class="data-safety-note">
     <strong>Qué archivo usar en cada caso</strong>
-    <p><b>SQLite (.sqlite3)</b> recupera el programa completo. <b>ZIP/CSV</b> sirve para consultar, filtrar o analizar datos en Excel, pero no reemplaza al backup.</p>
+    <p><b>Backup (.sqlite3.zip)</b> recupera el programa completo. <b>Exportación ZIP/CSV</b> sirve para Excel, pero no reemplaza al backup.</p>
     <p>Al cerrar se conserva una sola copia por día. Si cerrás varias veces el mismo día, esa copia se actualiza. Se guardan hasta 90 días de cierres.</p>
 </aside>
 {% endblock %}

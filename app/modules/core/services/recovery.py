@@ -20,7 +20,7 @@ def refresh_recovery_backup() -> Path | None:
             database_path,
             Path(settings.BACKUP_DIR),
             label="recovery",
-            fixed_name="gestion_recovery.sqlite3",
+            fixed_name="gestion_recovery.sqlite3.zip",
         )
     except BackupError:
         logger.exception("No se pudo actualizar la copia de recuperación.")

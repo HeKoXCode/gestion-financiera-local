@@ -18,6 +18,7 @@ if not getattr(sys, "frozen", False):
 
 from launcher.backup import (
     BackupError,
+    compress_legacy_backups,
     create_backup,
     create_daily_backup,
     validate_application_database,
@@ -85,6 +86,8 @@ class LocalApplication:
         os.environ["GESTION_MEDIA_DIR"] = str(self.media_path)
         os.environ.setdefault("DJANGO_DEBUG", "0")
 
+        compress_legacy_backups(self.backup_path)
+
         import django
         from django.core.management import call_command
 
@@ -109,7 +112,7 @@ class LocalApplication:
             self.database_path,
             self.backup_path,
             label="recovery",
-            fixed_name="gestion_recovery.sqlite3",
+            fixed_name="gestion_recovery.sqlite3.zip",
         )
 
     def start_server(self) -> None:

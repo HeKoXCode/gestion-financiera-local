@@ -20,7 +20,7 @@ from launcher.backup import (
     create_backup,
     list_backups,
     resolve_backup_path,
-    validate_sqlite_database,
+    validate_application_backup,
 )
 from modules.core.forms import (
     BusinessSettingsForm,
@@ -300,14 +300,18 @@ def backup_create(request):
 def backup_download(request, name):
     try:
         backup = resolve_backup_path(Path(django_settings.BACKUP_DIR), name)
-        validate_sqlite_database(backup)
+        validate_application_backup(backup)
     except BackupError as exc:
         raise Http404(str(exc)) from exc
     return FileResponse(
         backup.open("rb"),
         as_attachment=True,
         filename=backup.name,
-        content_type="application/vnd.sqlite3",
+        content_type=(
+            "application/zip"
+            if backup.name.endswith(".zip")
+            else "application/vnd.sqlite3"
+        ),
     )
 
 

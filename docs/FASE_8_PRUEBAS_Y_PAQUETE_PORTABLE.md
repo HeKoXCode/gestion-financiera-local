@@ -54,10 +54,10 @@ automáticamente la base real utilizada durante el desarrollo.
 Para trasladar datos existentes:
 
 1. cerrar el programa de origen con “Cerrar y respaldar”;
-2. copiar un backup `.sqlite3` a `backups` del paquete portable;
+2. copiar un backup `.sqlite3.zip` a `backups` del paquete portable;
 3. ejecutar `RESTAURAR_DATOS.bat`;
-4. seleccionar esa copia;
-5. abrir normalmente con `INICIAR.bat`.
+4. revisar la copia seleccionada automáticamente;
+5. confirmar la restauración; el programa volverá a abrirse automáticamente.
 
 ## 3. Construcción reproducible
 
@@ -192,4 +192,3 @@ El MVP cumple la definición del plan:
 - funciona desde una carpeta trasladable;
 - no necesita Python instalado;
 - supera los 20 casos obligatorios.
-

@@ -258,10 +258,10 @@ Estas reglas podrán cambiarse antes de implementar el motor de cobranza.
 
 ### 7.1 Backup correcto
 
-El backup principal será una copia SQLite:
+El backup principal será una copia SQLite comprimida:
 
 ```text
-backups/gestion_2026-07-24_183000.sqlite3
+backups/gestion_2026-07-24_183000.sqlite3.zip
 ```
 
 Es la mejor opción porque conserva:
@@ -276,7 +276,8 @@ Es la mejor opción porque conserva:
 - integridad de los datos.
 
 La copia se realizará con la API de backup de SQLite, no copiando un archivo
-que podría estar siendo escrito.
+que podría estar siendo escrito. Después se comprimirá y validará
+automáticamente antes de publicarse.
 
 ### 7.2 Cuándo se respalda
 
@@ -320,12 +321,14 @@ importes sin símbolos monetarios.
 
 La restauración se hará con el programa cerrado:
 
-1. seleccionar una copia;
-2. crear backup preventivo de la base actual;
-3. validar que la copia sea una base SQLite válida;
-4. reemplazar la base;
-5. ejecutar comprobación de integridad;
-6. abrir el sistema.
+1. detectar y preseleccionar la copia válida más reciente;
+2. permitir elegir otra copia solo si se necesita;
+3. validar y descomprimir automáticamente el ZIP;
+4. crear backup preventivo de la base actual;
+5. validar que la copia sea una base SQLite válida;
+6. reemplazar la base;
+7. ejecutar comprobación de integridad;
+8. abrir el sistema automáticamente.
 
 ## 8. WhatsApp opcional simple
 

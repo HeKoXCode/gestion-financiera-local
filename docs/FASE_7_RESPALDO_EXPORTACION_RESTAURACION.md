@@ -21,15 +21,15 @@ Desde allí se puede:
 
 - comprobar si existe la base activa;
 - consultar la fecha de la copia de recuperación;
-- crear un backup SQLite manual;
+- crear un backup SQLite comprimido manual;
 - descargar cualquier backup conservado;
 - exportar todos los datos en un ZIP de CSV;
 - volver a descargar exportaciones anteriores;
 - consultar las instrucciones para restaurar.
 
-## 2. Copias SQLite restaurables
+## 2. Copias SQLite comprimidas y restaurables
 
-Una copia SQLite conserva en un único archivo:
+Una copia `.sqlite3.zip` conserva en un único archivo:
 
 - clientes y productos;
 - ventas y cuotas;
@@ -43,8 +43,15 @@ La copia se crea con la API de backup de SQLite. Esto permite obtener una
 imagen consistente aunque la aplicación haya tenido actividad y evita copiar
 un archivo a mitad de una escritura.
 
-Cada copia se valida con `PRAGMA quick_check` antes de publicarse. La escritura
-se realiza primero en un archivo temporal y después se reemplaza atómicamente.
+Cada copia se valida con `PRAGMA quick_check`, se comprime en ZIP y se vuelve a
+leer por completo para comprobar su estructura y CRC antes de publicarse. La
+escritura se realiza primero en archivos temporales y después se reemplaza
+atómicamente.
+
+Al iniciar, las copias antiguas `.sqlite3` válidas se convierten
+automáticamente a `.sqlite3.zip`. El archivo anterior solo se elimina después
+de validar la copia comprimida. Los `.sqlite3` también continúan siendo
+aceptados por el restaurador para conservar compatibilidad.
 
 ### Copias automáticas
 
@@ -63,7 +70,7 @@ en lugar de crear archivos repetidos.
 La copia fija:
 
 ```text
-backups\gestion_recovery.sqlite3
+backups\gestion_recovery.sqlite3.zip
 ```
 
 se actualiza después de guardar configuración, clientes, productos, ventas,
@@ -108,7 +115,7 @@ Características:
 El ZIP sirve para consultar, filtrar o analizar datos. No es el medio de
 restauración porque varios CSV no reconstruyen automáticamente todas las
 relaciones y restricciones. Para recuperar el programa se usa un backup
-`.sqlite3`.
+`.sqlite3.zip`.
 
 ## 4. Restaurador externo
 
@@ -119,27 +126,31 @@ restauración se realiza con una herramienta externa:
 scripts\Restaurar.bat
 ```
 
-### Procedimiento para restaurar
+### Procedimiento normal para restaurar
 
 1. En la ventana pequeña del programa, presionar “Cerrar y respaldar”.
 2. Esperar a que se cierre por completo.
 3. Hacer doble clic en `scripts\Restaurar.bat`.
-4. Presionar “Seleccionar backup…”.
-5. Elegir un archivo `.sqlite3`.
-6. Confirmar “Restaurar copia seleccionada”.
-7. Esperar el mensaje “Datos restaurados”.
-8. Abrir otra vez con `scripts\Iniciar.bat`.
-9. Comprobar clientes, ventas y cobranza.
+4. Revisar la copia más reciente seleccionada automáticamente.
+5. Presionar “Restaurar la copia mostrada” y confirmar.
+6. Esperar el mensaje “Datos restaurados”.
+7. El programa volverá a abrirse automáticamente.
+8. Comprobar clientes, ventas y cobranza.
+
+“Elegir otra copia…” permite recuperar una fecha anterior o seleccionar un
+archivo guardado en otro disco. No hay que abrir ni descomprimir el ZIP a mano.
 
 El restaurador:
 
 1. detecta si el servidor local sigue abierto;
-2. comprueba que el archivo sea SQLite íntegro;
-3. comprueba que contenga tablas propias de Gestión Financiera;
-4. prepara una copia temporal validada;
-5. crea un backup preventivo de la base actual;
-6. reemplaza la base;
-7. vuelve a comprobar la integridad.
+2. localiza y preselecciona la copia válida más reciente;
+3. comprueba la estructura y el CRC del ZIP;
+4. descomprime la base en una ubicación temporal controlada;
+5. comprueba que sea SQLite íntegro y contenga las tablas del programa;
+6. crea un backup preventivo comprimido de la base actual;
+7. reemplaza la base;
+8. vuelve a comprobar la integridad;
+9. abre nuevamente Gestión Financiera.
 
 Si la copia seleccionada no es válida, la base activa no se modifica.
 
@@ -149,7 +160,7 @@ Los datos siguen separados del código:
 
 ```text
 data\gestion_financiera.sqlite3
-backups\gestion_*.sqlite3
+backups\gestion_*.sqlite3.zip
 exports\export_*.zip
 media\
 ```
@@ -163,6 +174,9 @@ La Fase 8 construirá el paquete que no requerirá tener Python instalado.
 La suite verifica:
 
 - integridad y rotación de backups;
+- compresión y lectura completa de los ZIP;
+- conversión segura de backups `.sqlite3` anteriores;
+- rechazo de ZIP dañados o con rutas internas inseguras;
 - catálogo y descarga segura de copias;
 - rechazo de rutas manipuladas;
 - rechazo de archivos que no pertenecen al programa;
@@ -181,7 +195,7 @@ La suite verifica:
 Resultado al cerrar la fase:
 
 ```text
-108 pruebas aprobadas
+120 pruebas aprobadas
 ```
 
 ## 7. Criterios de aceptación

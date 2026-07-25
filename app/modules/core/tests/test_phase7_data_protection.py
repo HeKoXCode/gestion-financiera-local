@@ -12,7 +12,11 @@ import pytest
 from django.urls import reverse
 from django.utils import timezone
 
-from launcher.backup import validate_application_database
+from launcher.backup import (
+    create_backup,
+    materialize_backup,
+    validate_application_backup,
+)
 from modules.core.models import CollectionAttempt
 from modules.core.services.export_data import (
     EXPECTED_FILES,
@@ -127,9 +131,9 @@ def test_data_management_page_explains_backup_export_and_restore(client, setting
     content = response.content.decode()
 
     assert response.status_code == 200
-    assert "Crear backup SQLite" in content
+    assert "Crear backup ZIP" in content
     assert "Descargar ZIP de CSV" in content
-    assert r"scripts\Restaurar.bat" in content
+    assert "RESTAURAR_DATOS.bat" in content
 
 
 def test_export_view_generates_download_and_keeps_copy(client, settings, tmp_path):
@@ -188,22 +192,22 @@ def test_manual_backup_view_creates_valid_sqlite_copy(
     response = client.post(reverse("core:backup_create"))
 
     assert response.status_code == 302
-    backups = list(backup_directory.glob("gestion_manual_*.sqlite3"))
+    backups = list(backup_directory.glob("gestion_manual_*.sqlite3.zip"))
     assert len(backups) == 1
-    validate_application_database(backups[0])
+    validate_application_backup(backups[0])
 
 
 def test_backup_can_be_downloaded_from_management_view(client, settings, tmp_path):
     backup_directory = tmp_path / "backups"
-    backup_directory.mkdir()
-    backup = backup_directory / "gestion_manual_2026-07-24_120000_000001.sqlite3"
-    create_application_database(backup)
+    database = tmp_path / "database.sqlite3"
+    create_application_database(database)
+    backup = create_backup(database, backup_directory, label="manual")
     settings.BACKUP_DIR = backup_directory
 
     response = client.get(reverse("core:backup_download", args=[backup.name]))
 
     assert response.status_code == 200
-    assert response["Content-Type"] == "application/vnd.sqlite3"
+    assert response["Content-Type"] == "application/zip"
     assert b"".join(response.streaming_content) == backup.read_bytes()
 
 
@@ -217,9 +221,12 @@ def test_recovery_service_refreshes_fixed_copy(settings, tmp_path, monkeypatch):
 
     recovery = refresh_recovery_backup()
 
-    assert recovery == backup_directory / "gestion_recovery.sqlite3"
-    validate_application_database(recovery)
-    with closing(sqlite3.connect(recovery)) as connection:
+    assert recovery == backup_directory / "gestion_recovery.sqlite3.zip"
+    validate_application_backup(recovery)
+    with (
+        materialize_backup(recovery, working_directory=tmp_path) as extracted,
+        closing(sqlite3.connect(extracted)) as connection,
+    ):
         assert connection.execute("SELECT value FROM sample").fetchone() == (
             "estado reciente",
         )

@@ -1,4 +1,5 @@
 import sqlite3
+import zipfile
 from contextlib import closing
 from datetime import date
 from pathlib import Path
@@ -7,12 +8,16 @@ import pytest
 
 from launcher.backup import (
     BackupError,
+    compress_legacy_backups,
     create_backup,
     create_daily_backup,
     list_backups,
+    materialize_backup,
     resolve_backup_path,
     restore_database,
+    validate_application_backup,
     validate_application_database,
+    validate_backup_archive,
     validate_sqlite_database,
 )
 
@@ -24,7 +29,7 @@ def create_sample_database(path: Path, value: str = "dato") -> None:
         connection.commit()
 
 
-def create_application_database(path: Path, value: str) -> None:
+def create_application_database(path: Path, value: str = "dato") -> None:
     with closing(sqlite3.connect(path)) as connection:
         for table in (
             "django_migrations",
@@ -41,14 +46,21 @@ def create_application_database(path: Path, value: str) -> None:
 def test_create_backup_preserves_data(tmp_path):
     source = tmp_path / "source.sqlite3"
     destination = tmp_path / "backups"
-    create_sample_database(source, "cliente")
+    create_application_database(source, "cliente")
 
     backup = create_backup(source, destination, label="test", retention=3)
 
     assert backup is not None
-    validate_sqlite_database(backup)
-    with closing(sqlite3.connect(backup)) as connection:
-        assert connection.execute("SELECT value FROM sample").fetchone() == ("cliente",)
+    assert backup.name.endswith(".sqlite3.zip")
+    validate_backup_archive(backup)
+    validate_application_backup(backup)
+    with (
+        materialize_backup(backup, working_directory=tmp_path) as extracted,
+        closing(sqlite3.connect(extracted)) as connection,
+    ):
+        assert connection.execute("SELECT value FROM sample").fetchone() == (
+            "cliente",
+        )
 
 
 def test_backup_returns_none_when_database_does_not_exist(tmp_path):
@@ -69,7 +81,7 @@ def test_backup_rotation_keeps_requested_number(tmp_path):
     for _ in range(4):
         create_backup(source, destination, label="close", retention=2)
 
-    assert len(list(destination.glob("gestion_close_*.sqlite3"))) == 2
+    assert len(list(destination.glob("gestion_close_*.sqlite3.zip"))) == 2
 
 
 def test_daily_backup_updates_same_day_and_keeps_requested_days(tmp_path):
@@ -96,8 +108,12 @@ def test_daily_backup_updates_same_day_and_keeps_requested_days(tmp_path):
     )
 
     assert repeated == first
-    assert len(list(destination.glob("gestion_close_*.sqlite3"))) == 1
-    with closing(sqlite3.connect(repeated)) as connection:
+    assert len(list(destination.glob("gestion_close_*.sqlite3.zip"))) == 1
+    with zipfile.ZipFile(repeated) as archive:
+        member = archive.namelist()[0]
+        extracted = tmp_path / "daily.sqlite3"
+        extracted.write_bytes(archive.read(member))
+    with closing(sqlite3.connect(extracted)) as connection:
         assert connection.execute("SELECT value FROM sample").fetchone() == (
             "versión actualizada",
         )
@@ -111,10 +127,10 @@ def test_daily_backup_updates_same_day_and_keeps_requested_days(tmp_path):
             day=date(2026, 7, day_number),
         )
 
-    names = {path.name for path in destination.glob("gestion_close_*.sqlite3")}
+    names = {path.name for path in destination.glob("gestion_close_*.sqlite3.zip")}
     assert names == {
-        "gestion_close_2026-07-23.sqlite3",
-        "gestion_close_2026-07-24.sqlite3",
+        "gestion_close_2026-07-23.sqlite3.zip",
+        "gestion_close_2026-07-24.sqlite3.zip",
     }
 
 
@@ -150,6 +166,7 @@ def test_backup_catalog_identifies_labels_and_recovery_copy(tmp_path):
 
     assert {backup.label for backup in backups} == {"manual", "recovery"}
     assert sum(backup.is_recovery for backup in backups) == 1
+    assert all(backup.is_compressed for backup in backups)
     assert all(backup.size > 0 for backup in backups)
 
 
@@ -173,12 +190,15 @@ def test_restore_recovers_data_and_preserves_previous_database(tmp_path):
 
     assert preventive is not None
     validate_application_database(database)
-    validate_application_database(preventive)
+    validate_application_backup(preventive)
     with closing(sqlite3.connect(database)) as connection:
         assert connection.execute("SELECT value FROM sample").fetchone() == (
             "datos respaldados",
         )
-    with closing(sqlite3.connect(preventive)) as connection:
+    with (
+        materialize_backup(preventive, working_directory=tmp_path) as extracted,
+        closing(sqlite3.connect(extracted)) as connection,
+    ):
         assert connection.execute("SELECT value FROM sample").fetchone() == (
             "datos anteriores",
         )
@@ -197,3 +217,47 @@ def test_restore_does_not_touch_database_when_source_is_invalid(tmp_path):
         assert connection.execute("SELECT value FROM sample").fetchone() == (
             "base intacta",
         )
+
+
+def test_restore_accepts_compressed_backup(tmp_path):
+    source = tmp_path / "source.sqlite3"
+    database = tmp_path / "data" / "gestion_financiera.sqlite3"
+    backup_directory = tmp_path / "backups"
+    database.parent.mkdir()
+    create_application_database(source, "estado comprimido")
+    create_application_database(database, "estado anterior")
+    compressed = create_backup(source, backup_directory, label="manual")
+
+    restore_database(compressed, database, backup_directory)
+
+    with closing(sqlite3.connect(database)) as connection:
+        assert connection.execute("SELECT value FROM sample").fetchone() == (
+            "estado comprimido",
+        )
+
+
+def test_corrupt_or_unsafe_archives_are_rejected(tmp_path):
+    corrupt = tmp_path / "gestion_corrupt.sqlite3.zip"
+    corrupt.write_text("no es un zip", encoding="utf-8")
+    with pytest.raises(BackupError, match="no es válido"):
+        validate_backup_archive(corrupt)
+
+    unsafe = tmp_path / "gestion_unsafe.sqlite3.zip"
+    with zipfile.ZipFile(unsafe, "w") as archive:
+        archive.writestr("../stolen.sqlite3", b"contenido")
+    with pytest.raises(BackupError, match="contenido"):
+        validate_backup_archive(unsafe)
+
+
+def test_legacy_backups_are_compressed_without_losing_restore_compatibility(tmp_path):
+    backup_directory = tmp_path / "backups"
+    backup_directory.mkdir()
+    legacy = backup_directory / "gestion_close_2026-07-20.sqlite3"
+    create_application_database(legacy, "copia anterior")
+
+    converted = compress_legacy_backups(backup_directory)
+
+    archive = backup_directory / "gestion_close_2026-07-20.sqlite3.zip"
+    assert converted == [archive]
+    assert not legacy.exists()
+    validate_application_backup(archive)

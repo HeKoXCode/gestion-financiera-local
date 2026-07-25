@@ -362,7 +362,10 @@ def create_data_export(export_directory: Path | None = None) -> Path:
                     "Importes: decimal con punto y sin símbolo monetario.",
                     "Las columnas *_id conservan las relaciones entre archivos.",
                     "Los textos que podrían ejecutarse como fórmula están protegidos.",
-                    "Este ZIP es para consulta; el backup SQLite es la copia restaurable.",
+                    (
+                        "Este ZIP es para consulta; el backup .sqlite3.zip "
+                        "es la copia restaurable."
+                    ),
                     "",
                     *[
                         f"{name}: {count} registros"

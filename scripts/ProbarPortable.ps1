@@ -89,7 +89,7 @@ try {
     }
 
     $databasePath = Join-Path $smokeDirectory "data\gestion_financiera.sqlite3"
-    $recoveryPath = Join-Path $smokeDirectory "backups\gestion_recovery.sqlite3"
+    $recoveryPath = Join-Path $smokeDirectory "backups\gestion_recovery.sqlite3.zip"
     if (-not (Test-Path -LiteralPath $databasePath -PathType Leaf)) {
         throw "El ejecutable no creo la base fuera de _internal."
     }
@@ -98,7 +98,7 @@ try {
     }
     if (-not (Get-ChildItem `
         -LiteralPath (Join-Path $smokeDirectory "backups") `
-        -Filter "gestion_close_*.sqlite3" `
+        -Filter "gestion_close_*.sqlite3.zip" `
         -File
     )) {
         throw "La prueba de cierre no creo su backup final."
@@ -123,7 +123,7 @@ try {
 
     if (-not (Get-ChildItem `
         -LiteralPath (Join-Path $smokeDirectory "backups") `
-        -Filter "gestion_pre_restore_*.sqlite3" `
+        -Filter "gestion_pre_restore_*.sqlite3.zip" `
         -File
     )) {
         throw "El restaurador no creo el backup preventivo."
@@ -131,8 +131,12 @@ try {
 
     & $pythonExecutable -c @"
 from pathlib import Path
-from launcher.backup import validate_application_database
+from launcher.backup import validate_application_backup, validate_application_database
 validate_application_database(Path(r'$databasePath'))
+validate_application_backup(
+    Path(r'$recoveryPath'),
+    working_directory=Path(r'$databasePath').parent,
+)
 print('Base portable: integridad y estructura correctas')
 "@
     if ($LASTEXITCODE -ne 0) {

@@ -1,17 +1,19 @@
 {% extends "base.html" %}
 {% load finance %}
 
-{% block title %}Agenda diaria · Gestión Financiera{% endblock %}
+{% block title %}Semana · Gestión Financiera{% endblock %}
 
 {% block content %}
-<header class="page-header agenda-header">
+<header class="page-header agenda-header weekly-agenda-header">
     <div>
-        <p class="eyebrow">Planificación semanal</p>
-        <h1>Agenda del {{ selected_date|date:"d/m/Y" }}</h1>
-        <p class="page-subtitle">Vencimientos programados y arrastre pendiente para organizar el recorrido.</p>
+        <p class="eyebrow">Vista semanal</p>
+        <h1>Semana del {{ week_start|date:"d/m" }} al {{ week_end|date:"d/m/Y" }}</h1>
+        <p class="page-subtitle">
+            Compará la carga de lunes a sábado y abrí la cobranza del día que quieras trabajar.
+        </p>
     </div>
     <form class="date-picker" method="get">
-        <label for="agenda-date">Seleccionar fecha</label>
+        <label for="agenda-date">Buscar una semana</label>
         <div>
             <input id="agenda-date" class="form-control" type="date" name="fecha"
                    value="{{ selected_date|date:'Y-m-d' }}">
@@ -20,102 +22,110 @@
     </form>
 </header>
 
-<div class="agenda-week-nav">
-    <a class="day-arrow" href="?fecha={{ previous_week|date:'Y-m-d' }}" aria-label="Semana anterior">‹</a>
-    {% for day in week_days %}
-        <a class="agenda-day {% if day.is_selected %}is-selected{% endif %}"
-           href="?fecha={{ day.date|date:'Y-m-d' }}">
-            <span>{{ day.date|date:"D" }}</span>
-            <strong>{{ day.date|date:"d" }}</strong>
-            <small>{{ day.date|date:"M" }}</small>
-        </a>
-    {% endfor %}
-    <a class="day-arrow" href="?fecha={{ next_week|date:'Y-m-d' }}" aria-label="Semana siguiente">›</a>
-</div>
+<nav class="weekly-agenda-nav" aria-label="Cambiar semana">
+    <a href="?fecha={{ previous_week|date:'Y-m-d' }}">‹ Semana anterior</a>
+    {% if today < week_start or today > week_end %}
+        <a class="weekly-today-link" href="{% url 'core:agenda' %}">Volver a esta semana</a>
+    {% else %}
+        <span class="weekly-current-label">Semana actual</span>
+    {% endif %}
+    <a href="?fecha={{ next_week|date:'Y-m-d' }}">Semana siguiente ›</a>
+</nav>
 
-<section class="agenda-summary">
-    <article><span>Clientes en recorrido</span><strong>{{ client_count }}</strong></article>
-    <article><span>Cuotas programadas</span><strong>{{ scheduled_installments }}</strong></article>
-    <article><span>Monto programado</span><strong>{{ scheduled_amount|ars }}</strong></article>
-    <article class="agenda-total"><span>Total del recorrido</span><strong>{{ route_total|ars }}</strong></article>
+<section class="agenda-summary weekly-agenda-summary">
+    <article>
+        <span>Clientes con vencimiento</span>
+        <strong>{{ weekly_scheduled_customers }}</strong>
+        <small>Personas diferentes en la semana</small>
+    </article>
+    <article>
+        <span>Cuotas programadas</span>
+        <strong>{{ weekly_scheduled_installments }}</strong>
+        <small>Vencimientos de lunes a sábado</small>
+    </article>
+    <article class="weekly-amount-card">
+        <span>Monto programado</span>
+        <strong>{{ weekly_scheduled_amount|ars }}</strong>
+        <small>Sin repetir el arrastre diario</small>
+    </article>
+    <article class="agenda-total">
+        <span>Día con mayor recorrido</span>
+        {% if busiest_day %}
+            <strong>{{ busiest_day.date|date:"l"|capfirst }}</strong>
+            <small>{{ busiest_day.client_count }} cliente{{ busiest_day.client_count|pluralize }}</small>
+        {% else %}
+            <strong>Sin recorrido</strong>
+            <small>No hay cobranzas exigibles</small>
+        {% endif %}
+    </article>
 </section>
 
-{% if neighborhoods %}
-<div class="neighborhood-strip">
-    <span>Barrios:</span>
-    {% for item in neighborhoods %}
-        <i>{{ item.name }} <strong>{{ item.count }}</strong></i>
+<section class="weekly-day-grid" aria-label="Resumen de cobranza por día">
+    {% for day in week_days %}
+    <article class="weekly-day-card {% if day.is_today %}is-today{% endif %} {% if not day.has_collection %}is-empty{% endif %}">
+        <header>
+            <div>
+                <span>{{ day.date|date:"l"|capfirst }}</span>
+                <strong>{{ day.date|date:"d" }}</strong>
+                <small>{{ day.date|date:"F"|capfirst }}</small>
+            </div>
+            {% if day.is_today %}
+                <span class="badge badge-success">Hoy</span>
+            {% elif day.is_selected %}
+                <span class="badge badge-neutral">Seleccionado</span>
+            {% elif day.is_past %}
+                <span class="weekly-day-state">Pasado</span>
+            {% else %}
+                <span class="weekly-day-state">Próximo</span>
+            {% endif %}
+        </header>
+
+        <div class="weekly-day-kpis">
+            <div>
+                <span>Clientes</span>
+                <strong>{{ day.client_count }}</strong>
+            </div>
+            <div>
+                <span>Programado</span>
+                <strong>{{ day.scheduled_amount|ars }}</strong>
+            </div>
+            <div class="{% if day.overdue_client_count %}is-danger{% endif %}">
+                <span>Atrasados</span>
+                <strong>{{ day.overdue_client_count }}</strong>
+            </div>
+            <div>
+                <span>Total recorrido</span>
+                <strong>{{ day.route_total|ars }}</strong>
+            </div>
+        </div>
+
+        <p class="weekly-day-breakdown">
+            {{ day.scheduled_client_count }} programado{{ day.scheduled_client_count|pluralize }}
+            · {{ day.carryover_client_count }} de arrastre
+            · {{ day.scheduled_installments }} cuota{{ day.scheduled_installments|pluralize }}
+        </p>
+
+        <div class="weekly-neighborhoods">
+            {% for neighborhood in day.neighborhoods %}
+                <span>{{ neighborhood.name }} <strong>{{ neighborhood.count }}</strong></span>
+            {% empty %}
+                <span class="is-muted">Sin barrios para recorrer</span>
+            {% endfor %}
+        </div>
+
+        <a class="btn {% if day.has_collection %}btn-primary{% else %}btn-secondary{% endif %}"
+           href="{% url 'core:collection_list' %}?fecha={{ day.date|date:'Y-m-d' }}">
+            Abrir cobranza
+        </a>
+    </article>
     {% endfor %}
-</div>
-{% endif %}
+</section>
 
-<div class="agenda-layout">
-    <section class="panel">
-        <div class="panel-header">
-            <div><p class="eyebrow">Fecha seleccionada</p><h2>Programadas</h2></div>
-            <span class="record-count">{{ scheduled_rows|length }} venta{{ scheduled_rows|length|pluralize }}</span>
-        </div>
-        {% if scheduled_rows %}
-        <div class="agenda-list">
-            {% for row in scheduled_rows %}
-            <article>
-                <time>{{ row.oldest_installment.due_date|date:"d/m" }}</time>
-                <div>
-                    <a href="{% url 'core:customer_detail' row.customer.pk %}">{{ row.customer.full_name }}</a>
-                    <span>{{ row.customer.address }}{% if row.customer.neighborhood %} · {{ row.customer.neighborhood }}{% endif %}</span>
-                </div>
-                <div><strong>{{ row.sale.product_description }}</strong><small>{{ row.due_installment_count }} cuota{{ row.due_installment_count|pluralize }} exigible{{ row.due_installment_count|pluralize }}</small></div>
-                {% if row.days_overdue %}<span class="badge badge-danger">Incluye atraso</span>{% else %}<span class="badge badge-success">En fecha</span>{% endif %}
-                <strong class="money-cell">{{ row.total_due|ars }}</strong>
-                <a class="icon-button" href="{% url 'core:sale_detail' row.sale.pk %}">›</a>
-            </article>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="empty-state compact">
-            <span class="empty-icon" aria-hidden="true">□</span>
-            <h3>Sin vencimientos programados</h3>
-            <p>No hay cuotas con vencimiento exacto en esta fecha.</p>
-        </div>
-        {% endif %}
-    </section>
-
-    <section class="panel">
-        <div class="panel-header">
-            <div><p class="eyebrow">Pendientes anteriores</p><h2>Arrastre</h2></div>
-            <span class="record-count">{{ carryover_rows|length }} venta{{ carryover_rows|length|pluralize }}</span>
-        </div>
-        {% if carryover_rows %}
-        <div class="agenda-list compact-list">
-            {% for row in carryover_rows %}
-            <article>
-                <time class="late">{{ row.days_overdue }}d</time>
-                <div>
-                    <a href="{% url 'core:customer_detail' row.customer.pk %}">{{ row.customer.full_name }}</a>
-                    <span>{{ row.customer.address }}</span>
-                </div>
-                <div><strong>{{ row.sale.product_description }}</strong><small>Desde {{ row.oldest_installment.due_date|date:"d/m/Y" }}</small></div>
-                <strong class="money-cell">{{ row.total_due|ars }}</strong>
-                <a class="icon-button" href="{% url 'core:sale_detail' row.sale.pk %}">›</a>
-            </article>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="empty-state compact">
-            <span class="empty-icon" aria-hidden="true">✓</span>
-            <h3>Sin arrastre anterior</h3>
-            <p>No hay ventas pendientes de fechas anteriores.</p>
-        </div>
-        {% endif %}
-    </section>
-</div>
-
-<div class="agenda-footer-actions">
-    {% if selected_date == today %}
-        <a class="btn btn-primary" href="{% url 'core:collection_list' %}">Abrir cobranza de hoy</a>
-    {% else %}
-        <a class="btn btn-secondary" href="{% url 'core:collection_list' %}?fecha={{ selected_date|date:'Y-m-d' }}">Ver cobranza de la fecha</a>
-    {% endif %}
-</div>
+<aside class="weekly-agenda-note">
+    <strong>Cómo leer esta semana</strong>
+    <p>
+        “Programado” cuenta únicamente las cuotas que vencen ese día. “Total recorrido”
+        agrega también lo pendiente de días anteriores, por eso no se suma como total semanal.
+    </p>
+</aside>
 {% endblock %}
-

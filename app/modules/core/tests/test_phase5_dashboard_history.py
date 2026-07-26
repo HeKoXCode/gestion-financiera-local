@@ -9,7 +9,7 @@ from django.utils import timezone
 from modules.core.models import CollectionAttempt, Sale
 from modules.core.services.installments import create_installments
 from modules.core.services.payments import register_payment, void_payment
-from modules.core.tests.factories import make_sale
+from modules.core.tests.factories import make_product, make_sale
 
 pytestmark = pytest.mark.django_db
 
@@ -19,6 +19,7 @@ def make_todays_sale(
     amount=Decimal("20000.00"),
     installment_count=1,
     first_due_offset=0,
+    **sale_overrides,
 ):
     today = timezone.localdate()
     sale = make_sale(
@@ -27,6 +28,7 @@ def make_todays_sale(
         financed_amount=amount,
         installment_count=installment_count,
         daily_late_fee=Decimal("0.00"),
+        **sale_overrides,
     )
     create_installments(sale)
     return sale
@@ -68,21 +70,38 @@ def test_dashboard_portfolio_includes_future_installments(client):
     assert response.context["scheduled_today_count"] == 1
 
 
-def test_agenda_shows_programmed_installments_for_selected_date(client):
+def test_agenda_shows_programmed_installments_for_each_day_of_the_week(client):
     today = timezone.localdate()
-    selected_date = today + timedelta(days=7)
-    sale = make_todays_sale(first_due_offset=7)
+    monday = today - timedelta(days=today.weekday()) + timedelta(days=7)
+    thursday = monday + timedelta(days=3)
+    product = make_product()
+    make_todays_sale(
+        amount=Decimal("20000.00"),
+        first_due_offset=(monday - today).days,
+        product=product,
+    )
+    make_todays_sale(
+        amount=Decimal("30000.00"),
+        first_due_offset=(thursday - today).days,
+        product=product,
+    )
 
     response = client.get(
         reverse("core:agenda"),
-        {"fecha": selected_date.isoformat()},
+        {"fecha": monday.isoformat()},
     )
+    days = {day["date"]: day for day in response.context["week_days"]}
 
     assert response.status_code == 200
-    assert response.context["scheduled_installments"] == 1
-    assert response.context["scheduled_amount"] == Decimal("20000.00")
-    assert response.context["route_total"] == Decimal("20000.00")
-    assert sale.customer.full_name in response.content.decode()
+    assert response.context["weekly_scheduled_customers"] == 2
+    assert response.context["weekly_scheduled_installments"] == 2
+    assert response.context["weekly_scheduled_amount"] == Decimal("50000.00")
+    assert days[monday]["scheduled_amount"] == Decimal("20000.00")
+    assert days[monday]["route_total"] == Decimal("20000.00")
+    assert days[thursday]["scheduled_amount"] == Decimal("30000.00")
+    assert days[thursday]["route_total"] == Decimal("50000.00")
+    assert days[thursday]["overdue_client_count"] == 1
+    assert "Vista semanal" in response.content.decode()
 
 
 def test_agenda_week_covers_monday_through_saturday(client):

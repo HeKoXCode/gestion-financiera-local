@@ -13,7 +13,7 @@
         </p>
     </div>
     <div class="dashboard-header-actions">
-        <a class="btn btn-secondary" href="{% url 'core:agenda' %}?fecha={{ selected_date|date:'Y-m-d' }}">Ver agenda</a>
+        <a class="btn btn-secondary" href="{% url 'core:agenda' %}?fecha={{ selected_date|date:'Y-m-d' }}">Ver semana</a>
         <a class="btn btn-primary" href="{% url 'core:collection_list' %}?fecha={{ selected_date|date:'Y-m-d' }}">Abrir cobranza</a>
     </div>
 </header>
@@ -27,7 +27,7 @@
         </a>
     {% endfor %}
     <a class="day-chip calendar-chip" href="{% url 'core:agenda' %}?fecha={{ selected_date|date:'Y-m-d' }}">
-        <small>Agenda</small><strong>＋</strong>
+        <small>Semana</small><strong>＋</strong>
     </a>
 </nav>
 
@@ -129,7 +129,7 @@
                 <div><dt>Próximas 7 días</dt><dd>{{ upcoming_installments }} cuotas</dd></div>
                 <div><dt>Visitas registradas</dt><dd>{{ visits_today }}</dd></div>
             </dl>
-            <a class="btn btn-secondary btn-compact" href="{% url 'core:agenda' %}">Organizar semana</a>
+            <a class="btn btn-secondary btn-compact" href="{% url 'core:agenda' %}">Ver semana completa</a>
         </section>
 
         <section class="panel recent-payments">

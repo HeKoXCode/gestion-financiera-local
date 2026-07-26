@@ -125,7 +125,7 @@ El ensayo nunca usa `data`, `backups`, `exports` o `media` del proyecto real.
 | 11 | Pago anulado | Reapertura de saldo |
 | 12 | “No pagó” | Intentos de cobranza idempotentes |
 | 13 | Cambio de recargo para ventas nuevas | Valor congelado por venta |
-| 14 | Consulta de lunes a sábado | Agenda semanal |
+| 14 | Comparación de lunes a sábado | Vista semanal |
 | 15 | Impresión con 18 clientes | Prueba A4 con nombres y domicilios extensos |
 | 16 | Exportación CSV | ZIP relacional compatible con Excel |
 | 17 | Backup | Copia consistente y rotación |
@@ -184,7 +184,7 @@ El MVP cumple la definición del plan:
 - funciona localmente y sin servicios de Internet;
 - administra el flujo cliente–venta–cuota–pago;
 - calcula atraso, recargo y pagos parciales;
-- muestra dashboard, cobranza, agenda, historial y reportes;
+- muestra dashboard, cobranza, semana, historial y reportes;
 - imprime la planilla A4;
 - crea, descarga y rota backups;
 - exporta CSV;

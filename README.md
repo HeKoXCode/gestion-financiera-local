@@ -6,7 +6,7 @@ cuotas, recargos y cobranzas.
 Estado actual: Fases 0 a 8 terminadas. El MVP está terminado y permite administrar
 clientes, productos y ventas; generar cuotas y recargos; consultar la cobranza;
 registrar pagos completos o parciales; anularlos; conservar las visitas; revisar
-el dashboard, planificar la agenda semanal, consultar el historial consolidado,
+el dashboard, comparar la carga semanal, consultar el historial consolidado,
 imprimir la planilla A4, analizar reportes de cobranza y cartera, crear y
 descargar backups, exportar CSV y restaurar una copia de forma segura.
 
@@ -116,7 +116,7 @@ Documentos:
 - [Modelos y motor base de la Fase 2](docs/FASE_2_MODELOS_Y_MOTOR.md).
 - [Interfaz y flujos de la Fase 3](docs/FASE_3_INTERFAZ_COMERCIAL.md).
 - [Cobranza y pagos de la Fase 4](docs/FASE_4_COBRANZA_Y_PAGOS.md).
-- [Dashboard, agenda e historial de la Fase 5](docs/FASE_5_DASHBOARD_AGENDA_HISTORIAL.md).
+- [Dashboard, semana e historial de la Fase 5](docs/FASE_5_DASHBOARD_AGENDA_HISTORIAL.md).
 - [Impresión, reportes y configuración de la Fase 6](docs/FASE_6_IMPRESION_Y_REPORTES.md).
 - [Respaldo, exportación y restauración de la Fase 7](docs/FASE_7_RESPALDO_EXPORTACION_RESTAURACION.md).
 - [Pruebas y paquete portable de la Fase 8](docs/FASE_8_PRUEBAS_Y_PAQUETE_PORTABLE.md).

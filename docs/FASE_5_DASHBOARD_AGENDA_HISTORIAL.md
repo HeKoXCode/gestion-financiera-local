@@ -1,4 +1,4 @@
-# Fase 5: dashboard, agenda e historial
+# Fase 5: dashboard, semana e historial
 
 Estado: terminada el 24/07/2026.
 
@@ -8,7 +8,7 @@ Convertir los datos de ventas, cuotas, recargos, pagos y visitas en tres
 pantallas operativas:
 
 1. un dashboard para decidir qué cobrar;
-2. una agenda semanal para organizar el recorrido;
+2. una vista semanal para comparar la carga de trabajo;
 3. un historial de cliente que concentre toda su actividad.
 
 La fase no agrega infraestructura, usuarios ni servicios externos. Todo sigue
@@ -37,7 +37,7 @@ El dashboard permite cambiar rápidamente entre lunes y sábado. Una consulta
 histórica respeta los pagos existentes hasta esa fecha y no ofrece registrar
 un pago en una venta que actualmente ya está finalizada.
 
-## Agenda semanal
+## Vista semanal
 
 Se agregó la ruta:
 
@@ -45,23 +45,31 @@ Se agregó la ruta:
 /agenda/
 ```
 
-La fecha puede elegirse desde el selector o desde la banda semanal. La agenda
-separa:
+La fecha elegida determina una semana de lunes a sábado. Los seis días se
+muestran simultáneamente para evitar que esta pantalla repita la lista operativa
+de Cobranza.
 
-- **Programadas:** ventas con al menos una cuota cuyo vencimiento coincide con
-  la fecha;
-- **Arrastre:** deuda de días anteriores que todavía no fue saldada.
+El resumen semanal muestra:
 
-También resume:
+- clientes diferentes con vencimientos;
+- cantidad de cuotas programadas;
+- importe programado sin repetir deudas atrasadas;
+- día con mayor cantidad de clientes en recorrido.
+
+Cada tarjeta diaria muestra:
 
 - clientes incluidos en el recorrido;
-- cantidad de cuotas programadas;
-- importe programado;
-- total exigible del recorrido;
-- distribución por barrio.
+- importe que vence exactamente ese día;
+- clientes atrasados;
+- total exigible si se realiza el recorrido;
+- cantidad de programados y de arrastre;
+- barrios involucrados;
+- acceso directo a la Cobranza de esa fecha.
 
-Las filas dan acceso directo al detalle de la venta y la pantalla se adapta a
-escritorio, tablet y celular.
+“Programado” se suma semanalmente porque cada cuota aparece una sola vez. El
+“Total recorrido” no se suma entre días, ya que una misma deuda atrasada podría
+aparecer como arrastre en varias fechas. La pantalla se adapta a escritorio,
+tablet y celular.
 
 ## Historial consolidado del cliente
 
@@ -112,7 +120,7 @@ Se agregaron pruebas para:
 - objetivo diario y progreso de cobranza;
 - pagos parciales en el dashboard;
 - cartera con cuotas futuras;
-- agenda de una fecha seleccionada;
+- resumen simultáneo de lunes a sábado;
 - semana de lunes a sábado;
 - historial de ventas, pagos y visitas;
 - exclusión contable de pagos anulados;

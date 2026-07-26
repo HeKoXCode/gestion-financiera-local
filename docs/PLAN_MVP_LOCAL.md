@@ -12,7 +12,7 @@ Estado al 24/07/2026:
 - Paso 2 terminado: modelos, restricciones, configuración y motor base.
 - Paso 3 terminado: clientes, productos, ventas, cuotas e interfaz responsive.
 - Paso 4 terminado: recargos automáticos, cobranza, pagos, anulaciones y visitas.
-- Paso 5 terminado: dashboard, agenda semanal e historial consolidado.
+- Paso 5 terminado: dashboard, vista semanal e historial consolidado.
 - Paso 6 terminado: planilla A4, reportes operativos y configuración visual.
 - Paso 7 terminado: backups automáticos y manuales, recuperación reciente,
   exportación ZIP/CSV y restauración segura.
@@ -61,7 +61,7 @@ No se eliminan:
 - recargos;
 - pagos parciales;
 - saldos;
-- agenda;
+- semana;
 - historial;
 - dashboard;
 - reportes;
@@ -450,7 +450,7 @@ Aceptación:
 - el saldo parcial se recuerda;
 - no puede guardarse dos veces el mismo pago por doble clic.
 
-### Paso 5. Dashboard, agenda e historial — 3 a 4 horas
+### Paso 5. Dashboard, semana e historial — 3 a 4 horas
 
 Acciones:
 
@@ -460,7 +460,7 @@ Acciones:
 4. Clientes atrasados.
 5. Total adeudado.
 6. Cobrado hoy.
-7. Agenda por fecha.
+7. Vista simultánea de lunes a sábado con acceso a la cobranza diaria.
 8. Accesos lunes a sábado.
 9. Historial del cliente.
 10. Historial de venta, cuotas y pagos.
@@ -468,7 +468,7 @@ Acciones:
 Aceptación:
 
 - los totales coinciden con los detalles;
-- elegir una fecha cambia correctamente la agenda.
+- elegir una fecha abre correctamente la semana que la contiene.
 
 ### Paso 6. Impresión y reportes — 3 a 4 horas
 
@@ -540,7 +540,7 @@ Aceptación:
 ### Día 2
 
 - Pasos 4–6.
-- Resultado: cobranza completa, agenda, historial, planilla y reportes.
+- Resultado: cobranza completa, semana, historial, planilla y reportes.
 
 ### Día 3
 
@@ -583,7 +583,7 @@ El MVP estará terminado cuando:
 - funcione sin Internet;
 - permita todo el flujo cliente–venta–cuota–pago;
 - calcule recargos y pagos parciales;
-- muestre cobranza y agenda;
+- muestre cobranza y semana;
 - imprima A4;
 - muestre reportes;
 - cree backup al cerrar;

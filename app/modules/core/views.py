@@ -1,5 +1,4 @@
 import logging
-from collections import Counter
 from datetime import timedelta
 from pathlib import Path
 
@@ -36,11 +35,11 @@ from modules.core.models import (
     BusinessSettings,
     CollectionAttempt,
     Customer,
-    Installment,
     Payment,
     Product,
     Sale,
 )
+from modules.core.services.agenda import build_weekly_agenda
 from modules.core.services.balances import (
     get_due_sale_balance,
     get_installment_balance,
@@ -132,36 +131,12 @@ def home(request):
 def agenda(request):
     selected_date = _selected_date(request)
     today = timezone.localdate()
-    generate_missing_late_fees(as_of=min(selected_date, today))
-    rows = build_collection_rows(as_of=selected_date)
-    scheduled_rows = [row for row in rows if row["has_installment_today"]]
-    carryover_rows = [
-        row for row in rows if not row["has_installment_today"] and row["days_overdue"] > 0
-    ]
-
-    exact_installments = (
-        Installment.objects.select_related("sale", "sale__customer")
-        .filter(due_date=selected_date)
-        .exclude(sale__status=Sale.Status.CANCELLED)
+    week_days = _week_days(selected_date)
+    generate_missing_late_fees(as_of=min(week_days[-1]["date"], today))
+    weekly_agenda = build_weekly_agenda(
+        containing_date=selected_date,
+        today=today,
     )
-    scheduled_amount = ZERO
-    scheduled_installments = 0
-    for installment in exact_installments:
-        balance = get_installment_balance(installment, as_of=selected_date)
-        if balance.total_due > ZERO:
-            scheduled_amount += balance.total_due
-            scheduled_installments += 1
-
-    neighborhood_counts = Counter(
-        (row["customer"].neighborhood or "Sin barrio") for row in rows
-    )
-    neighborhoods = [
-        {"name": name, "count": count}
-        for name, count in sorted(
-            neighborhood_counts.items(),
-            key=lambda item: (-item[1], item[0]),
-        )
-    ]
 
     return render(
         request,
@@ -169,17 +144,7 @@ def agenda(request):
         {
             "selected_date": selected_date,
             "today": today,
-            "week_days": _week_days(selected_date),
-            "previous_week": selected_date - timedelta(days=7),
-            "next_week": selected_date + timedelta(days=7),
-            "rows": rows,
-            "scheduled_rows": scheduled_rows,
-            "carryover_rows": carryover_rows,
-            "scheduled_installments": scheduled_installments,
-            "scheduled_amount": as_money(scheduled_amount),
-            "route_total": as_money(sum((row["total_due"] for row in rows), ZERO)),
-            "client_count": len({row["customer"].pk for row in rows}),
-            "neighborhoods": neighborhoods,
+            **weekly_agenda,
         },
     )
 

@@ -25,7 +25,7 @@ from launcher.backup import (
 )
 
 HOST = "127.0.0.1"
-PORT = 8765
+DEFAULT_PORT = 8765
 CLOSE_BACKUP_RETENTION_DAYS = 90
 
 
@@ -57,6 +57,7 @@ class LocalApplication:
     def __init__(self) -> None:
         self.root_path = portable_root()
         self.app_path = application_code_root(self.root_path)
+        self.port = int(os.environ.get("GESTION_PORT", DEFAULT_PORT))
         self.data_path = self.root_path / "data"
         self.backup_path = self.root_path / "backups"
         self.export_path = self.root_path / "exports"
@@ -118,10 +119,11 @@ class LocalApplication:
     def start_server(self) -> None:
         self.server = make_server(
             HOST,
-            PORT,
+            self.port,
             build_local_wsgi_application(),
             server_class=ThreadingServer,
         )
+        self.port = self.server.server_port
         self.server_thread = threading.Thread(
             target=self.server.serve_forever,
             name="gestion-financiera-server",
@@ -130,7 +132,7 @@ class LocalApplication:
         self.server_thread.start()
 
     def wait_until_ready(self) -> bool:
-        url = f"http://{HOST}:{PORT}/health/"
+        url = f"http://{HOST}:{self.port}/health/"
         for _ in range(40):
             try:
                 with urlopen(url, timeout=0.25) as response:
@@ -164,7 +166,7 @@ class LocalApplication:
                 "/static/css/app.css",
             ):
                 try:
-                    with urlopen(f"http://{HOST}:{PORT}{path}", timeout=5) as response:
+                    with urlopen(f"http://{HOST}:{self.port}{path}", timeout=5) as response:
                         if response.status != 200 or not response.read(256):
                             raise RuntimeError(
                                 f"La ruta portable no respondió correctamente: {path}"
@@ -185,7 +187,7 @@ class LocalApplication:
         validate_application_database(self.database_path)
 
     def open_browser(self) -> None:
-        webbrowser.open(f"http://{HOST}:{PORT}/")
+        webbrowser.open(f"http://{HOST}:{self.port}/")
 
     def close_and_backup(self) -> None:
         if self.closing:
@@ -232,7 +234,7 @@ class LocalApplication:
         ).pack(anchor="w")
         Label(
             content,
-            text=f"Disponible solo en este equipo: http://{HOST}:{PORT}",
+            text=f"Disponible solo en este equipo: http://{HOST}:{self.port}",
             font=("Segoe UI", 9),
         ).pack(anchor="w", pady=(4, 18))
 

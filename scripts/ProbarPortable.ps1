@@ -60,6 +60,7 @@ $previousPath = $env:Path
 $previousHttpProxy = $env:HTTP_PROXY
 $previousHttpsProxy = $env:HTTPS_PROXY
 $previousNoProxy = $env:NO_PROXY
+$previousGestionPort = $env:GESTION_PORT
 $succeeded = $false
 
 try {
@@ -67,6 +68,7 @@ try {
     $env:HTTP_PROXY = "http://127.0.0.1:9"
     $env:HTTPS_PROXY = "http://127.0.0.1:9"
     $env:NO_PROXY = "127.0.0.1,localhost"
+    $env:GESTION_PORT = "0"
 
     $applicationProcess = Start-Process `
         -FilePath (Join-Path $smokeDirectory "GestionFinanciera.exe") `
@@ -150,6 +152,7 @@ finally {
     $env:HTTP_PROXY = $previousHttpProxy
     $env:HTTPS_PROXY = $previousHttpsProxy
     $env:NO_PROXY = $previousNoProxy
+    $env:GESTION_PORT = $previousGestionPort
 }
 
 if ($succeeded) {

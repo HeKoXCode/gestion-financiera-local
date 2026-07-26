@@ -108,6 +108,10 @@ La construcción normal no debe omitir pruebas.
 
 El ensayo nunca usa `data`, `backups`, `exports` o `media` del proyecto real.
 
+Los archivos CSS y JavaScript incluyen automáticamente una versión derivada de
+su contenido. Al actualizar el programa, el navegador descarga la estética y
+los comportamientos nuevos en lugar de reutilizar una copia anterior.
+
 ## 5. Casos obligatorios
 
 | N.º | Caso | Cobertura |

@@ -1,11 +1,11 @@
-{% load static finance %}
+{% load finance %}
 <!doctype html>
 <html lang="es">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Planilla de cobranza · {{ selected_date|date:"d-m-Y" }}</title>
-    <link rel="stylesheet" href="{% static 'css/print.css' %}">
+    <link rel="stylesheet" href="{% versioned_static 'css/print.css' %}">
 </head>
 <body>
     <nav class="print-toolbar">

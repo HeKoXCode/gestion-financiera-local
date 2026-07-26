@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static finance %}
+{% load finance %}
 
 {% block title %}Nueva venta · Gestión Financiera{% endblock %}
 
@@ -161,6 +161,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/sale-form.js' %}" defer></script>
+<script src="{% versioned_static 'js/sale-form.js' %}" defer></script>
 {% endblock %}
-

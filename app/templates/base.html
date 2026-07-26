@@ -1,4 +1,4 @@
-{% load static %}
+{% load finance %}
 <!doctype html>
 <html lang="es">
 <head>
@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#123a32">
     <title>{% block title %}Gestión Financiera{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    <link rel="stylesheet" href="{% versioned_static 'css/app.css' %}">
 </head>
 <body>
     {% with current=request.resolver_match.url_name %}

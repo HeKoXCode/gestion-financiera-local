@@ -1,10 +1,35 @@
 from decimal import ROUND_DOWN, Decimal, InvalidOperation
+from functools import lru_cache
+from hashlib import sha256
+from pathlib import Path
 
 from django import template
+from django.contrib.staticfiles import finders
+from django.templatetags.static import static
 
 from modules.core.services.money import format_ars
 
 register = template.Library()
+
+
+@lru_cache(maxsize=32)
+def _static_digest(asset_path: str) -> str:
+    resolved_path = finders.find(asset_path)
+    if not resolved_path:
+        return ""
+
+    try:
+        return sha256(Path(resolved_path).read_bytes()).hexdigest()[:12]
+    except OSError:
+        return ""
+
+
+@register.simple_tag
+def versioned_static(asset_path: str) -> str:
+    """Return a static URL that changes when the bundled file changes."""
+    asset_url = static(asset_path)
+    digest = _static_digest(asset_path)
+    return f"{asset_url}?v={digest}" if digest else asset_url
 
 
 @register.filter

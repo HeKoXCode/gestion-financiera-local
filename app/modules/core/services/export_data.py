@@ -51,7 +51,9 @@ EXPECTED_FILES = {
 
 
 def _safe_text(value: str) -> str:
-    if value.startswith(("=", "+", "-", "@", "\t", "\r")):
+    if value.lstrip().startswith(("=", "+", "-", "@")) or value.startswith(
+        ("\t", "\r", "\n")
+    ):
         return f"'{value}"
     return value
 

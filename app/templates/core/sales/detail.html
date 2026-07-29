@@ -50,7 +50,7 @@
         <strong>{{ sale.financed_amount|ars }}</strong>
     </article>
     <article>
-        <span>Total pendiente</span>
+        <span>{% if sale.status == "cancelled" %}Saldo no exigible{% else %}Total pendiente{% endif %}</span>
         <strong>{{ balance.total_due|ars }}</strong>
     </article>
     <article>
@@ -78,7 +78,10 @@
         </dl>
     </section>
     <aside class="panel balance-card">
-        <p class="eyebrow">Estado financiero</p>
+        <p class="eyebrow">{% if sale.status == "cancelled" %}Saldo histórico{% else %}Estado financiero{% endif %}</p>
+        {% if sale.status == "cancelled" %}
+            <p class="muted-note">Se conserva como antecedente, pero no forma parte de la cobranza.</p>
+        {% endif %}
         <div><span>Capital pendiente</span><strong>{{ balance.principal_due|ars }}</strong></div>
         <div><span>Recargos pendientes</span><strong>{{ balance.late_fees_due|ars }}</strong></div>
         <div class="balance-total"><span>Total</span><strong>{{ balance.total_due|ars }}</strong></div>
@@ -111,7 +114,9 @@
                     <td data-label="Cuota"><strong>{{ row.installment.number }} de {{ sale.installment_count }}</strong></td>
                     <td data-label="Vencimiento">{{ row.installment.due_date|date:"d/m/Y" }}</td>
                     <td data-label="Estado">
-                        {% if row.balance.total_due == 0 %}
+                        {% if sale.status == "cancelled" %}
+                            <span class="badge badge-cancelled">Cancelada</span>
+                        {% elif row.balance.total_due == 0 %}
                             <span class="badge badge-success">Pagada</span>
                         {% elif row.installment.due_date < today %}
                             <span class="badge badge-danger">{{ row.balance.days_overdue }} días tarde</span>

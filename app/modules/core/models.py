@@ -129,6 +129,12 @@ class BusinessSettings(TimestampedModel):
             not isinstance(method, str) or not method.strip() for method in self.payment_methods
         ):
             errors["payment_methods"] = "Debe existir al menos un método de pago válido."
+        elif len(self.payment_methods) > 20:
+            errors["payment_methods"] = "Puede haber hasta 20 métodos de pago."
+        elif any(len(method.strip()) > 40 for method in self.payment_methods):
+            errors["payment_methods"] = (
+                "Cada método de pago puede tener hasta 40 caracteres."
+            )
 
         valid_frequencies = {choice for choice, _ in Sale.Frequency.choices}
         if (

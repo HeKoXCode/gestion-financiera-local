@@ -1,5 +1,5 @@
 import logging
-from datetime import timedelta
+from datetime import date, timedelta
 from pathlib import Path
 
 from django.conf import settings as django_settings
@@ -44,6 +44,7 @@ from modules.core.services.balances import (
     get_due_sale_balance,
     get_installment_balance,
     get_sale_balance,
+    installment_balance_prefetches,
 )
 from modules.core.services.collection import build_collection_rows
 from modules.core.services.customer_history import build_customer_history
@@ -67,6 +68,8 @@ from modules.core.services.reports import build_reports
 
 logger = logging.getLogger(__name__)
 PAGE_SIZE = 20
+MIN_NAVIGATION_DATE = date(1900, 1, 15)
+MAX_NAVIGATION_DATE = date(9999, 12, 15)
 BACKUP_LABELS = {
     "startup": "Inicio",
     "close": "Cierre",
@@ -79,7 +82,13 @@ BACKUP_LABELS = {
 
 def _selected_date(request):
     requested = parse_date(request.GET.get("fecha", ""))
-    return requested or timezone.localdate()
+    if (
+        requested is None
+        or requested < MIN_NAVIGATION_DATE
+        or requested > MAX_NAVIGATION_DATE
+    ):
+        return timezone.localdate()
+    return requested
 
 
 def _paginate(request, queryset):
@@ -589,8 +598,7 @@ def sale_detail(request, pk):
     sale = get_object_or_404(
         Sale.objects.select_related("customer", "product").prefetch_related(
             "installments",
-            "installments__late_fees",
-            "installments__payment_allocations",
+            *installment_balance_prefetches("installments"),
         ),
         pk=pk,
     )

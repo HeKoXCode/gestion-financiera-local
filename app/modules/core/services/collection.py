@@ -3,18 +3,26 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from modules.core.models import Sale
-from modules.core.services.balances import get_installment_balance
+from modules.core.models import BusinessSettings, Sale
+from modules.core.services.balances import (
+    get_installment_balance,
+    installment_balance_prefetches,
+    sale_effective_filter,
+)
 from modules.core.services.money import ZERO, as_money
 from modules.core.services.whatsapp import build_payment_reminder_url
 
 
 def build_collection_rows(*, as_of: date) -> list[dict]:
+    settings = BusinessSettings.get_solo()
     sales = (
         Sale.objects.filter(installments__due_date__lte=as_of)
-        .exclude(status=Sale.Status.CANCELLED)
+        .filter(sale_effective_filter(as_of))
         .select_related("customer", "product")
-        .prefetch_related("installments")
+        .prefetch_related(
+            "installments",
+            *installment_balance_prefetches("installments"),
+        )
         .distinct()
     )
 
@@ -63,6 +71,7 @@ def build_collection_rows(*, as_of: date) -> list[dict]:
                     customer=sale.customer,
                     amount=total_due,
                     due_date=oldest_installment.due_date,
+                    settings=settings,
                 ),
             }
         )

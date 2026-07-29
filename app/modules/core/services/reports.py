@@ -4,13 +4,18 @@ from collections import Counter
 from datetime import date, timedelta
 
 from modules.core.models import Payment, Sale
-from modules.core.services.balances import get_installment_balance
+from modules.core.services.balances import (
+    get_installment_balance,
+    installment_balance_prefetches,
+    registered_payment_filter,
+    sale_effective_filter,
+)
 from modules.core.services.money import ZERO, as_money
 
 
 def _sum_payments(*, start: date, end: date):
     amounts = Payment.objects.filter(
-        status=Payment.Status.REGISTERED,
+        registered_payment_filter(end),
         payment_date__gte=start,
         payment_date__lte=end,
     ).values_list("amount", flat=True)
@@ -28,13 +33,12 @@ def build_reports(*, as_of: date) -> dict:
     collected_month = _sum_payments(start=month_start, end=as_of)
 
     sales = list(
-        Sale.objects.exclude(status=Sale.Status.CANCELLED)
+        Sale.objects.filter(sale_effective_filter(as_of))
         .filter(delivery_date__lte=as_of)
         .select_related("customer", "product")
         .prefetch_related(
             "installments",
-            "installments__late_fees",
-            "installments__payment_allocations",
+            *installment_balance_prefetches("installments"),
         )
         .order_by("customer__last_name", "customer__first_name", "pk")
     )
@@ -158,7 +162,7 @@ def build_reports(*, as_of: date) -> dict:
     )
 
     trend_payments = Payment.objects.filter(
-        status=Payment.Status.REGISTERED,
+        registered_payment_filter(as_of),
         payment_date__gte=trend_start,
         payment_date__lte=as_of,
     )
@@ -181,7 +185,7 @@ def build_reports(*, as_of: date) -> dict:
 
     method_amounts = Counter()
     month_payments = Payment.objects.filter(
-        status=Payment.Status.REGISTERED,
+        registered_payment_filter(as_of),
         payment_date__gte=month_start,
         payment_date__lte=as_of,
     )

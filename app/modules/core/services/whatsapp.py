@@ -36,9 +36,17 @@ def build_payment_reminder_url(
         return ""
 
     settings = settings or BusinessSettings.get_solo()
-    message = settings.whatsapp_message.format(
-        nombre=customer.first_name,
-        monto=format_ars(amount),
-        vencimiento=due_date.strftime("%d/%m/%Y"),
-    )
+    values = {
+        "nombre": customer.first_name,
+        "monto": format_ars(amount),
+        "vencimiento": due_date.strftime("%d/%m/%Y"),
+    }
+    try:
+        message = settings.whatsapp_message.format(**values)
+    except (AttributeError, IndexError, KeyError, ValueError):
+        # A malformed value from an older database must never break cobranza.
+        message = (
+            "Hola {nombre}. Te recordamos que tenés una cuota pendiente "
+            "de {monto} con vencimiento {vencimiento}."
+        ).format(**values)
     return f"https://wa.me/{number}?text={quote(message)}"

@@ -3,7 +3,12 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from modules.core.models import CollectionAttempt, Installment, Payment, Sale
-from modules.core.services.balances import get_sale_balance
+from modules.core.services.balances import (
+    get_sale_balance,
+    installment_balance_prefetches,
+    registered_payment_filter,
+    sale_effective_filter,
+)
 from modules.core.services.collection import build_collection_rows
 from modules.core.services.money import ZERO, as_money
 
@@ -12,8 +17,8 @@ def build_dashboard(*, as_of: date) -> dict:
     collection_rows = build_collection_rows(as_of=as_of)
     overdue_rows = [row for row in collection_rows if row["days_overdue"] > 0]
     registered_payments = Payment.objects.filter(
+        registered_payment_filter(as_of),
         payment_date=as_of,
-        status=Payment.Status.REGISTERED,
     )
     installment_payments = registered_payments.filter(
         kind=Payment.Kind.INSTALLMENT,
@@ -41,12 +46,24 @@ def build_dashboard(*, as_of: date) -> dict:
         else 0
     )
 
-    active_sales = Sale.objects.filter(status=Sale.Status.ACTIVE).prefetch_related(
-        "installments"
+    portfolio_sales = (
+        Sale.objects.filter(
+            sale_effective_filter(as_of),
+            delivery_date__lte=as_of,
+        )
+        .prefetch_related(
+            "installments",
+            *installment_balance_prefetches("installments"),
+        )
     )
-    portfolio_total = as_money(
-        sum((get_sale_balance(sale, as_of=as_of).total_due for sale in active_sales), ZERO)
-    )
+    portfolio_balances = [
+        get_sale_balance(sale, as_of=as_of)
+        for sale in portfolio_sales
+    ]
+    open_portfolio = [
+        balance for balance in portfolio_balances if balance.total_due > ZERO
+    ]
+    portfolio_total = as_money(sum((balance.total_due for balance in open_portfolio), ZERO))
     upcoming_until = as_of + timedelta(days=7)
 
     return {
@@ -62,17 +79,20 @@ def build_dashboard(*, as_of: date) -> dict:
         "day_target": day_target,
         "collection_progress": collection_progress,
         "portfolio_total": portfolio_total,
-        "active_sales_count": active_sales.count(),
+        "active_sales_count": len(open_portfolio),
         "scheduled_today_count": sum(
             1 for row in collection_rows if row["has_installment_today"]
         ),
         "upcoming_installments": Installment.objects.filter(
-            sale__status=Sale.Status.ACTIVE,
+            sale_effective_filter(as_of, "sale"),
             due_date__gt=as_of,
             due_date__lte=upcoming_until,
         ).count(),
         "visits_today": CollectionAttempt.objects.filter(attempt_date=as_of).count(),
         "recent_payments": Payment.objects.select_related("customer", "sale")
-        .filter(status=Payment.Status.REGISTERED)
+        .filter(
+            registered_payment_filter(as_of),
+            payment_date__lte=as_of,
+        )
         .order_by("-payment_date", "-created_at")[:5],
     }

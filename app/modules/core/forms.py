@@ -1,6 +1,7 @@
 import uuid
 from decimal import Decimal
 from pathlib import Path
+from string import Formatter
 
 from django import forms
 from django.core.exceptions import ValidationError
@@ -94,6 +95,7 @@ class ProductForm(StyledModelForm):
 
 
 class BusinessSettingsForm(StyledModelForm):
+    WHATSAPP_FIELDS = {"nombre", "monto", "vencimiento"}
     DAY_CHOICES = [
         (0, "Lunes"),
         (1, "Martes"),
@@ -181,7 +183,34 @@ class BusinessSettingsForm(StyledModelForm):
                 methods.append(method)
         if not methods:
             raise ValidationError("Indicá al menos un método de pago.")
+        if len(methods) > 20:
+            raise ValidationError("Podés configurar hasta 20 métodos de pago.")
+        if any(len(method) > 40 for method in methods):
+            raise ValidationError(
+                "Cada método de pago puede tener hasta 40 caracteres."
+            )
         return methods
+
+    def clean_whatsapp_message(self):
+        message = self.cleaned_data["whatsapp_message"].strip()
+        try:
+            fields = {
+                field_name
+                for _, field_name, _, _ in Formatter().parse(message)
+                if field_name is not None
+            }
+        except ValueError as exc:
+            raise ValidationError(
+                "El mensaje tiene una llave abierta o cerrada incorrectamente."
+            ) from exc
+        invalid_fields = fields - self.WHATSAPP_FIELDS
+        if invalid_fields:
+            invalid = ", ".join(sorted(invalid_fields))
+            raise ValidationError(
+                f"Variable no permitida: {invalid}. "
+                "Usá solamente {nombre}, {monto} y {vencimiento}."
+            )
+        return message
 
     def save(self, commit=True):
         settings = super().save(commit=False)

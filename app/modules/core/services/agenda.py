@@ -4,7 +4,10 @@ from collections import Counter, defaultdict
 from datetime import date, timedelta
 
 from modules.core.models import Installment, Sale
-from modules.core.services.balances import get_installment_balance
+from modules.core.services.balances import (
+    get_installment_balance,
+    installment_balance_prefetches,
+)
 from modules.core.services.collection import build_collection_rows
 from modules.core.services.money import ZERO, as_money
 
@@ -19,8 +22,8 @@ def build_weekly_agenda(*, containing_date: date, today: date) -> dict:
     installments_by_date: dict[date, list[Installment]] = defaultdict(list)
     exact_installments = (
         Installment.objects.select_related("sale", "sale__customer")
+        .prefetch_related(*installment_balance_prefetches())
         .filter(due_date__range=(dates[0], dates[-1]))
-        .exclude(sale__status=Sale.Status.CANCELLED)
     )
     for installment in exact_installments:
         installments_by_date[installment.due_date].append(installment)
@@ -46,6 +49,11 @@ def build_weekly_agenda(*, containing_date: date, today: date) -> dict:
         scheduled_installments = 0
         scheduled_customer_ids: set[int] = set()
         for installment in installments_by_date[current_date]:
+            if (
+                installment.sale.status == Sale.Status.CANCELLED
+                and installment.sale.cancelled_on <= current_date
+            ):
+                continue
             balance = get_installment_balance(installment, as_of=current_date)
             if balance.total_due <= ZERO:
                 continue

@@ -3,7 +3,11 @@ from __future__ import annotations
 from datetime import date
 
 from modules.core.models import Customer, Payment, Sale
-from modules.core.services.balances import get_installment_balance, get_sale_balance
+from modules.core.services.balances import (
+    get_installment_balance,
+    get_sale_balance,
+    installment_balance_prefetches,
+)
 from modules.core.services.money import ZERO, as_money
 
 
@@ -12,8 +16,7 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
         customer.sales.select_related("product")
         .prefetch_related(
             "installments",
-            "installments__late_fees",
-            "installments__payment_allocations",
+            *installment_balance_prefetches("installments"),
         )
         .order_by("-delivery_date", "-pk")
     )

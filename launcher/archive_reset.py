@@ -100,7 +100,7 @@ def archive_and_reset(label: str) -> tuple[Path, dict[str, int], Path]:
     if local_application_is_running():
         raise BackupError(
             "Gestión Financiera está abierta. Cerrala con "
-            "“Cerrar y respaldar” antes de continuar."
+            "“Cerrar y crear respaldo” antes de continuar."
         )
 
     settings = configure_django()

@@ -8,7 +8,7 @@ import traceback
 import webbrowser
 from pathlib import Path
 from socketserver import ThreadingMixIn
-from tkinter import BOTH, LEFT, Button, Frame, Label, StringVar, Tk, messagebox
+from tkinter import Button, Frame, Label, StringVar, Tk, messagebox
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 from wsgiref.simple_server import WSGIServer, make_server
@@ -27,6 +27,18 @@ from launcher.backup import (
 HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 CLOSE_BACKUP_RETENTION_DAYS = 90
+WINDOW_WIDTH = 620
+WINDOW_HEIGHT = 430
+
+COLOR_BACKGROUND = "#F3F6F4"
+COLOR_SURFACE = "#FFFFFF"
+COLOR_PRIMARY = "#0F4C3A"
+COLOR_PRIMARY_HOVER = "#0B3D2E"
+COLOR_ACCENT = "#42B883"
+COLOR_TEXT = "#17211D"
+COLOR_MUTED = "#607069"
+COLOR_BORDER = "#D9E2DE"
+COLOR_SECONDARY_HOVER = "#E9EFEC"
 
 
 class ThreadingServer(ThreadingMixIn, WSGIServer):
@@ -68,6 +80,7 @@ class LocalApplication:
         self.server_thread = None
         self.window = None
         self.status = None
+        self.open_button = None
         self.closing = False
 
     def configure_django(self) -> None:
@@ -187,13 +200,30 @@ class LocalApplication:
         validate_application_database(self.database_path)
 
     def open_browser(self) -> None:
-        webbrowser.open(f"http://{HOST}:{self.port}/")
+        opened = webbrowser.open_new_tab(f"http://{HOST}:{self.port}/")
+        if opened:
+            self.status.set(
+                "El sistema está abierto en el navegador. "
+                "Dejá esta ventana abierta mientras trabajás."
+            )
+            self.open_button.configure(text="Volver a abrir el sistema")
+            return
+
+        self.status.set("No se pudo abrir el navegador automáticamente.")
+        messagebox.showwarning(
+            "Abrir Gestión Financiera",
+            (
+                "No se pudo abrir el navegador automáticamente.\n\n"
+                f"Abrí esta dirección manualmente:\nhttp://{HOST}:{self.port}/"
+            ),
+        )
 
     def close_and_backup(self) -> None:
         if self.closing:
             return
         self.closing = True
-        self.status.set("Cerrando y creando backup…")
+        self.status.set("Guardando los datos y cerrando de forma segura…")
+        self.window.update_idletasks()
 
         try:
             self.stop_server()
@@ -215,47 +245,166 @@ class LocalApplication:
 
         self.window.destroy()
 
+    @staticmethod
+    def _add_hover(button: Button, *, normal: str, hover: str) -> None:
+        button.bind("<Enter>", lambda _event: button.configure(background=hover))
+        button.bind("<Leave>", lambda _event: button.configure(background=normal))
+
+    def _center_window(self) -> None:
+        self.window.update_idletasks()
+        screen_width = self.window.winfo_screenwidth()
+        screen_height = self.window.winfo_screenheight()
+        position_x = max((screen_width - WINDOW_WIDTH) // 2, 0)
+        position_y = max((screen_height - WINDOW_HEIGHT) // 2, 0)
+        self.window.geometry(
+            f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{position_x}+{position_y}"
+        )
+
     def build_window(self) -> None:
         self.window = Tk()
         self.window.title("Gestión Financiera")
-        self.window.geometry("470x220")
-        self.window.minsize(420, 210)
+        self.window.configure(background=COLOR_BACKGROUND)
+        self.window.resizable(False, False)
         self.window.protocol("WM_DELETE_WINDOW", self.close_and_backup)
+        self._center_window()
 
-        self.status = StringVar(value="Sistema local en funcionamiento")
+        self.status = StringVar(
+            value="Todo está listo. Presioná “Abrir sistema” para comenzar."
+        )
 
-        content = Frame(self.window, padx=24, pady=22)
-        content.pack(fill=BOTH, expand=True)
+        header = Frame(
+            self.window,
+            background=COLOR_PRIMARY,
+            padx=38,
+            pady=28,
+        )
+        header.pack(fill="x")
 
         Label(
-            content,
-            text="Gestión Financiera",
-            font=("Segoe UI", 18, "bold"),
+            header,
+            text="GESTIÓN LOCAL",
+            font=("Segoe UI Semibold", 9),
+            foreground="#A9E7CD",
+            background=COLOR_PRIMARY,
         ).pack(anchor="w")
         Label(
-            content,
-            text=f"Disponible solo en este equipo: http://{HOST}:{self.port}",
-            font=("Segoe UI", 9),
-        ).pack(anchor="w", pady=(4, 18))
+            header,
+            text="Gestión Financiera",
+            font=("Segoe UI Semibold", 25),
+            foreground="#FFFFFF",
+            background=COLOR_PRIMARY,
+        ).pack(anchor="w", pady=(3, 0))
+        Label(
+            header,
+            text="Ventas financiadas y cobranza diaria",
+            font=("Segoe UI", 10),
+            foreground="#D3E9E0",
+            background=COLOR_PRIMARY,
+        ).pack(anchor="w")
 
-        actions = Frame(content)
-        actions.pack(anchor="w")
-        Button(actions, text="Abrir sistema", command=self.open_browser, width=16).pack(
-            side=LEFT, padx=(0, 8)
+        content = Frame(
+            self.window,
+            background=COLOR_BACKGROUND,
+            padx=38,
+            pady=28,
         )
-        Button(
+        content.pack(fill="both", expand=True)
+
+        status_card = Frame(
+            content,
+            background=COLOR_SURFACE,
+            highlightbackground=COLOR_BORDER,
+            highlightthickness=1,
+            padx=20,
+            pady=17,
+        )
+        status_card.pack(fill="x")
+
+        ready_row = Frame(status_card, background=COLOR_SURFACE)
+        ready_row.pack(fill="x")
+        Label(
+            ready_row,
+            text="●",
+            font=("Segoe UI", 10),
+            foreground=COLOR_ACCENT,
+            background=COLOR_SURFACE,
+        ).pack(side="left", padx=(0, 8))
+        Label(
+            ready_row,
+            text="Sistema preparado",
+            font=("Segoe UI Semibold", 11),
+            foreground=COLOR_TEXT,
+            background=COLOR_SURFACE,
+        ).pack(side="left")
+        Label(
+            status_card,
+            text=(
+                "Tus datos permanecen en este equipo. Abrí el sistema para "
+                "consultar clientes, ventas y cobranzas."
+            ),
+            font=("Segoe UI", 9),
+            foreground=COLOR_MUTED,
+            background=COLOR_SURFACE,
+            justify="left",
+            wraplength=495,
+        ).pack(anchor="w", pady=(7, 0))
+
+        actions = Frame(content, background=COLOR_BACKGROUND)
+        actions.pack(fill="x", pady=(20, 0))
+
+        self.open_button = Button(
             actions,
-            text="Cerrar y respaldar",
+            text="Abrir sistema",
+            command=self.open_browser,
+            font=("Segoe UI Semibold", 10),
+            foreground="#FFFFFF",
+            background=COLOR_PRIMARY,
+            activeforeground="#FFFFFF",
+            activebackground=COLOR_PRIMARY_HOVER,
+            relief="flat",
+            borderwidth=0,
+            cursor="hand2",
+            padx=22,
+            pady=11,
+        )
+        self.open_button.pack(side="left")
+        self._add_hover(
+            self.open_button,
+            normal=COLOR_PRIMARY,
+            hover=COLOR_PRIMARY_HOVER,
+        )
+
+        close_button = Button(
+            actions,
+            text="Cerrar y crear respaldo",
             command=self.close_and_backup,
-            width=18,
-        ).pack(side=LEFT)
+            font=("Segoe UI Semibold", 10),
+            foreground=COLOR_TEXT,
+            background=COLOR_BACKGROUND,
+            activeforeground=COLOR_TEXT,
+            activebackground=COLOR_SECONDARY_HOVER,
+            relief="solid",
+            borderwidth=1,
+            cursor="hand2",
+            padx=18,
+            pady=10,
+        )
+        close_button.pack(side="left", padx=(12, 0))
+        self._add_hover(
+            close_button,
+            normal=COLOR_BACKGROUND,
+            hover=COLOR_SECONDARY_HOVER,
+        )
 
         Label(
             content,
             textvariable=self.status,
             font=("Segoe UI", 9),
-            fg="#475467",
-        ).pack(anchor="w", pady=(20, 0))
+            foreground=COLOR_MUTED,
+            background=COLOR_BACKGROUND,
+            justify="left",
+            wraplength=530,
+        ).pack(anchor="w", pady=(18, 0))
 
     def run(self) -> None:
         self.configure_django()
@@ -263,7 +412,6 @@ class LocalApplication:
         if not self.wait_until_ready():
             raise RuntimeError("El servidor local no respondió a tiempo")
         self.build_window()
-        self.open_browser()
 
         signal.signal(signal.SIGINT, lambda *_: self.window.after(0, self.close_and_backup))
         self.window.mainloop()

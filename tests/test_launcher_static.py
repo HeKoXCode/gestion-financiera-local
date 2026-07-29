@@ -1,4 +1,5 @@
 import re
+from types import SimpleNamespace
 from wsgiref.util import setup_testing_defaults
 
 import pytest
@@ -64,3 +65,40 @@ def test_launcher_accepts_an_ephemeral_port_for_portable_tests(monkeypatch):
     application = LocalApplication()
 
     assert application.port == 0
+
+
+def test_launcher_waits_for_the_user_before_opening_the_browser(monkeypatch):
+    application = LocalApplication()
+    calls = []
+    fake_window = SimpleNamespace(mainloop=lambda: calls.append("mainloop"))
+
+    monkeypatch.setattr(application, "configure_django", lambda: calls.append("configure"))
+    monkeypatch.setattr(application, "start_server", lambda: calls.append("server"))
+    monkeypatch.setattr(application, "wait_until_ready", lambda: True)
+
+    def build_fake_window():
+        calls.append("window")
+        application.window = fake_window
+
+    monkeypatch.setattr(application, "build_window", build_fake_window)
+    monkeypatch.setattr(application, "open_browser", lambda: calls.append("browser"))
+    monkeypatch.setattr("launcher.launcher.signal.signal", lambda *_args: None)
+
+    application.run()
+
+    assert calls == ["configure", "server", "window", "mainloop"]
+
+
+def test_open_browser_updates_the_launcher_message(monkeypatch):
+    application = LocalApplication()
+    recorded = {}
+    application.status = SimpleNamespace(set=lambda value: recorded.update(status=value))
+    application.open_button = SimpleNamespace(
+        configure=lambda **values: recorded.update(values)
+    )
+    monkeypatch.setattr("launcher.launcher.webbrowser.open_new_tab", lambda _url: True)
+
+    application.open_browser()
+
+    assert recorded["text"] == "Volver a abrir el sistema"
+    assert "abierto en el navegador" in recorded["status"]

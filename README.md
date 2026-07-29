@@ -42,9 +42,9 @@ El lanzador:
 - aplica migraciones pendientes;
 - actualiza los recargos diarios faltantes;
 - crea un backup de inicio;
-- abre `http://127.0.0.1:8765/`;
-- muestra una pequeña ventana de control;
-- permite abrir el navegador o cerrar y respaldar.
+- muestra una ventana de inicio clara, sin abrir el navegador automáticamente;
+- permite entrar al sistema con “Abrir sistema”;
+- permite cerrar de forma segura y crear el respaldo final.
 
 La sección “Datos y respaldo” del menú permite crear y descargar backups
 SQLite comprimidos (`.sqlite3.zip`) y exportar un ZIP de CSV compatible con

@@ -53,7 +53,7 @@ automáticamente la base real utilizada durante el desarrollo.
 
 Para trasladar datos existentes:
 
-1. cerrar el programa de origen con “Cerrar y respaldar”;
+1. cerrar el programa de origen con “Cerrar y crear respaldo”;
 2. copiar un backup `.sqlite3.zip` a `backups` del paquete portable;
 3. ejecutar `RESTAURAR_DATOS.bat`;
 4. revisar la copia seleccionada automáticamente;

@@ -166,7 +166,8 @@ class RestorerApplication:
         if local_application_is_running():
             messagebox.showerror(
                 "El programa está abierto",
-                "Cerrá Gestión Financiera con “Cerrar y respaldar” antes de restaurar.",
+                "Cerrá Gestión Financiera con “Cerrar y crear respaldo” "
+                "antes de restaurar.",
             )
             return
         if not messagebox.askyesno(

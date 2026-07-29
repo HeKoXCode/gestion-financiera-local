@@ -60,7 +60,7 @@ aceptados por el restaurador para conservar compatibilidad.
 | Inicio | Al abrir el programa | 5 |
 | Antes de actualizar | Antes de aplicar migraciones | 5 |
 | Recuperación | Al iniciar y después de cada alta o cambio importante | 1 fija |
-| Cierre | Al usar “Cerrar y respaldar” | 1 por día, 90 días |
+| Cierre | Al usar “Cerrar y crear respaldo” | 1 por día, 90 días |
 | Preventiva | Antes de una restauración | 10 |
 
 Las copias manuales conservan las 30 más recientes. Si el programa se cierra
@@ -128,7 +128,7 @@ scripts\Restaurar.bat
 
 ### Procedimiento normal para restaurar
 
-1. En la ventana pequeña del programa, presionar “Cerrar y respaldar”.
+1. En el panel de inicio, presionar “Cerrar y crear respaldo”.
 2. Esperar a que se cierre por completo.
 3. Hacer doble clic en `scripts\Restaurar.bat`.
 4. Revisar la copia más reciente seleccionada automáticamente.
@@ -200,7 +200,7 @@ Resultado al cerrar la fase:
 
 ## 7. Criterios de aceptación
 
-- “Cerrar y respaldar” crea una copia final: cumplido.
+- “Cerrar y crear respaldo” crea una copia final: cumplido.
 - Existe una copia reciente después de operaciones importantes: cumplido.
 - Un backup puede descargarse desde la aplicación: cumplido.
 - La exportación genera CSV legibles por Excel: cumplido.

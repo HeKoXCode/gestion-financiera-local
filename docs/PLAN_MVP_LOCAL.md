@@ -104,7 +104,7 @@ para abrir ni utilizar el programa.
 6. Muestra el dashboard y la cobranza del día.
 7. La persona trabaja normalmente.
 8. Puede crear un backup o exportar CSV en cualquier momento.
-9. Presiona “Cerrar y respaldar”.
+9. Presiona “Cerrar y crear respaldo”.
 10. El programa crea una copia final y se cierra.
 
 Si el equipo se apaga inesperadamente, SQLite protege las transacciones y
@@ -286,7 +286,7 @@ automáticamente antes de publicarse.
 - después de una operación financiera importante, actualizando una copia de
   recuperación;
 - al crear una copia manual desde “Datos y respaldo”;
-- al presionar “Cerrar y respaldar”;
+- al presionar “Cerrar y crear respaldo”;
 - antes de restaurar otra copia.
 
 ### 7.3 Retención
@@ -498,7 +498,7 @@ Acciones:
 1. Implementar API de backup SQLite.
 2. Crear copia de recuperación.
 3. Crear el backup manual dentro de “Datos y respaldo”.
-4. Crear “Cerrar y respaldar”.
+4. Crear “Cerrar y crear respaldo”.
 5. Rotar copias.
 6. Exportar ZIP de CSV.
 7. Crear restaurador externo.

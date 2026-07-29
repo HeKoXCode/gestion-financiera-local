@@ -22,7 +22,8 @@ Al abrir el programa, el lanzador:
 1. aplica migraciones;
 2. genera los recargos faltantes hasta la fecha local;
 3. crea el backup de inicio;
-4. abre el servidor y el navegador.
+4. abre el panel local; el navegador se inicia únicamente al presionar
+   “Abrir sistema”.
 
 La portada y la pantalla de cobranza también actualizan los recargos del día.
 Esto cubre el caso en que el programa permanece abierto durante la noche.

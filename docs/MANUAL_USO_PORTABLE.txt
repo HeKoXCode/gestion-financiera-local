@@ -5,7 +5,9 @@ GESTIÓN FINANCIERA — MANUAL RÁPIDO
 
 Conservá completa la carpeta GestionFinanciera.
 Hacé doble clic en INICIAR.bat o GestionFinanciera.exe.
-Se abrirá una ventana pequeña de control y luego el navegador.
+Se abrirá el panel de inicio de Gestión Financiera.
+Presioná “Abrir sistema” cuando quieras entrar; recién entonces se abrirá el
+navegador. Dejá el panel abierto mientras trabajás.
 El sistema funciona en este equipo mediante http://127.0.0.1:8765/.
 No necesita Internet, Docker ni Python instalado.
 
@@ -34,7 +36,7 @@ Cobranza > seleccionar fecha > Imprimir planilla.
 3. CERRAR CORRECTAMENTE
 
 No cierres solamente la pestaña del navegador.
-En la ventana pequeña de Gestión Financiera presioná “Cerrar y respaldar”.
+En el panel de Gestión Financiera presioná “Cerrar y crear respaldo”.
 El programa detendrá el servidor y guardará una copia final.
 Se guarda una copia por día durante 90 días. Si cerrás varias veces en la misma
 fecha, se actualiza la copia de ese día sin ocupar otro lugar.
@@ -60,7 +62,7 @@ Conviene copiar periódicamente un backup .sqlite3.zip a otro disco o pendrive.
 
 6. RESTAURAR UNA COPIA
 
-1) Cerrá el programa con “Cerrar y respaldar”.
+1) Cerrá el programa con “Cerrar y crear respaldo”.
 2) Ejecutá RESTAURAR_DATOS.bat o Restaurador.exe.
 3) Revisá la copia más reciente que aparece seleccionada automáticamente.
 4) Presioná “Restaurar la copia mostrada” y confirmá.

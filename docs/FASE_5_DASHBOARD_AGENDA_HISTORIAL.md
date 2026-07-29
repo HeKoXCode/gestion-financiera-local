@@ -76,7 +76,7 @@ tablet y celular.
 El detalle del cliente ahora reúne:
 
 - datos personales y administrativos;
-- total financiado no cancelado;
+- total en cuotas de ventas no canceladas;
 - total abonado mediante pagos vigentes;
 - saldo pendiente;
 - cantidad de cuotas atrasadas y pagadas;

@@ -19,7 +19,9 @@
         <dl class="confirm-summary">
             <div><dt>Cliente</dt><dd>{{ sale.customer.full_name }}</dd></div>
             <div><dt>Producto</dt><dd>{{ sale.product_description }}</dd></div>
-            <div><dt>Monto financiado</dt><dd>{{ sale.financed_amount|ars }}</dd></div>
+            <div><dt>Precio del producto</dt><dd>{{ sale.cash_price|ars }}</dd></div>
+            <div><dt>Entrega inicial</dt><dd>{{ sale.down_payment|ars }}</dd></div>
+            <div><dt>Total en cuotas</dt><dd>{{ sale.financed_amount|ars }}</dd></div>
         </dl>
 
         <form method="post" novalidate>
@@ -38,4 +40,3 @@
     </section>
 </div>
 {% endblock %}
-

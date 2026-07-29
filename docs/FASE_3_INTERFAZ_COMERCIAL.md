@@ -91,15 +91,17 @@ El formulario contiene:
 - producto;
 - descripción específica;
 - fecha de entrega;
-- precio contado;
-- monto financiado;
+- precio del producto;
+- entrega inicial y método de pago;
+- total en cuotas;
 - frecuencia semanal, quincenal o mensual;
 - cantidad de cuotas;
 - primer día de cobro.
 
-El **precio contado** es el valor de referencia si el producto se pagara
-completo al momento de la compra. El **monto financiado** es el total acordado
-que se divide entre las cuotas; no incluye futuros recargos por atraso.
+El **precio del producto** es el valor acordado. La **entrega inicial** es el
+dinero recibido al entregar el producto. El **total en cuotas** es lo que se
+divide entre las cuotas y puede ser distinto del saldo base si se acordó un
+costo financiero o un descuento; no incluye futuros recargos por atraso.
 
 Mientras se completa, una vista previa local muestra:
 
@@ -107,7 +109,7 @@ Mientras se completa, una vista previa local muestra:
 - vencimiento;
 - importe;
 - frecuencia;
-- monto total;
+- precio, entrega, saldo base y total de la operación;
 - ajuste de centavos de la última cuota.
 
 Al confirmar:
@@ -116,17 +118,19 @@ Al confirmar:
 2. se copia el recargo configurado;
 3. se congela la descripción del producto;
 4. se guarda la venta;
-5. se crean todas las cuotas en una única transacción;
-6. se abre el detalle de la operación.
+5. se registra la entrega inicial como dinero recibido, cuando corresponda;
+6. se crean todas las cuotas en una única transacción;
+7. se abre el detalle de la operación.
 
 ## Detalle y estados
 
 El detalle de una venta muestra:
 
 - cliente y producto;
-- precio contado;
-- monto financiado;
-- total pendiente y abonado;
+- precio del producto;
+- entrega inicial;
+- total en cuotas;
+- total pendiente y recibido;
 - frecuencia;
 - recargo diario congelado;
 - capital y recargos pendientes;

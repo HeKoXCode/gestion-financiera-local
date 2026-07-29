@@ -18,6 +18,9 @@ Resumen del día: muestra cobranzas, atrasos y total pendiente.
 Clientes: alta, edición, búsqueda, historial y archivado.
 Productos: catálogo usado al registrar ventas.
 Ventas: carga una financiación y genera sus cuotas.
+En una venta indicá el precio del producto, la entrega inicial (si existe) y
+el total que se dividirá en cuotas. La entrega queda registrada como dinero
+recibido y no se descuenta nuevamente de las cuotas.
 Cobranza: registra pagos, pagos parciales o que el cliente no pagó.
 Semana: compara de lunes a sábado clientes, vencimientos, atrasos y recorridos.
 Reportes: revisa lo cobrado y la cartera pendiente.

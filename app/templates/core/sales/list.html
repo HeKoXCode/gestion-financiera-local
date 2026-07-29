@@ -50,7 +50,7 @@
                     <th>Entrega</th>
                     <th>Plan</th>
                     <th>Estado</th>
-                    <th class="align-right">Financiado</th>
+                    <th class="align-right">En cuotas</th>
                     <th class="align-right">Cuota estimada</th>
                     <th></th>
                 </tr>
@@ -72,7 +72,7 @@
                     <td data-label="Estado">
                         <span class="badge badge-{{ sale.status }}">{{ sale.get_status_display }}</span>
                     </td>
-                    <td data-label="Financiado" class="money-cell">{{ sale.financed_amount|ars }}</td>
+                    <td data-label="En cuotas" class="money-cell">{{ sale.financed_amount|ars }}</td>
                     <td data-label="Cuota estimada" class="money-cell">
                         {{ sale.financed_amount|installment_estimate:sale.installment_count|ars }}
                     </td>

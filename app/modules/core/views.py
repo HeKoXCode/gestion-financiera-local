@@ -57,7 +57,11 @@ from modules.core.services.export_data import (
 from modules.core.services.installments import create_installments
 from modules.core.services.late_fees import generate_missing_late_fees
 from modules.core.services.money import ZERO, as_money, format_ars
-from modules.core.services.payments import register_payment, void_payment
+from modules.core.services.payments import (
+    register_initial_payment,
+    register_payment,
+    void_payment,
+)
 from modules.core.services.recovery import refresh_recovery_backup
 from modules.core.services.reports import build_reports
 
@@ -555,6 +559,11 @@ def sale_create(request):
                 sale.full_clean()
                 sale.save()
                 create_installments(sale)
+                register_initial_payment(
+                    sale=sale,
+                    payment_method=form.cleaned_data.get("down_payment_method", ""),
+                    settings=settings,
+                )
         except ValidationError as exc:
             form.add_error(None, exc)
         else:
@@ -595,6 +604,21 @@ def sale_detail(request, pk):
         }
         for installment in sale.installments.all()
     ]
+    payments = list(sale.payments.prefetch_related("allocations").all())
+    total_received = as_money(
+        sum(
+            (
+                payment.amount
+                for payment in payments
+                if payment.status == Payment.Status.REGISTERED
+            ),
+            ZERO,
+        )
+    )
+    initial_payment = next(
+        (payment for payment in payments if payment.kind == Payment.Kind.INITIAL),
+        None,
+    )
     return render(
         request,
         "core/sales/detail.html",
@@ -603,7 +627,9 @@ def sale_detail(request, pk):
             "balance": get_sale_balance(sale, as_of=today),
             "due_balance": get_due_sale_balance(sale, as_of=today),
             "installment_rows": installment_rows,
-            "payments": sale.payments.prefetch_related("allocations").all(),
+            "payments": payments,
+            "total_received": total_received,
+            "initial_payment": initial_payment,
             "collection_attempts": sale.collection_attempts.all()[:10],
             "today": today,
         },
@@ -657,6 +683,7 @@ def collection_list(request):
     collected = Payment.objects.filter(
         payment_date=selected_date,
         status=Payment.Status.REGISTERED,
+        kind=Payment.Kind.INSTALLMENT,
     )
     collected_amount = as_money(sum(collected.values_list("amount", flat=True), ZERO))
 

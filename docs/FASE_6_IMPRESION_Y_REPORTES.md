@@ -88,7 +88,7 @@ También se incluyen:
 - clientes con mayor deuda total, incluidas cuotas futuras;
 - clientes con financiación activa sin atraso;
 - productos más vendidos;
-- monto financiado y pendiente por producto.
+- total en cuotas y pendiente por producto.
 
 Los pagos anulados y las ventas canceladas quedan fuera de los totales.
 

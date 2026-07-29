@@ -9,7 +9,11 @@ from django.utils import timezone
 from modules.core.models import Payment, PaymentAllocation, Sale
 from modules.core.services.balances import get_installment_balance, get_sale_balance
 from modules.core.services.installments import create_installments
-from modules.core.services.payments import register_payment, void_payment
+from modules.core.services.payments import (
+    register_initial_payment,
+    register_payment,
+    void_payment,
+)
 from modules.core.tests.factories import make_sale
 
 pytestmark = pytest.mark.django_db
@@ -21,14 +25,20 @@ def make_due_sale(
     installment_count: int = 1,
     first_due_offset: int = 0,
     daily_late_fee: Decimal = Decimal("0.00"),
+    **sale_overrides,
 ):
     today = timezone.localdate()
+    delivery_date = sale_overrides.pop(
+        "delivery_date",
+        today - timedelta(days=30),
+    )
     sale = make_sale(
-        delivery_date=today - timedelta(days=30),
+        delivery_date=delivery_date,
         first_due_date=today + timedelta(days=first_due_offset),
         financed_amount=amount,
         installment_count=installment_count,
         daily_late_fee=daily_late_fee,
+        **sale_overrides,
     )
     create_installments(sale)
     return sale
@@ -162,3 +172,21 @@ def test_invalid_payment_method_is_rejected():
     with pytest.raises(ValidationError):
         register(sale, "1000.00", method="Cheque")
 
+
+def test_initial_payment_cannot_be_voided_separately():
+    sale = make_due_sale(
+        amount=Decimal("40000.00"),
+        cash_price=Decimal("60000.00"),
+        down_payment=Decimal("20000.00"),
+        delivery_date=timezone.localdate(),
+    )
+    payment = register_initial_payment(
+        sale=sale,
+        payment_method="Efectivo",
+    )
+
+    with pytest.raises(ValidationError, match="no se anula por separado"):
+        void_payment(payment=payment, reason="Importe incorrecto")
+
+    payment.refresh_from_db()
+    assert payment.status == Payment.Status.REGISTERED

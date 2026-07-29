@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from modules.core.models import (
+    ZERO,
     BusinessSettings,
     CollectionAttempt,
     Customer,
@@ -196,7 +197,7 @@ class BusinessSettingsForm(StyledModelForm):
 
 class SaleForm(StyledModelForm):
     cash_price = forms.DecimalField(
-        label="Precio contado",
+        label="Precio del producto",
         max_digits=14,
         decimal_places=2,
         min_value=Decimal("0.01"),
@@ -209,8 +210,28 @@ class SaleForm(StyledModelForm):
             }
         ),
     )
+    down_payment = forms.DecimalField(
+        label="Entrega inicial",
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal("0.00"),
+        required=False,
+        initial=Decimal("0.00"),
+        localize=True,
+        widget=forms.TextInput(
+            attrs={
+                "inputmode": "decimal",
+                "placeholder": "Ej. 200000",
+                "data-money-input": "",
+            }
+        ),
+    )
+    down_payment_method = forms.ChoiceField(
+        label="Método de la entrega",
+        required=False,
+    )
     financed_amount = forms.DecimalField(
-        label="Monto financiado",
+        label="Total en cuotas",
         max_digits=14,
         decimal_places=2,
         min_value=Decimal("0.01"),
@@ -232,6 +253,7 @@ class SaleForm(StyledModelForm):
             "product_description",
             "delivery_date",
             "cash_price",
+            "down_payment",
             "financed_amount",
             "frequency",
             "installment_count",
@@ -267,6 +289,10 @@ class SaleForm(StyledModelForm):
             for choice in Sale.Frequency.choices
             if choice[0] in self.settings.available_frequencies
         ]
+        self.fields["down_payment_method"].choices = [
+            ("", "Seleccionar método"),
+            *((method, method) for method in self.settings.payment_methods),
+        ]
         self.fields["product_description"].required = False
         self.fields["installment_count"].widget.attrs["max"] = self.settings.max_installments
         self.fields["installment_count"].help_text = (
@@ -294,14 +320,36 @@ class SaleForm(StyledModelForm):
             raise ValidationError("La frecuencia seleccionada no está habilitada.")
         return frequency
 
+    def clean_down_payment(self):
+        return self.cleaned_data.get("down_payment") or Decimal("0.00")
+
     def clean(self):
         cleaned = super().clean()
         delivery_date = cleaned.get("delivery_date")
         first_due_date = cleaned.get("first_due_date")
+        product_price = cleaned.get("cash_price")
+        down_payment = cleaned.get("down_payment") or Decimal("0.00")
+        payment_method = cleaned.get("down_payment_method")
+
         if delivery_date and first_due_date and first_due_date < delivery_date:
             self.add_error(
                 "first_due_date",
                 "El primer cobro no puede ser anterior a la entrega.",
+            )
+        if product_price is not None and down_payment >= product_price:
+            self.add_error(
+                "down_payment",
+                "Debe ser menor al precio del producto porque quedará un saldo en cuotas.",
+            )
+        if down_payment > ZERO and not payment_method:
+            self.add_error(
+                "down_payment_method",
+                "Elegí cómo se recibió la entrega inicial.",
+            )
+        if down_payment > ZERO and delivery_date and delivery_date > timezone.localdate():
+            self.add_error(
+                "delivery_date",
+                "Una venta con entrega inicial no puede tener una fecha de entrega futura.",
             )
         return cleaned
 

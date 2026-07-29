@@ -5,7 +5,7 @@ import pytest
 from django.urls import reverse
 from django.utils import timezone
 
-from modules.core.models import BusinessSettings, Customer, Product, Sale
+from modules.core.models import BusinessSettings, Customer, Payment, Product, Sale
 from modules.core.services.installments import create_installments
 from modules.core.tests.factories import make_customer, make_product, make_sale
 
@@ -198,6 +198,70 @@ def test_sale_creation_supports_monthly_installments(client):
         Decimal("120000.00"),
         Decimal("120000.00"),
     ]
+
+
+def test_sale_creation_records_initial_payment_and_finances_only_the_balance(client):
+    customer = make_customer()
+    product = make_product()
+
+    response = client.post(
+        reverse("core:sale_create"),
+        sale_form_data(
+            customer,
+            product,
+            delivery_date=timezone.localdate().isoformat(),
+            cash_price="600000",
+            down_payment="200000",
+            down_payment_method="Efectivo",
+            financed_amount="400000",
+            installment_count="20",
+            first_due_date=timezone.localdate().isoformat(),
+        ),
+    )
+
+    sale = Sale.objects.get()
+    initial_payment = Payment.objects.get(sale=sale)
+
+    assert response.status_code == 302
+    assert sale.cash_price == Decimal("600000.00")
+    assert sale.down_payment == Decimal("200000.00")
+    assert sale.financed_amount == Decimal("400000.00")
+    assert sale.operation_total == Decimal("600000.00")
+    assert sale.installments.count() == 20
+    assert set(sale.installments.values_list("original_amount", flat=True)) == {
+        Decimal("20000.00")
+    }
+    assert initial_payment.kind == Payment.Kind.INITIAL
+    assert initial_payment.amount == Decimal("200000.00")
+    assert initial_payment.payment_method == "Efectivo"
+    assert initial_payment.allocations.count() == 0
+
+    detail = client.get(response.url).content.decode()
+    assert "Precio del producto" in detail
+    assert "Entrega inicial" in detail
+    assert "Total en cuotas" in detail
+
+
+def test_initial_payment_requires_method_and_non_future_delivery(client):
+    customer = make_customer()
+    product = make_product()
+
+    response = client.post(
+        reverse("core:sale_create"),
+        sale_form_data(
+            customer,
+            product,
+            delivery_date="2099-01-01",
+            first_due_date="2099-01-01",
+            down_payment="100000",
+            down_payment_method="",
+        ),
+    )
+
+    assert response.status_code == 200
+    assert Sale.objects.count() == 0
+    assert "Elegí cómo se recibió la entrega inicial" in response.content.decode()
+    assert "no puede tener una fecha de entrega futura" in response.content.decode()
 
 
 def test_sale_creation_respects_maximum_installments(client):

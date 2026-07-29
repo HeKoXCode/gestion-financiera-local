@@ -6,9 +6,13 @@ import pytest
 from django.urls import reverse
 from django.utils import timezone
 
-from modules.core.models import CollectionAttempt, Sale
+from modules.core.models import CollectionAttempt, Payment, Sale
 from modules.core.services.installments import create_installments
-from modules.core.services.payments import register_payment, void_payment
+from modules.core.services.payments import (
+    register_initial_payment,
+    register_payment,
+    void_payment,
+)
 from modules.core.tests.factories import make_product, make_sale
 
 pytestmark = pytest.mark.django_db
@@ -22,8 +26,12 @@ def make_todays_sale(
     **sale_overrides,
 ):
     today = timezone.localdate()
+    delivery_date = sale_overrides.pop(
+        "delivery_date",
+        today - timedelta(days=30),
+    )
     sale = make_sale(
-        delivery_date=today - timedelta(days=30),
+        delivery_date=delivery_date,
         first_due_date=today + timedelta(days=first_due_offset),
         financed_amount=amount,
         installment_count=installment_count,
@@ -68,6 +76,35 @@ def test_dashboard_portfolio_includes_future_installments(client):
     assert response.context["remaining_to_collect"] == Decimal("20000.00")
     assert response.context["portfolio_total"] == Decimal("40000.00")
     assert response.context["scheduled_today_count"] == 1
+
+
+def test_initial_payment_is_received_money_but_not_collection_progress(client):
+    sale = make_todays_sale(
+        amount=Decimal("400000.00"),
+        cash_price=Decimal("600000.00"),
+        down_payment=Decimal("200000.00"),
+        delivery_date=timezone.localdate(),
+    )
+    register_initial_payment(sale=sale, payment_method="Efectivo")
+
+    response = client.get(reverse("core:home"))
+
+    assert response.context["collected_amount"] == Decimal("200000.00")
+    assert response.context["initial_collected_amount"] == Decimal("200000.00")
+    assert response.context["installment_collected_amount"] == Decimal("0.00")
+    assert response.context["remaining_to_collect"] == Decimal("400000.00")
+    assert response.context["day_target"] == Decimal("400000.00")
+    assert response.context["collection_progress"] == 0
+
+    collection = client.get(reverse("core:collection_list"))
+    assert collection.context["collected_amount"] == Decimal("0.00")
+
+    history = client.get(reverse("core:customer_detail", args=[sale.customer_id]))
+    assert history.context["total_paid"] == Decimal("200000.00")
+    assert "Entrega inicial" in {
+        event["title"] for event in history.context["events"]
+    }
+    assert Payment.objects.get(sale=sale).kind == Payment.Kind.INITIAL
 
 
 def test_agenda_shows_programmed_installments_for_each_day_of_the_week(client):
@@ -132,7 +169,7 @@ def test_customer_history_consolidates_sales_payments_and_visits(client):
     assert response.context["total_paid"] == Decimal("5000.00")
     assert response.context["total_balance"] == Decimal("15000.00")
     assert response.context["active_sales"] == 1
-    assert {"Venta entregada", "Pago registrado", "Prometió pagar"} <= event_titles
+    assert {"Venta entregada", "Pago de cuota", "Prometió pagar"} <= event_titles
 
 
 def test_voided_payment_is_excluded_from_total_but_stays_in_timeline(client):

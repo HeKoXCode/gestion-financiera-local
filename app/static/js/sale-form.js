@@ -4,6 +4,9 @@
     const form = document.querySelector("#sale-form");
     if (!form) return;
 
+    const productPriceInput = document.querySelector("#id_cash_price");
+    const downPaymentInput = document.querySelector("#id_down_payment");
+    const downPaymentMethodInput = document.querySelector("#id_down_payment_method");
     const financedInput = document.querySelector("#id_financed_amount");
     const countInput = document.querySelector("#id_installment_count");
     const frequencyInput = document.querySelector("#id_frequency");
@@ -11,6 +14,12 @@
     const productInput = document.querySelector("#id_product");
     const descriptionInput = document.querySelector("#id_product_description");
     const totalOutput = document.querySelector("#preview-total");
+    const productPriceOutput = document.querySelector("#preview-product-price");
+    const downPaymentOutput = document.querySelector("#preview-down-payment");
+    const baseBalanceOutput = document.querySelector("#preview-base-balance");
+    const adjustmentLabel = document.querySelector("#preview-adjustment-label");
+    const adjustmentOutput = document.querySelector("#preview-adjustment");
+    const operationTotalOutput = document.querySelector("#preview-operation-total");
     const captionOutput = document.querySelector("#preview-caption");
     const frequencyOutput = document.querySelector("#preview-frequency");
     const rowsOutput = document.querySelector("#preview-rows");
@@ -18,6 +27,7 @@
     const tableOutput = document.querySelector("#preview-table-wrap");
     const submitButton = document.querySelector("#sale-submit");
     let lastAutomaticDescription = "";
+    let financedWasEdited = Boolean(financedInput?.value.trim());
 
     const currency = new Intl.NumberFormat("es-AR", {
         style: "currency",
@@ -64,7 +74,12 @@
     }
 
     function updatePreview() {
+        const productPriceCents = parseMoneyToCents(productPriceInput.value);
+        const downPaymentCents = parseMoneyToCents(downPaymentInput.value);
         const totalCents = parseMoneyToCents(financedInput.value);
+        const baseBalanceCents = Math.max(productPriceCents - downPaymentCents, 0);
+        const operationTotalCents = downPaymentCents + totalCents;
+        const adjustmentCents = operationTotalCents - productPriceCents;
         const count = Number.parseInt(countInput.value, 10);
         const firstDate = dateFromIso(firstDueInput.value);
         const isMonthly = frequencyInput.value === "monthly";
@@ -73,6 +88,17 @@
             frequencyInput.options[frequencyInput.selectedIndex]?.text || "Sin datos";
 
         totalOutput.textContent = currency.format(totalCents / 100);
+        productPriceOutput.textContent = currency.format(productPriceCents / 100);
+        downPaymentOutput.textContent = currency.format(downPaymentCents / 100);
+        baseBalanceOutput.textContent = currency.format(baseBalanceCents / 100);
+        operationTotalOutput.textContent = currency.format(operationTotalCents / 100);
+        adjustmentOutput.textContent = currency.format(Math.abs(adjustmentCents) / 100);
+        adjustmentLabel.textContent =
+            adjustmentCents > 0
+                ? "Costo financiero"
+                : adjustmentCents < 0
+                  ? "Descuento acordado"
+                  : "Diferencia financiera";
         frequencyOutput.textContent = frequencyLabel;
 
         if (!totalCents || !count || count < 1 || !firstDate) {
@@ -119,6 +145,25 @@
         tableOutput.hidden = false;
     }
 
+    function suggestInstallmentTotal() {
+        const productPriceCents = parseMoneyToCents(productPriceInput.value);
+        const downPaymentCents = parseMoneyToCents(downPaymentInput.value);
+        const suggestedCents = Math.max(productPriceCents - downPaymentCents, 0);
+
+        if (!financedWasEdited) {
+            financedInput.value =
+                suggestedCents > 0
+                    ? (suggestedCents / 100).toFixed(2).replace(".", ",")
+                    : "";
+        }
+
+        const hasDownPayment = downPaymentCents > 0;
+        downPaymentMethodInput.disabled = !hasDownPayment;
+        downPaymentMethodInput.required = hasDownPayment;
+        if (!hasDownPayment) downPaymentMethodInput.value = "";
+        updatePreview();
+    }
+
     function updateProductDescription() {
         const selectedText =
             productInput.options[productInput.selectedIndex]?.text?.trim() || "";
@@ -129,9 +174,18 @@
         }
     }
 
-    [financedInput, countInput, frequencyInput, firstDueInput].forEach((control) => {
+    [countInput, frequencyInput, firstDueInput].forEach((control) => {
         control?.addEventListener("input", updatePreview);
         control?.addEventListener("change", updatePreview);
+    });
+    financedInput?.addEventListener("input", () => {
+        financedWasEdited = Boolean(financedInput.value.trim());
+        updatePreview();
+    });
+    financedInput?.addEventListener("change", updatePreview);
+    [productPriceInput, downPaymentInput].forEach((control) => {
+        control?.addEventListener("input", suggestInstallmentTotal);
+        control?.addEventListener("change", suggestInstallmentTotal);
     });
     productInput?.addEventListener("change", updateProductDescription);
 
@@ -142,5 +196,5 @@
         }
     });
 
-    updatePreview();
+    suggestInstallmentTotal();
 })();

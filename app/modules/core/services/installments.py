@@ -34,7 +34,7 @@ def calculate_installment_amounts(financed_amount: Decimal, count: int) -> list[
 
     total = as_money(financed_amount)
     if total <= 0:
-        raise ValidationError("El monto financiado debe ser mayor que cero.")
+        raise ValidationError("El total en cuotas debe ser mayor que cero.")
 
     regular_amount = (total / count).quantize(CENT, rounding=ROUND_DOWN)
     if regular_amount <= 0:

@@ -246,13 +246,20 @@ class Sale(TimestampedModel):
         max_digits=14,
         decimal_places=2,
         validators=[MinValueValidator(MIN_MONEY)],
-        verbose_name="precio contado",
+        verbose_name="precio del producto",
+    )
+    down_payment = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=ZERO,
+        validators=[MinValueValidator(ZERO)],
+        verbose_name="entrega inicial",
     )
     financed_amount = models.DecimalField(
         max_digits=14,
         decimal_places=2,
         validators=[MinValueValidator(MIN_MONEY)],
-        verbose_name="monto financiado",
+        verbose_name="total en cuotas",
     )
     frequency = models.CharField(
         max_length=16,
@@ -300,6 +307,10 @@ class Sale(TimestampedModel):
                 name="sale_financed_amount_positive",
             ),
             models.CheckConstraint(
+                condition=Q(down_payment__gte=ZERO),
+                name="sale_down_payment_non_negative",
+            ),
+            models.CheckConstraint(
                 condition=Q(installment_count__gte=1),
                 name="sale_installment_count_positive",
             ),
@@ -320,9 +331,32 @@ class Sale(TimestampedModel):
     def is_collectible(self) -> bool:
         return self.status == self.Status.ACTIVE
 
+    @property
+    def base_financed_amount(self) -> Decimal:
+        """Price left after the initial payment, before financing adjustments."""
+        return max(ZERO, self.cash_price - self.down_payment)
+
+    @property
+    def operation_total(self) -> Decimal:
+        return self.down_payment + self.financed_amount
+
+    @property
+    def financing_adjustment(self) -> Decimal:
+        return self.operation_total - self.cash_price
+
     def clean(self) -> None:
         super().clean()
         errors: dict[str, str] = {}
+
+        if (
+            self.cash_price is not None
+            and self.down_payment is not None
+            and self.down_payment >= self.cash_price
+        ):
+            errors["down_payment"] = (
+                "La entrega inicial debe ser menor al precio del producto; "
+                "el resto se paga en cuotas."
+            )
 
         if self.first_due_date and self.delivery_date and self.first_due_date < self.delivery_date:
             errors["first_due_date"] = "El primer vencimiento no puede ser anterior a la entrega."
@@ -423,6 +457,10 @@ class LateFee(TimestampedModel):
 
 
 class Payment(TimestampedModel):
+    class Kind(models.TextChoices):
+        INSTALLMENT = "installment", "Pago de cuota"
+        INITIAL = "initial", "Entrega inicial"
+
     class Status(models.TextChoices):
         REGISTERED = "registered", "Registrado"
         VOIDED = "voided", "Anulado"
@@ -453,6 +491,12 @@ class Payment(TimestampedModel):
         verbose_name="importe",
     )
     payment_method = models.CharField(max_length=40, verbose_name="método de pago")
+    kind = models.CharField(
+        max_length=16,
+        choices=Kind.choices,
+        default=Kind.INSTALLMENT,
+        verbose_name="tipo de movimiento",
+    )
     notes = models.TextField(blank=True, verbose_name="observaciones")
     status = models.CharField(
         max_length=16,

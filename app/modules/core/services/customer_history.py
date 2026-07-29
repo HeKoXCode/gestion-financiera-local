@@ -19,7 +19,7 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
     )
     sale_rows = []
     installment_rows = []
-    total_financed = ZERO
+    total_installments = ZERO
     total_balance = ZERO
     overdue_installments = 0
     paid_installments = 0
@@ -29,7 +29,7 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
         is_cancelled = sale.status == Sale.Status.CANCELLED
         exigible_total = ZERO if is_cancelled else balance.total_due
         if not is_cancelled:
-            total_financed += sale.financed_amount
+            total_installments += sale.financed_amount
             total_balance += balance.total_due
 
         sale_rows.append(
@@ -99,7 +99,7 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
                 "kind": "sale",
                 "title": "Venta entregada",
                 "detail": sale.product_description,
-                "amount": sale.financed_amount,
+                "amount": sale.operation_total,
                 "sale": sale,
             }
         )
@@ -115,6 +115,7 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
                 }
             )
     for payment in payments:
+        is_initial = payment.kind == Payment.Kind.INITIAL
         events.append(
             {
                 "date": payment.payment_date,
@@ -124,9 +125,13 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
                     else "payment_voided"
                 ),
                 "title": (
-                    "Pago registrado"
+                    ("Entrega inicial" if is_initial else "Pago de cuota")
                     if payment.status == Payment.Status.REGISTERED
-                    else "Pago anulado"
+                    else (
+                        "Entrega inicial anulada"
+                        if is_initial
+                        else "Pago de cuota anulado"
+                    )
                 ),
                 "detail": payment.notes or payment.payment_method,
                 "amount": payment.amount,
@@ -152,7 +157,9 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
         "payments": payments,
         "attempts": attempts,
         "events": events,
-        "total_financed": as_money(total_financed),
+        "total_installments": as_money(total_installments),
+        # Kept temporarily for compatibility with older integrations.
+        "total_financed": as_money(total_installments),
         "total_paid": total_paid,
         "total_balance": as_money(total_balance),
         "overdue_installments": overdue_installments,

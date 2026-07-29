@@ -75,15 +75,27 @@
             </div>
             <div class="form-grid two-columns">
                 <div class="field">
-                    <label for="{{ form.cash_price.id_for_label }}">Precio contado</label>
+                    <label for="{{ form.cash_price.id_for_label }}">Precio del producto</label>
                     <div class="money-input"><span>$</span>{{ form.cash_price }}</div>
-                    <p class="field-help">Lo que costaría el producto si se pagara todo en el momento.</p>
+                    <p class="field-help">Valor acordado del producto, antes de dividir el pago.</p>
                     {% for error in form.cash_price.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
                 <div class="field">
-                    <label for="{{ form.financed_amount.id_for_label }}">Monto financiado</label>
+                    <label for="{{ form.down_payment.id_for_label }}">Entrega inicial</label>
+                    <div class="money-input"><span>$</span>{{ form.down_payment }}</div>
+                    <p class="field-help">Dinero que el cliente entrega al recibir el producto. Usá 0 si no entrega nada.</p>
+                    {% for error in form.down_payment.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="field">
+                    <label for="{{ form.down_payment_method.id_for_label }}">Método de la entrega</label>
+                    {{ form.down_payment_method }}
+                    <p class="field-help">Solo es necesario cuando hay una entrega inicial.</p>
+                    {% for error in form.down_payment_method.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="field">
+                    <label for="{{ form.financed_amount.id_for_label }}">Total en cuotas</label>
                     <div class="money-input"><span>$</span>{{ form.financed_amount }}</div>
-                    <p class="field-help">El total que se dividirá entre las cuotas, antes de posibles recargos por atraso.</p>
+                    <p class="field-help">Se sugiere precio menos entrega. Podés cambiarlo si acordaste un costo financiero.</p>
                     {% for error in form.financed_amount.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
             </div>
@@ -140,10 +152,17 @@
             <span id="preview-frequency" class="badge badge-neutral">Sin datos</span>
         </div>
         <div class="preview-total">
-            <span>Monto financiado</span>
+            <span>Total en cuotas</span>
             <strong id="preview-total">$ 0,00</strong>
             <small id="preview-caption">Completá monto, cantidad y primera fecha.</small>
         </div>
+        <dl class="sale-money-breakdown">
+            <div><dt>Precio del producto</dt><dd id="preview-product-price">$ 0,00</dd></div>
+            <div><dt>Entrega inicial</dt><dd id="preview-down-payment">$ 0,00</dd></div>
+            <div><dt>Saldo base a financiar</dt><dd id="preview-base-balance">$ 0,00</dd></div>
+            <div><dt id="preview-adjustment-label">Diferencia financiera</dt><dd id="preview-adjustment">$ 0,00</dd></div>
+            <div class="breakdown-total"><dt>Total de la operación</dt><dd id="preview-operation-total">$ 0,00</dd></div>
+        </dl>
         <div id="preview-empty" class="preview-empty">
             <span aria-hidden="true">⌁</span>
             <p>Las fechas e importes aparecerán aquí antes de guardar.</p>

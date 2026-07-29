@@ -10,7 +10,7 @@ from django.utils import timezone
 from modules.core.forms import BusinessSettingsForm
 from modules.core.models import BusinessSettings, Payment, Sale
 from modules.core.services.installments import create_installments
-from modules.core.services.payments import register_payment
+from modules.core.services.payments import register_initial_payment, register_payment
 from modules.core.services.reports import build_reports
 from modules.core.tests.factories import make_customer, make_product, make_sale
 
@@ -64,6 +64,26 @@ def test_report_payment_totals_use_day_week_and_month_periods():
     assert report["collected_today"] == Decimal("100.00")
     assert report["collected_week"] == Decimal("300.00")
     assert report["collected_month"] == Decimal("600.00")
+
+
+def test_reports_include_the_initial_payment_as_received_money():
+    today = timezone.localdate()
+    sale = make_sale(
+        cash_price=Decimal("600000.00"),
+        down_payment=Decimal("200000.00"),
+        financed_amount=Decimal("400000.00"),
+        delivery_date=today,
+        first_due_date=today,
+    )
+    create_installments(sale)
+    register_initial_payment(sale=sale, payment_method="Efectivo")
+
+    report = build_reports(as_of=today)
+
+    assert report["collected_today"] == Decimal("200000.00")
+    assert report["payment_methods"] == [
+        {"name": "Efectivo", "amount": Decimal("200000.00")}
+    ]
 
 
 def test_reports_separate_portfolio_due_and_overdue_amounts():

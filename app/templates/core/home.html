@@ -48,9 +48,9 @@
         <small>{{ overdue_total|ars }} en mora</small>
     </article>
     <article class="dashboard-kpi is-success">
-        <span class="kpi-label">Cobrado</span>
+        <span class="kpi-label">Dinero recibido</span>
         <strong>{{ collected_amount|ars }}</strong>
-        <small>Pagos registrados en la fecha</small>
+        <small>{{ installment_collected_amount|ars }} en cuotas · {{ initial_collected_amount|ars }} en entregas</small>
     </article>
     <article class="dashboard-kpi is-dark">
         <span class="kpi-label">Cartera pendiente</span>
@@ -64,7 +64,7 @@
         <p class="eyebrow">Avance de cobranza</p>
         <div class="progress-title">
             <h2>{{ collection_progress }}% del objetivo diario</h2>
-            <span>{{ collected_amount|ars }} de {{ day_target|ars }}</span>
+            <span>{{ installment_collected_amount|ars }} de {{ day_target|ars }}</span>
         </div>
         <div class="progress-track" role="progressbar" aria-valuenow="{{ collection_progress }}"
              aria-valuemin="0" aria-valuemax="100">
@@ -138,7 +138,7 @@
             <div class="compact-payment-list">
                 {% for payment in recent_payments %}
                 <a href="{% url 'core:sale_detail' payment.sale_id %}">
-                    <span>{{ payment.customer.full_name }}<small>{{ payment.payment_date|date:"d/m/Y" }}</small></span>
+                    <span>{{ payment.customer.full_name }}<small>{{ payment.get_kind_display }} · {{ payment.payment_date|date:"d/m/Y" }}</small></span>
                     <strong>{{ payment.amount|ars }}</strong>
                 </a>
                 {% endfor %}

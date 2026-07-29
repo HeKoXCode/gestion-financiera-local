@@ -32,7 +32,7 @@
     <article class="report-kpi is-success">
         <span>Cobrado en la fecha</span>
         <strong>{{ collected_today|ars }}</strong>
-        <small>Pagos registrados, sin anulados</small>
+        <small>Cuotas y entregas iniciales, sin anulados</small>
     </article>
     <article class="report-kpi">
         <span>Cobrado esta semana</span>
@@ -200,13 +200,13 @@
         {% if products_most_sold %}
         <div class="table-wrap">
             <table class="data-table responsive-table report-table">
-                <thead><tr><th>Producto</th><th class="align-right">Ventas</th><th class="align-right">Financiado</th><th class="align-right">Pendiente</th></tr></thead>
+                <thead><tr><th>Producto</th><th class="align-right">Ventas</th><th class="align-right">En cuotas</th><th class="align-right">Pendiente</th></tr></thead>
                 <tbody>
                     {% for row in products_most_sold|slice:":10" %}
                     <tr>
                         <td data-label="Producto"><strong>{{ row.product.name }}</strong></td>
                         <td data-label="Ventas" class="align-right">{{ row.units }}</td>
-                        <td data-label="Financiado" class="money-cell">{{ row.financed|ars }}</td>
+                        <td data-label="En cuotas" class="money-cell">{{ row.financed|ars }}</td>
                         <td data-label="Pendiente" class="money-cell">{{ row.pending|ars }}</td>
                     </tr>
                     {% endfor %}

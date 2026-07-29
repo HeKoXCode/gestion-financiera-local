@@ -1405,6 +1405,48 @@ textarea.form-control {
     font-size: 0.65rem;
 }
 
+.sale-money-breakdown {
+    display: grid;
+    gap: 0;
+    margin: 0 0 1rem;
+    padding: 0.25rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    background: var(--surface-soft);
+}
+
+.sale-money-breakdown > div {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.sale-money-breakdown > div:last-child {
+    border-bottom: 0;
+}
+
+.sale-money-breakdown dt {
+    color: var(--muted);
+    font-size: 0.68rem;
+}
+
+.sale-money-breakdown dd {
+    margin: 0;
+    color: var(--ink);
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-align: right;
+}
+
+.sale-money-breakdown .breakdown-total dt,
+.sale-money-breakdown .breakdown-total dd {
+    color: var(--primary-dark);
+    font-weight: 850;
+}
+
 .preview-empty {
     padding: 2rem 0.5rem;
     color: var(--muted);
@@ -1505,7 +1547,7 @@ textarea.form-control {
 
 .sale-summary-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 0.75rem;
     margin-bottom: 1rem;
 }

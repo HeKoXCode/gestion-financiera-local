@@ -28,7 +28,7 @@
 </section>
 
 <section class="customer-kpis">
-    <article><span>Total financiado</span><strong>{{ total_financed|ars }}</strong><small>{{ product_count }} producto{{ product_count|pluralize }}</small></article>
+    <article><span>Total en cuotas</span><strong>{{ total_installments|ars }}</strong><small>{{ product_count }} producto{{ product_count|pluralize }}</small></article>
     <article class="is-success"><span>Total abonado</span><strong>{{ total_paid|ars }}</strong><small>Pagos no anulados</small></article>
     <article class="{% if total_balance > 0 %}is-warning{% endif %}"><span>Saldo pendiente</span><strong>{{ total_balance|ars }}</strong><small>{{ active_sales }} venta{{ active_sales|pluralize }} activa{{ active_sales|pluralize }}</small></article>
     <article class="{% if overdue_installments %}is-danger{% endif %}"><span>Cuotas atrasadas</span><strong>{{ overdue_installments }}</strong><small>{{ paid_installments }} cuota{{ paid_installments|pluralize }} pagada{{ paid_installments|pluralize }}</small></article>
@@ -81,7 +81,7 @@
     {% if sale_rows %}
     <div class="table-wrap">
         <table class="data-table responsive-table">
-            <thead><tr><th>Entrega</th><th>Producto</th><th>Plan</th><th>Estado</th><th class="align-right">Financiado</th><th class="align-right">Saldo exigible</th><th></th></tr></thead>
+            <thead><tr><th>Entrega</th><th>Producto</th><th>Plan</th><th>Estado</th><th class="align-right">En cuotas</th><th class="align-right">Saldo exigible</th><th></th></tr></thead>
             <tbody>
                 {% for row in sale_rows %}
                 <tr>
@@ -89,7 +89,7 @@
                     <td data-label="Producto"><a class="table-primary" href="{% url 'core:sale_detail' row.sale.pk %}">{{ row.sale.product_description }}</a></td>
                     <td data-label="Plan">{{ row.sale.installment_count }} cuotas<small>{{ row.sale.get_frequency_display }}</small></td>
                     <td data-label="Estado"><span class="badge badge-{{ row.sale.status }}">{{ row.sale.get_status_display }}</span></td>
-                    <td data-label="Financiado" class="money-cell">{{ row.sale.financed_amount|ars }}</td>
+                    <td data-label="En cuotas" class="money-cell">{{ row.sale.financed_amount|ars }}</td>
                     <td data-label="Saldo" class="money-cell">
                         {{ row.exigible_total|ars }}
                         {% if row.sale.status == "cancelled" %}<small>No exigible</small>{% endif %}
@@ -142,11 +142,12 @@
     {% if payments %}
     <div class="table-wrap">
         <table class="data-table responsive-table">
-            <thead><tr><th>Fecha</th><th>Producto</th><th>Método</th><th>Estado</th><th>Observaciones</th><th class="align-right">Importe</th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Tipo</th><th>Producto</th><th>Método</th><th>Estado</th><th>Observaciones</th><th class="align-right">Importe</th></tr></thead>
             <tbody>
                 {% for payment in payments %}
                 <tr>
                     <td data-label="Fecha">{{ payment.payment_date|date:"d/m/Y" }}</td>
+                    <td data-label="Tipo">{{ payment.get_kind_display }}</td>
                     <td data-label="Producto"><a class="table-primary" href="{% url 'core:sale_detail' payment.sale_id %}">{{ payment.sale.product_description }}</a></td>
                     <td data-label="Método">{{ payment.payment_method }}</td>
                     <td data-label="Estado">
@@ -160,7 +161,7 @@
         </table>
     </div>
     {% else %}
-    <div class="empty-state compact"><span class="empty-icon" aria-hidden="true">$</span><h3>Sin pagos</h3><p>Los pagos completos y parciales aparecerán aquí.</p></div>
+    <div class="empty-state compact"><span class="empty-icon" aria-hidden="true">$</span><h3>Sin pagos</h3><p>Las entregas iniciales y los pagos de cuotas aparecerán aquí.</p></div>
     {% endif %}
 </section>
 
@@ -187,4 +188,3 @@
     {% endif %}
 </section>
 {% endblock %}
-

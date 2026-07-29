@@ -76,7 +76,7 @@ El servicio:
 
 - calcula fechas cada 7 o 14 días;
 - usa importes Decimal con dos posiciones;
-- divide el monto financiado sin perder centavos;
+- divide el total en cuotas sin perder centavos;
 - asigna la diferencia de redondeo a la última cuota;
 - respeta las frecuencias y máximo de cuotas configurados;
 - evita generar las cuotas dos veces.

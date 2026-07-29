@@ -29,6 +29,45 @@ class PaymentRegistration:
     created: bool
 
 
+@transaction.atomic
+def register_initial_payment(
+    *,
+    sale: Sale,
+    payment_method: str,
+    settings: BusinessSettings | None = None,
+) -> Payment | None:
+    """Record the cash received when a financed sale is delivered."""
+    sale = Sale.objects.select_for_update().select_related("customer").get(pk=sale.pk)
+    if sale.down_payment <= ZERO:
+        return None
+
+    settings = settings or BusinessSettings.get_solo()
+    errors: dict[str, str] = {}
+    if sale.delivery_date > timezone.localdate():
+        errors["delivery_date"] = (
+            "No se puede registrar una entrega inicial con fecha futura."
+        )
+    if payment_method not in settings.payment_methods:
+        errors["down_payment_method"] = "El método de pago no está habilitado."
+    if Payment.objects.filter(sale=sale, kind=Payment.Kind.INITIAL).exists():
+        errors["down_payment"] = "Esta venta ya tiene una entrega inicial registrada."
+    if errors:
+        raise ValidationError(errors)
+
+    payment = Payment(
+        customer=sale.customer,
+        sale=sale,
+        payment_date=sale.delivery_date,
+        amount=sale.down_payment,
+        payment_method=payment_method,
+        kind=Payment.Kind.INITIAL,
+        notes="Registrada junto con la venta.",
+    )
+    payment.full_clean()
+    payment.save()
+    return payment
+
+
 def _eligible_installments(sale: Sale, payment_date: date, *, allow_advance: bool):
     installments = sale.installments.order_by("due_date", "number", "pk")
     if not allow_advance:
@@ -118,6 +157,7 @@ def register_payment(
         payment_date=payment_date,
         amount=amount,
         payment_method=payment_method,
+        kind=Payment.Kind.INSTALLMENT,
         notes=notes.strip(),
     )
     payment.full_clean()
@@ -166,6 +206,15 @@ def void_payment(*, payment: Payment, reason: str) -> bool:
     payment = Payment.objects.select_for_update().select_related("sale").get(pk=payment.pk)
     if payment.status == Payment.Status.VOIDED:
         return False
+    if payment.kind == Payment.Kind.INITIAL:
+        raise ValidationError(
+            {
+                "reason": (
+                    "La entrega inicial forma parte de la venta y no se anula por separado. "
+                    "Si fue cargada por error, cancelá la venta y registrala nuevamente."
+                )
+            }
+        )
     if not reason.strip():
         raise ValidationError({"reason": "Debés indicar el motivo de la anulación."})
 

@@ -186,8 +186,9 @@ código. Actualizar el programa no deberá reemplazar los datos.
 - producto;
 - descripción congelada;
 - fecha de entrega;
-- precio contado;
-- monto financiado;
+- precio del producto;
+- entrega inicial y método;
+- total en cuotas;
 - frecuencia semanal, quincenal o mensual;
 - cantidad de cuotas;
 - recargo diario congelado;

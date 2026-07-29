@@ -104,9 +104,12 @@ def test_export_contains_excel_compatible_relational_csv_files(tmp_path):
         assert customers[0]["nombre"] == "Ángela"
         assert customers[0]["observaciones"] == "'=2+2"
         assert sales[0]["cliente_id"] == str(sale.customer_id)
-        assert sales[0]["monto_financiado"] == "20000.00"
+        assert sales[0]["precio_producto"] == "400000.00"
+        assert sales[0]["entrega_inicial"] == "0.00"
+        assert sales[0]["total_en_cuotas"] == "20000.00"
         assert installments[0]["venta_id"] == str(sale.pk)
         assert payments[0]["id"] == str(payment.pk)
+        assert payments[0]["tipo"] == "installment"
         assert allocations[0]["pago_id"] == str(payment.pk)
         assert attempts[0]["id"] == str(attempt.pk)
         assert "decimal con punto" in archive.read("resumen.txt").decode("utf-8-sig")

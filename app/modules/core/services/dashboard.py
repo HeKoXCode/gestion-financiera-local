@@ -15,6 +15,12 @@ def build_dashboard(*, as_of: date) -> dict:
         payment_date=as_of,
         status=Payment.Status.REGISTERED,
     )
+    installment_payments = registered_payments.filter(
+        kind=Payment.Kind.INSTALLMENT,
+    )
+    initial_payments = registered_payments.filter(
+        kind=Payment.Kind.INITIAL,
+    )
 
     remaining_to_collect = as_money(
         sum((row["total_due"] for row in collection_rows), ZERO)
@@ -22,9 +28,17 @@ def build_dashboard(*, as_of: date) -> dict:
     collected_amount = as_money(
         sum(registered_payments.values_list("amount", flat=True), ZERO)
     )
-    day_target = as_money(remaining_to_collect + collected_amount)
+    installment_collected_amount = as_money(
+        sum(installment_payments.values_list("amount", flat=True), ZERO)
+    )
+    initial_collected_amount = as_money(
+        sum(initial_payments.values_list("amount", flat=True), ZERO)
+    )
+    day_target = as_money(remaining_to_collect + installment_collected_amount)
     collection_progress = (
-        min(100, round((collected_amount / day_target) * 100)) if day_target > ZERO else 0
+        min(100, round((installment_collected_amount / day_target) * 100))
+        if day_target > ZERO
+        else 0
     )
 
     active_sales = Sale.objects.filter(status=Sale.Status.ACTIVE).prefetch_related(
@@ -43,6 +57,8 @@ def build_dashboard(*, as_of: date) -> dict:
         "overdue_clients": len({row["customer"].pk for row in overdue_rows}),
         "overdue_total": as_money(sum((row["total_due"] for row in overdue_rows), ZERO)),
         "collected_amount": collected_amount,
+        "installment_collected_amount": installment_collected_amount,
+        "initial_collected_amount": initial_collected_amount,
         "day_target": day_target,
         "collection_progress": collection_progress,
         "portfolio_total": portfolio_total,
@@ -60,4 +76,3 @@ def build_dashboard(*, as_of: date) -> dict:
         .filter(status=Payment.Status.REGISTERED)
         .order_by("-payment_date", "-created_at")[:5],
     }
-

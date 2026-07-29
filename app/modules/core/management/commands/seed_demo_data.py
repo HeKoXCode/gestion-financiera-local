@@ -34,8 +34,8 @@ SCENARIO_LABELS = {
     0: "finalizada al día",
     1: "finalizada con atraso",
     2: "activa con pago parcial",
-    3: "morosa sin pagos",
-    4: "activa todavía no exigible",
+    3: "con cuotas atrasadas y sin pagos",
+    4: "activa sin cuotas vencidas",
     5: "cancelada",
     6: "con pago anulado",
     7: "activa con pagos mixtos",
@@ -62,7 +62,7 @@ def _first_due_date(delivery_date: date, frequency: str) -> date:
 
 
 class Command(BaseCommand):
-    help = "Crea una cartera ficticia integral para demostración y QA."
+    help = "Crea datos ficticios integrales para demostración y QA."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -102,7 +102,7 @@ class Command(BaseCommand):
             generate_missing_late_fees(as_of=as_of, settings=settings)
 
         summary = self._summary()
-        self.stdout.write(self.style.SUCCESS("Cartera demo creada correctamente."))
+        self.stdout.write(self.style.SUCCESS("Datos de demostración creados correctamente."))
         for label, value in summary.items():
             self.stdout.write(f"  {label}: {value}")
 
@@ -118,7 +118,7 @@ class Command(BaseCommand):
 
     def _configure_demo_business(self) -> BusinessSettings:
         settings = BusinessSettings.get_solo()
-        settings.business_name = "Casa Demo — Cartera Integral"
+        settings.business_name = "Casa Demo — Prueba Integral"
         settings.daily_late_fee = Decimal("2500.00")
         settings.collection_days = [0, 1, 2, 3, 4, 5]
         settings.payment_methods = [
@@ -253,7 +253,7 @@ class Command(BaseCommand):
                 customer=customer,
                 product=product,
                 product_description=(
-                    f"{product.name} — operación demo {index:02d} "
+                    f"{product.name} — venta demo {index:02d} "
                     f"({SCENARIO_LABELS[scenario]})"
                 ),
                 delivery_date=delivery_date,

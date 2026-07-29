@@ -98,10 +98,10 @@
         adjustmentOutput.textContent = currency.format(Math.abs(adjustmentCents) / 100);
         adjustmentLabel.textContent =
             adjustmentCents > 0
-                ? "Costo financiero"
+                ? "Costo de financiación"
                 : adjustmentCents < 0
-                  ? "Descuento acordado"
-                  : "Diferencia financiera";
+                  ? "Descuento en cuotas"
+                  : "Ajuste por financiación";
         frequencyOutput.textContent = frequencyLabel;
 
         if (!totalCents || !count || count < 1 || !firstDate) {
@@ -165,8 +165,8 @@
         financedInput.classList.toggle("is-calculated", !usesCustomTotal);
         financedInput.setAttribute("aria-readonly", String(!usesCustomTotal));
         financingModeNote.textContent = usesCustomTotal
-            ? "Modo personalizado: este valor no cambia al modificar el precio o la entrega."
-            : "Automático: siempre es el precio del producto menos la entrega inicial.";
+            ? "Total elegido: no se recalcula al modificar el precio o el pago inicial."
+            : "Cálculo automático: precio del producto menos pago inicial.";
 
         const hasDownPayment = downPaymentCents > 0;
         downPaymentMethodInput.disabled = !hasDownPayment;

@@ -13,7 +13,7 @@
         <p>{{ sale.product_description }} · Venta #{{ sale.pk }}</p>
     </div>
     <div class="payment-due">
-        <span>Deuda exigible hoy</span>
+        <span>Pendiente hasta hoy</span>
         <strong>{{ due_balance.total_due|ars }}</strong>
         {% if first_due %}<small>Desde el {{ first_due.due_date|date:"d/m/Y" }}</small>{% endif %}
     </div>
@@ -26,7 +26,7 @@
         {% include "core/partials/form_errors.html" %}
 
         <div class="payment-breakdown">
-            <div><span>Capital pendiente</span><strong>{{ due_balance.principal_due|ars }}</strong></div>
+            <div><span>Cuotas pendientes</span><strong>{{ due_balance.principal_due|ars }}</strong></div>
             <div><span>Recargos pendientes</span><strong>{{ due_balance.late_fees_due|ars }}</strong></div>
         </div>
 
@@ -44,7 +44,7 @@
                 {% for error in form.payment_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
             </div>
             <div class="field">
-                <label for="{{ form.payment_method.id_for_label }}">Método</label>
+                <label for="{{ form.payment_method.id_for_label }}">Medio de pago</label>
                 {{ form.payment_method }}
                 {% for error in form.payment_method.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
             </div>
@@ -65,8 +65,8 @@
         <p class="eyebrow">Cómo se aplicará</p>
         <ol>
             <li><span>1</span><div><strong>Cuota más antigua</strong><small>Se comienza por la primera deuda vencida.</small></div></li>
-            <li><span>2</span><div><strong>Recargos</strong><small>Los recargos pendientes se cancelan primero.</small></div></li>
-            <li><span>3</span><div><strong>Capital</strong><small>El resto reduce el capital de la cuota.</small></div></li>
+            <li><span>2</span><div><strong>Recargos</strong><small>Los recargos pendientes se cubren primero.</small></div></li>
+            <li><span>3</span><div><strong>Importe de la cuota</strong><small>El resto reduce el saldo de la cuota.</small></div></li>
         </ol>
         <div class="partial-note">
             Si el pago es parcial, el saldo restante se recordará automáticamente.
@@ -86,4 +86,3 @@ document.querySelector("#payment-form")?.addEventListener("submit", function () 
 });
 </script>
 {% endblock %}
-

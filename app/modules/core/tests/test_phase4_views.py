@@ -112,7 +112,7 @@ def test_payment_screen_rejects_overpayment(client):
     )
 
     assert response.status_code == 200
-    assert "supera la deuda exigible" in response.content.decode()
+    assert "supera el monto pendiente" in response.content.decode()
     assert Payment.objects.count() == 0
 
 

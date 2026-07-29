@@ -239,7 +239,7 @@ def test_restore_accepts_compressed_backup(tmp_path):
 def test_corrupt_or_unsafe_archives_are_rejected(tmp_path):
     corrupt = tmp_path / "gestion_corrupt.sqlite3.zip"
     corrupt.write_text("no es un zip", encoding="utf-8")
-    with pytest.raises(BackupError, match="no es válido"):
+    with pytest.raises(BackupError, match="no es válida"):
         validate_backup_archive(corrupt)
 
     unsafe = tmp_path / "gestion_unsafe.sqlite3.zip"

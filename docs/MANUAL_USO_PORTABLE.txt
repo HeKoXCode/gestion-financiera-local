@@ -6,9 +6,9 @@ GESTIÓN FINANCIERA — MANUAL RÁPIDO
 Conservá completa la carpeta GestionFinanciera.
 Hacé doble clic en INICIAR.bat o GestionFinanciera.exe.
 Se abrirá el panel de inicio de Gestión Financiera.
-Presioná “Abrir sistema” cuando quieras entrar; recién entonces se abrirá el
+Presioná “Abrir programa” cuando quieras entrar; recién entonces se abrirá el
 navegador. Dejá el panel abierto mientras trabajás.
-El sistema funciona en este equipo mediante http://127.0.0.1:8765/.
+El programa funciona en este equipo mediante http://127.0.0.1:8765/.
 No necesita Internet, Docker ni Python instalado.
 
 Si Windows muestra una advertencia la primera vez, comprobá que el archivo
@@ -19,16 +19,16 @@ provenga de tu paquete y elegí “Más información” > “Ejecutar de todas f
 Resumen del día: muestra cobranzas, atrasos y total pendiente.
 Clientes: alta, edición, búsqueda, historial y archivado.
 Productos: catálogo usado al registrar ventas.
-Ventas: carga una financiación y genera sus cuotas.
-En una venta indicá el precio del producto, la entrega inicial (si existe) y
-el total que se dividirá en cuotas. La entrega queda registrada como dinero
+Ventas: registra una venta financiada y genera sus cuotas.
+En una venta indicá el precio del producto, el pago inicial (si existe) y
+el total que se dividirá en cuotas. El pago inicial queda registrado como dinero
 recibido y no se descuenta nuevamente de las cuotas. El total se calcula solo;
-activá “Usar un total en cuotas diferente” únicamente si acordaste un costo
-financiero o un descuento.
+activá “Modificar el total que se pagará en cuotas” únicamente si acordaste un
+costo de financiación o un descuento.
 Cobranza: registra pagos, pagos parciales o que el cliente no pagó.
-Semana: compara de lunes a sábado clientes, vencimientos, atrasos y recorridos.
-Reportes: revisa lo cobrado y la cartera pendiente.
-Datos y respaldo: crea backups y exportaciones.
+Semana: compara de lunes a sábado clientes, vencimientos, atrasos y total a cobrar.
+Reportes: revisa lo cobrado y los saldos pendientes.
+Datos y respaldo: crea copias de seguridad y exportaciones.
 
 Para imprimir la hoja del cobrador:
 Cobranza > seleccionar fecha > Imprimir planilla.
@@ -36,47 +36,47 @@ Cobranza > seleccionar fecha > Imprimir planilla.
 3. CERRAR CORRECTAMENTE
 
 No cierres solamente la pestaña del navegador.
-En el panel de Gestión Financiera presioná “Cerrar y crear respaldo”.
+En el panel de Gestión Financiera presioná “Cerrar y respaldar”.
 El programa detendrá el servidor y guardará una copia final.
 Se guarda una copia por día durante 90 días. Si cerrás varias veces en la misma
 fecha, se actualiza la copia de ese día sin ocupar otro lugar.
 
 4. UBICACIÓN DE LOS DATOS
 
-data\      Base principal. No borrar.
-backups\   Copias SQLite comprimidas y restaurables.
-exports\   ZIP de CSV para Excel.
+data\      Datos principales. No borrar.
+backups\   Copias comprimidas y restaurables.
+exports\   ZIP con archivos CSV para Excel.
 media\     Logo y archivos locales.
 
 Para trasladar el programa, copiá la carpeta GestionFinanciera completa.
 No muevas solamente GestionFinanciera.exe ni la carpeta _internal.
 
-5. CREAR UN BACKUP O EXPORTAR
+5. CREAR UNA COPIA O EXPORTAR
 
 Dentro del sistema abrí “Datos y respaldo”.
-“Crear backup ZIP” produce una copia .sqlite3.zip restaurable.
-“Descargar ZIP de CSV” crea archivos para consultar en Excel.
-El ZIP/CSV de exportación no reemplaza al backup .sqlite3.zip.
+“Crear copia ZIP” produce una copia .sqlite3.zip restaurable.
+“Descargar ZIP con CSV” crea archivos para consultar en Excel.
+El ZIP con CSV de exportación no reemplaza a la copia .sqlite3.zip.
 
-Conviene copiar periódicamente un backup .sqlite3.zip a otro disco o pendrive.
+Conviene guardar periódicamente una copia .sqlite3.zip en otro disco o pendrive.
 
 6. RESTAURAR UNA COPIA
 
-1) Cerrá el programa con “Cerrar y crear respaldo”.
+1) Cerrá el programa con “Cerrar y respaldar”.
 2) Ejecutá RESTAURAR_DATOS.bat o Restaurador.exe.
 3) Revisá la copia más reciente que aparece seleccionada automáticamente.
 4) Presioná “Restaurar la copia mostrada” y confirmá.
-5) El sistema volverá a abrirse automáticamente para que compruebes los datos.
+5) El programa volverá a abrirse automáticamente para que compruebes los datos.
 
 Antes de reemplazar la base, el restaurador guarda automáticamente otra copia
 preventiva. El ZIP se valida y descomprime automáticamente. Para usar otra
-fecha, presioná “Elegir otra copia…”. También se aceptan backups .sqlite3
+fecha, presioná “Elegir otra copia…”. También se aceptan copias .sqlite3
 anteriores. No intentes restaurar mientras el programa está abierto.
 
 7. SI EL PROGRAMA NO ABRE
 
 Comprobá que GestionFinanciera.exe y la carpeta _internal sigan juntas.
 Reiniciá Windows si otra ejecución quedó bloqueando el puerto local.
-No borres data ni backups.
-Si el problema continúa, conservá la carpeta completa y el backup más reciente
+No borres las carpetas data ni backups.
+Si el problema continúa, conservá la carpeta completa y la copia más reciente
 antes de reemplazar o volver a copiar el programa.

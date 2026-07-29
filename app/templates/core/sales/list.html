@@ -6,9 +6,9 @@
 {% block content %}
 <header class="page-header">
     <div>
-        <p class="eyebrow">Financiaciones</p>
+        <p class="eyebrow">Ventas financiadas</p>
         <h1>Ventas</h1>
-        <p class="page-subtitle">Consultá las condiciones y el cronograma de cada operación.</p>
+        <p class="page-subtitle">Consultá las condiciones y el calendario de cuotas de cada venta.</p>
     </div>
     <a class="btn btn-primary" href="{% url 'core:sale_create' %}">
         <span aria-hidden="true">＋</span> Nueva venta
@@ -37,7 +37,7 @@
 <section class="panel">
     <div class="panel-header compact">
         <div>
-            <h2>Operaciones</h2>
+            <h2>Ventas registradas</h2>
             <p>{{ page.paginator.count }} venta{{ page.paginator.count|pluralize }}</p>
         </div>
     </div>
@@ -47,10 +47,10 @@
             <thead>
                 <tr>
                     <th>Cliente y producto</th>
-                    <th>Entrega</th>
+                    <th>Fecha de entrega</th>
                     <th>Plan</th>
                     <th>Estado</th>
-                    <th class="align-right">En cuotas</th>
+                    <th class="align-right">Total en cuotas</th>
                     <th class="align-right">Cuota estimada</th>
                     <th></th>
                 </tr>
@@ -64,7 +64,7 @@
                         </a>
                         <small>{{ sale.product_description }}</small>
                     </td>
-                    <td data-label="Entrega">{{ sale.delivery_date|date:"d/m/Y" }}</td>
+                    <td data-label="Fecha de entrega">{{ sale.delivery_date|date:"d/m/Y" }}</td>
                     <td data-label="Plan">
                         {{ sale.installment_count }} cuotas
                         <small>{{ sale.get_frequency_display }}</small>
@@ -72,7 +72,7 @@
                     <td data-label="Estado">
                         <span class="badge badge-{{ sale.status }}">{{ sale.get_status_display }}</span>
                     </td>
-                    <td data-label="En cuotas" class="money-cell">{{ sale.financed_amount|ars }}</td>
+                    <td data-label="Total en cuotas" class="money-cell">{{ sale.financed_amount|ars }}</td>
                     <td data-label="Cuota estimada" class="money-cell">
                         {{ sale.financed_amount|installment_estimate:sale.installment_count|ars }}
                     </td>

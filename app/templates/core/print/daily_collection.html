@@ -39,7 +39,7 @@
         <section class="print-summary">
             <div><span>Clientes</span><strong>{{ client_count }}</strong></div>
             <div><span>Registros</span><strong>{{ rows|length }}</strong></div>
-            <div><span>Total esperado</span><strong>{{ total_expected|ars }}</strong></div>
+            <div><span>Total a cobrar</span><strong>{{ total_expected|ars }}</strong></div>
         </section>
 
         <section class="print-list">
@@ -61,7 +61,7 @@
                     <div class="entry-details">
                         <div><small>Dirección</small><strong>{{ row.customer.address }}</strong>{% if row.customer.neighborhood %}<span>{{ row.customer.neighborhood }}</span>{% endif %}</div>
                         <div><small>Producto</small><strong>{{ row.sale.product_description }}</strong><span>Desde cuota {{ row.oldest_installment.number }}/{{ row.sale.installment_count }}</span></div>
-                        <div><small>Debe</small><strong class="entry-amount">{{ row.total_due|ars }}</strong><span>Recargos: {{ row.late_fees_due|ars }}</span></div>
+                        <div><small>Total a cobrar</small><strong class="entry-amount">{{ row.total_due|ars }}</strong><span>Recargos: {{ row.late_fees_due|ars }}</span></div>
                     </div>
                     {% if row.customer.address_reference or row.customer.phone %}
                     <p class="entry-reference">
@@ -79,7 +79,7 @@
             {% empty %}
             <section class="print-empty">
                 <strong>Sin cobranzas pendientes</strong>
-                <p>No existen ventas con deuda exigible para esta fecha.</p>
+                <p>No existen cuotas vencidas ni con vencimiento para esta fecha.</p>
             </section>
             {% endfor %}
         </section>

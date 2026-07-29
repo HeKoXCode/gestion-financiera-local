@@ -31,7 +31,7 @@
 
 {% if sale.status == "cancelled" %}
 <div class="cancelled-notice">
-    <strong>Operación cancelada el {{ sale.cancelled_on|date:"d/m/Y" }}</strong>
+    <strong>Venta cancelada el {{ sale.cancelled_on|date:"d/m/Y" }}</strong>
     <p>{{ sale.cancellation_reason }}</p>
 </div>
 {% endif %}
@@ -42,7 +42,7 @@
         <strong>{{ sale.cash_price|ars }}</strong>
     </article>
     <article>
-        <span>Entrega inicial</span>
+        <span>Pago inicial</span>
         <strong>{{ sale.down_payment|ars }}</strong>
     </article>
     <article class="highlight">
@@ -50,7 +50,7 @@
         <strong>{{ sale.financed_amount|ars }}</strong>
     </article>
     <article>
-        <span>{% if sale.status == "cancelled" %}Saldo no exigible{% else %}Total pendiente{% endif %}</span>
+        <span>{% if sale.status == "cancelled" %}Saldo fuera de cobranza{% else %}Total pendiente{% endif %}</span>
         <strong>{{ balance.total_due|ars }}</strong>
     </article>
     <article>
@@ -63,26 +63,26 @@
     <section class="panel detail-card">
         <div class="panel-header compact"><h2>Condiciones acordadas</h2></div>
         <dl class="detail-list">
-            <div><dt>Producto original</dt><dd>{{ sale.product.name }}</dd></div>
+            <div><dt>Producto del catálogo</dt><dd>{{ sale.product.name }}</dd></div>
             <div><dt>Frecuencia</dt><dd>{{ sale.get_frequency_display }}</dd></div>
             <div><dt>Cantidad de cuotas</dt><dd>{{ sale.installment_count }}</dd></div>
-            <div><dt>Total de la operación</dt><dd>{{ sale.operation_total|ars }}</dd></div>
+            <div><dt>Total final de la venta</dt><dd>{{ sale.operation_total|ars }}</dd></div>
             <div>
-                <dt>{% if sale.financing_adjustment > 0 %}Costo financiero{% elif sale.financing_adjustment < 0 %}Descuento acordado{% else %}Diferencia financiera{% endif %}</dt>
+                <dt>{% if sale.financing_adjustment > 0 %}Costo de financiación{% elif sale.financing_adjustment < 0 %}Descuento en cuotas{% else %}Ajuste por financiación{% endif %}</dt>
                 <dd>{{ sale.financing_adjustment|ars }}</dd>
             </div>
-            <div><dt>Método de la entrega</dt><dd>{% if initial_payment %}{{ initial_payment.payment_method }}{% else %}Sin entrega inicial{% endif %}</dd></div>
+            <div><dt>Medio del pago inicial</dt><dd>{% if initial_payment %}{{ initial_payment.payment_method }}{% else %}Sin pago inicial{% endif %}</dd></div>
             <div><dt>Primer vencimiento</dt><dd>{{ sale.first_due_date|date:"d/m/Y" }}</dd></div>
             <div><dt>Recargo diario</dt><dd>{{ sale.daily_late_fee|ars }}</dd></div>
-            <div><dt>Creada</dt><dd>{{ sale.created_at|date:"d/m/Y H:i" }}</dd></div>
+            <div><dt>Venta registrada</dt><dd>{{ sale.created_at|date:"d/m/Y H:i" }}</dd></div>
         </dl>
     </section>
     <aside class="panel balance-card">
-        <p class="eyebrow">{% if sale.status == "cancelled" %}Saldo histórico{% else %}Estado financiero{% endif %}</p>
+        <p class="eyebrow">{% if sale.status == "cancelled" %}Saldo histórico{% else %}Saldo de la venta{% endif %}</p>
         {% if sale.status == "cancelled" %}
             <p class="muted-note">Se conserva como antecedente, pero no forma parte de la cobranza.</p>
         {% endif %}
-        <div><span>Capital pendiente</span><strong>{{ balance.principal_due|ars }}</strong></div>
+        <div><span>Cuotas pendientes, sin recargos</span><strong>{{ balance.principal_due|ars }}</strong></div>
         <div><span>Recargos pendientes</span><strong>{{ balance.late_fees_due|ars }}</strong></div>
         <div class="balance-total"><span>Total</span><strong>{{ balance.total_due|ars }}</strong></div>
     </aside>
@@ -91,7 +91,7 @@
 <section class="panel">
     <div class="panel-header">
         <div>
-            <p class="eyebrow">Cronograma</p>
+            <p class="eyebrow">Calendario de cuotas</p>
             <h2>{{ installment_rows|length }} cuotas generadas</h2>
         </div>
         <span class="record-count">{{ sale.get_frequency_display }}</span>
@@ -103,7 +103,7 @@
                     <th>Cuota</th>
                     <th>Vencimiento</th>
                     <th>Estado</th>
-                    <th class="align-right">Importe original</th>
+                    <th class="align-right">Importe de cuota</th>
                     <th class="align-right">Recargos</th>
                     <th class="align-right">Saldo</th>
                 </tr>
@@ -119,7 +119,7 @@
                         {% elif row.balance.total_due == 0 %}
                             <span class="badge badge-success">Pagada</span>
                         {% elif row.installment.due_date < today %}
-                            <span class="badge badge-danger">{{ row.balance.days_overdue }} días tarde</span>
+                            <span class="badge badge-danger">{{ row.balance.days_overdue }} días de atraso</span>
                         {% elif row.installment.due_date == today %}
                             <span class="badge badge-warning">Vence hoy</span>
                         {% else %}
@@ -152,7 +152,7 @@
                     <tr>
                         <th>Fecha</th>
                         <th>Tipo</th>
-                        <th>Método</th>
+                        <th>Medio de pago</th>
                         <th>Estado</th>
                         <th>Observaciones</th>
                         <th class="align-right">Importe</th>
@@ -164,7 +164,7 @@
                     <tr>
                         <td data-label="Fecha">{{ payment.payment_date|date:"d/m/Y" }}</td>
                         <td data-label="Tipo">{{ payment.get_kind_display }}</td>
-                        <td data-label="Método">{{ payment.payment_method }}</td>
+                        <td data-label="Medio de pago">{{ payment.payment_method }}</td>
                         <td data-label="Estado">
                             {% if payment.status == "registered" %}
                                 <span class="badge badge-success">Registrado</span>
@@ -189,7 +189,7 @@
         <div class="empty-state compact">
             <span class="empty-icon" aria-hidden="true">$</span>
             <h3>Sin pagos registrados</h3>
-            <p>La entrega inicial y los pagos de cuotas aparecerán en esta sección.</p>
+            <p>El pago inicial y los pagos de cuotas aparecerán en esta sección.</p>
         </div>
         {% endif %}
     </section>

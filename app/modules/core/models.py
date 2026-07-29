@@ -60,7 +60,7 @@ class BusinessSettings(TimestampedModel):
     )
     payment_methods = models.JSONField(
         default=default_payment_methods,
-        verbose_name="métodos de pago",
+        verbose_name="medios de pago",
     )
     available_frequencies = models.JSONField(
         default=default_frequencies,
@@ -128,18 +128,15 @@ class BusinessSettings(TimestampedModel):
         if not self.payment_methods or any(
             not isinstance(method, str) or not method.strip() for method in self.payment_methods
         ):
-            errors["payment_methods"] = "Debe existir al menos un método de pago válido."
+            errors["payment_methods"] = "Debe existir al menos un medio de pago válido."
         elif len(self.payment_methods) > 20:
-            errors["payment_methods"] = "Puede haber hasta 20 métodos de pago."
+            errors["payment_methods"] = "Puede haber hasta 20 medios de pago."
         elif any(len(method.strip()) > 40 for method in self.payment_methods):
-            errors["payment_methods"] = (
-                "Cada método de pago puede tener hasta 40 caracteres."
-            )
+            errors["payment_methods"] = "Cada medio de pago puede tener hasta 40 caracteres."
 
         valid_frequencies = {choice for choice, _ in Sale.Frequency.choices}
-        if (
-            not self.available_frequencies
-            or not set(self.available_frequencies).issubset(valid_frequencies)
+        if not self.available_frequencies or not set(self.available_frequencies).issubset(
+            valid_frequencies
         ):
             errors["available_frequencies"] = "Las frecuencias configuradas no son válidas."
 
@@ -223,7 +220,7 @@ class Product(TimestampedModel):
 class Sale(TimestampedModel):
     class Frequency(models.TextChoices):
         WEEKLY = "weekly", "Semanal"
-        BIWEEKLY = "biweekly", "Quincenal"
+        BIWEEKLY = "biweekly", "Cada 2 semanas"
         MONTHLY = "monthly", "Mensual"
 
     class Status(models.TextChoices):
@@ -259,7 +256,7 @@ class Sale(TimestampedModel):
         decimal_places=2,
         default=ZERO,
         validators=[MinValueValidator(ZERO)],
-        verbose_name="entrega inicial",
+        verbose_name="pago inicial",
     )
     financed_amount = models.DecimalField(
         max_digits=14,
@@ -360,8 +357,7 @@ class Sale(TimestampedModel):
             and self.down_payment >= self.cash_price
         ):
             errors["down_payment"] = (
-                "La entrega inicial debe ser menor al precio del producto; "
-                "el resto se paga en cuotas."
+                "El pago inicial debe ser menor al precio del producto; el resto se paga en cuotas."
             )
 
         if self.first_due_date and self.delivery_date and self.first_due_date < self.delivery_date:
@@ -465,7 +461,7 @@ class LateFee(TimestampedModel):
 class Payment(TimestampedModel):
     class Kind(models.TextChoices):
         INSTALLMENT = "installment", "Pago de cuota"
-        INITIAL = "initial", "Entrega inicial"
+        INITIAL = "initial", "Pago inicial"
 
     class Status(models.TextChoices):
         REGISTERED = "registered", "Registrado"
@@ -496,7 +492,7 @@ class Payment(TimestampedModel):
         validators=[MinValueValidator(MIN_MONEY)],
         verbose_name="importe",
     )
-    payment_method = models.CharField(max_length=40, verbose_name="método de pago")
+    payment_method = models.CharField(max_length=40, verbose_name="medio de pago")
     kind = models.CharField(
         max_length=16,
         choices=Kind.choices,
@@ -612,9 +608,9 @@ class PaymentAllocation(TimestampedModel):
 class CollectionAttempt(TimestampedModel):
     class Result(models.TextChoices):
         DID_NOT_PAY = "did_not_pay", "No pagó"
-        ABSENT = "absent", "Ausente"
+        ABSENT = "absent", "No estaba en el domicilio"
         PROMISED = "promised", "Prometió pagar"
-        OTHER = "other", "Otro"
+        OTHER = "other", "Otro resultado"
 
     customer = models.ForeignKey(
         Customer,

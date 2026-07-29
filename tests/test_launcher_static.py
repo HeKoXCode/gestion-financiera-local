@@ -102,7 +102,7 @@ def test_open_browser_updates_the_launcher_message(monkeypatch):
 
     application.open_browser()
 
-    assert recorded["text"] == "Volver a abrir el sistema"
+    assert recorded["text"] == "Volver a abrir el programa"
     assert "abierto en el navegador" in recorded["status"]
 
 

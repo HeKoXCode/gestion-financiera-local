@@ -46,7 +46,7 @@ def test_daily_screen_shows_due_and_overdue_installments(client):
 
     assert response.status_code == 200
     assert sale.customer.full_name in content
-    assert "7 días tarde" in content
+    assert "7 días de atraso" in content
     assert "$ 40.000,00" in content
 
 
@@ -165,9 +165,7 @@ def test_sale_creation_freezes_settings_and_generates_installments(client):
     assert sale.product_description == product.name
     assert sale.daily_late_fee == Decimal("5000.00")
     assert sale.installments.count() == 12
-    assert sum(sale.installments.values_list("original_amount", flat=True)) == Decimal(
-        "480000.00"
-    )
+    assert sum(sale.installments.values_list("original_amount", flat=True)) == Decimal("480000.00")
 
 
 def test_automatic_total_ignores_stale_browser_value_before_creating_installments(
@@ -299,9 +297,7 @@ def test_sale_creation_records_initial_payment_and_finances_only_the_balance(cli
     assert sale.financed_amount == Decimal("400000.00")
     assert sale.operation_total == Decimal("600000.00")
     assert sale.installments.count() == 20
-    assert set(sale.installments.values_list("original_amount", flat=True)) == {
-        Decimal("20000.00")
-    }
+    assert set(sale.installments.values_list("original_amount", flat=True)) == {Decimal("20000.00")}
     assert initial_payment.kind == Payment.Kind.INITIAL
     assert initial_payment.amount == Decimal("200000.00")
     assert initial_payment.payment_method == "Efectivo"
@@ -309,7 +305,7 @@ def test_sale_creation_records_initial_payment_and_finances_only_the_balance(cli
 
     detail = client.get(response.url).content.decode()
     assert "Precio del producto" in detail
-    assert "Entrega inicial" in detail
+    assert "Pago inicial" in detail
     assert "Total en cuotas" in detail
 
 
@@ -331,7 +327,7 @@ def test_initial_payment_requires_method_and_non_future_delivery(client):
 
     assert response.status_code == 200
     assert Sale.objects.count() == 0
-    assert "Elegí cómo se recibió la entrega inicial" in response.content.decode()
+    assert "Elegí cómo se recibió el pago inicial" in response.content.decode()
     assert "no puede tener una fecha de entrega futura" in response.content.decode()
 
 

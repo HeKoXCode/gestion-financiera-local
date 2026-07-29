@@ -44,13 +44,11 @@ def register_initial_payment(
     settings = settings or BusinessSettings.get_solo()
     errors: dict[str, str] = {}
     if sale.delivery_date > timezone.localdate():
-        errors["delivery_date"] = (
-            "No se puede registrar una entrega inicial con fecha futura."
-        )
+        errors["delivery_date"] = "No se puede registrar un pago inicial con fecha futura."
     if payment_method not in settings.payment_methods:
-        errors["down_payment_method"] = "El método de pago no está habilitado."
+        errors["down_payment_method"] = "El medio de pago no está habilitado."
     if Payment.objects.filter(sale=sale, kind=Payment.Kind.INITIAL).exists():
-        errors["down_payment"] = "Esta venta ya tiene una entrega inicial registrada."
+        errors["down_payment"] = "Esta venta ya tiene un pago inicial registrado."
     if errors:
         raise ValidationError(errors)
 
@@ -77,9 +75,7 @@ def _eligible_installments(sale: Sale, payment_date: date, *, allow_advance: boo
 
 def _refresh_sale_status(sale: Sale) -> None:
     balance = get_sale_balance(sale)
-    expected_status = (
-        Sale.Status.COMPLETED if balance.total_due <= ZERO else Sale.Status.ACTIVE
-    )
+    expected_status = Sale.Status.COMPLETED if balance.total_due <= ZERO else Sale.Status.ACTIVE
     if sale.status != expected_status:
         sale.status = expected_status
         sale.cancelled_on = None
@@ -123,7 +119,7 @@ def register_payment(
     if amount <= ZERO:
         errors["amount"] = "El monto abonado debe ser mayor que cero."
     if payment_method not in settings.payment_methods:
-        errors["payment_method"] = "El método de pago no está habilitado."
+        errors["payment_method"] = "El medio de pago no está habilitado."
     if errors:
         raise ValidationError(errors)
 
@@ -136,18 +132,12 @@ def register_payment(
             allow_advance=settings.allow_advance_payments,
         )
     ]
-    exigible_total = as_money(
-        sum((balance.total_due for _, balance in installment_balances), ZERO)
-    )
+    exigible_total = as_money(sum((balance.total_due for _, balance in installment_balances), ZERO))
     if exigible_total <= ZERO:
-        raise ValidationError({"amount": "La venta no tiene deuda exigible en esa fecha."})
+        raise ValidationError({"amount": "La venta no tiene cuotas pendientes en esa fecha."})
     if amount > exigible_total:
         raise ValidationError(
-            {
-                "amount": (
-                    f"El pago supera la deuda exigible de {format_ars(exigible_total)}."
-                )
-            }
+            {"amount": (f"El pago supera el monto pendiente de {format_ars(exigible_total)}.")}
         )
 
     payment = Payment(
@@ -210,7 +200,7 @@ def void_payment(*, payment: Payment, reason: str) -> bool:
         raise ValidationError(
             {
                 "reason": (
-                    "La entrega inicial forma parte de la venta y no se anula por separado. "
+                    "El pago inicial forma parte de la venta y no se anula por separado. "
                     "Si fue cargada por error, cancelá la venta y registrala nuevamente."
                 )
             }

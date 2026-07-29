@@ -8,26 +8,26 @@
         <p class="eyebrow">Protección local</p>
         <h1>Datos y respaldo</h1>
         <p class="page-subtitle">
-            Copias restaurables de SQLite y exportaciones relacionadas para Excel.
+            Copias completas para restaurar el programa y archivos CSV para consultar en Excel.
         </p>
     </div>
 </header>
 
 <section class="data-kpi-grid">
     <article>
-        <span>Base activa</span>
+        <span>Datos actuales</span>
         <strong>{% if database_exists %}Disponible{% else %}No encontrada{% endif %}</strong>
         <small>{{ database_size|filesizeformat }}</small>
     </article>
     <article class="{% if recovery_backup %}is-success{% endif %}">
         <span>Copia de recuperación</span>
         <strong>{% if recovery_backup %}Actualizada{% else %}Pendiente{% endif %}</strong>
-        <small>{% if recovery_backup %}{{ recovery_backup.backup.created_at|date:"d/m/Y H:i" }}{% else %}Se crea al guardar operaciones{% endif %}</small>
+        <small>{% if recovery_backup %}{{ recovery_backup.backup.created_at|date:"d/m/Y H:i" }}{% else %}Se crea al guardar cambios{% endif %}</small>
     </article>
     <article>
-        <span>Backups disponibles</span>
+        <span>Copias disponibles</span>
         <strong>{{ backup_count }}</strong>
-        <small>Cantidad actual · copias restaurables</small>
+        <small>Copias completas que pueden restaurarse</small>
     </article>
     <article>
         <span>Exportaciones</span>
@@ -41,12 +41,12 @@
         <span class="data-action-icon">DB</span>
         <div>
             <p class="eyebrow">Copia completa</p>
-            <h2>Crear backup comprimido</h2>
-            <p>Conserva tablas, relaciones, cuotas, pagos y configuración en un único ZIP restaurable.</p>
+            <h2>Crear copia de seguridad</h2>
+            <p>Conserva clientes, productos, ventas, cuotas, pagos y configuración en un único ZIP restaurable.</p>
         </div>
         <form method="post" action="{% url 'core:backup_create' %}">
             {% csrf_token %}
-            <button class="btn btn-primary" type="submit">Crear backup ZIP</button>
+            <button class="btn btn-primary" type="submit">Crear copia ZIP</button>
         </form>
     </section>
 
@@ -55,11 +55,11 @@
         <div>
             <p class="eyebrow">Consulta y análisis</p>
             <h2>Exportar todos los datos</h2>
-            <p>Genera un ZIP con CSV UTF-8 para clientes, ventas, cuotas, recargos, pagos y demás relaciones.</p>
+            <p>Genera un ZIP con archivos CSV para clientes, ventas, cuotas, recargos, pagos y configuración.</p>
         </div>
         <form method="post" action="{% url 'core:data_export_create' %}">
             {% csrf_token %}
-            <button class="btn btn-secondary" type="submit">Descargar ZIP de CSV</button>
+            <button class="btn btn-secondary" type="submit">Descargar ZIP con CSV</button>
         </form>
     </section>
 
@@ -68,10 +68,10 @@
         <div>
             <p class="eyebrow">Recuperación segura</p>
             <h2>Restaurar una copia</h2>
-            <p>Cerrá el programa y abrí el restaurador. Elegirá la copia más reciente, la recuperará y volverá a abrir el sistema.</p>
+            <p>Cerrá el programa y abrí el restaurador. Elegirá la copia más reciente, recuperará los datos y volverá a abrir el programa.</p>
             <code>RESTAURAR_DATOS.bat · scripts\Restaurar.bat</code>
         </div>
-        <span class="restore-note">También acepta copias antiguas <strong>.sqlite3</strong>. El ZIP de CSV no se restaura.</span>
+        <span class="restore-note">También acepta copias antiguas <strong>.sqlite3</strong>. Los ZIP con archivos CSV no sirven para restaurar.</span>
     </section>
 </div>
 
@@ -79,7 +79,7 @@
     <div class="panel-header">
         <div>
             <p class="eyebrow">Recuperación</p>
-            <h2>Backups SQLite</h2>
+            <h2>Copias de seguridad completas</h2>
         </div>
         <span class="record-count">{{ backup_count }} copia{{ backup_count|pluralize }}</span>
     </div>
@@ -113,7 +113,7 @@
     {% else %}
     <div class="empty-state compact">
         <span class="empty-icon">DB</span>
-        <h3>Todavía no hay backups</h3>
+        <h3>Todavía no hay copias de seguridad</h3>
         <p>Creá la primera copia manual desde el botón superior.</p>
     </div>
     {% endif %}
@@ -151,7 +151,7 @@
 
 <aside class="data-safety-note">
     <strong>Qué archivo usar en cada caso</strong>
-    <p><b>Backup (.sqlite3.zip)</b> recupera el programa completo. <b>Exportación ZIP/CSV</b> sirve para Excel, pero no reemplaza al backup.</p>
-    <p>Al cerrar se conserva una sola copia por día. Si cerrás varias veces el mismo día, esa copia se actualiza. Se guardan hasta 90 días de cierres.</p>
+    <p><b>Copia de seguridad (.sqlite3.zip)</b> recupera todos los datos del programa. <b>Exportación ZIP con CSV</b> sirve para Excel, pero no puede restaurarse.</p>
+    <p>Al cerrar se conserva una copia por día. Si cerrás varias veces el mismo día, esa copia se actualiza. Las copias diarias se guardan durante 90 días.</p>
 </aside>
 {% endblock %}

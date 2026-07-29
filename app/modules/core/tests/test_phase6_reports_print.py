@@ -81,9 +81,7 @@ def test_reports_include_the_initial_payment_as_received_money():
     report = build_reports(as_of=today)
 
     assert report["collected_today"] == Decimal("200000.00")
-    assert report["payment_methods"] == [
-        {"name": "Efectivo", "amount": Decimal("200000.00")}
-    ]
+    assert report["payment_methods"] == [{"name": "Efectivo", "amount": Decimal("200000.00")}]
 
 
 def test_reports_separate_portfolio_due_and_overdue_amounts():
@@ -173,7 +171,7 @@ def test_reports_page_and_main_navigation_render(client):
 
     assert response.status_code == 200
     assert "Cobrado en la fecha" in content
-    assert "Clientes morosos" in content
+    assert "Clientes con pagos atrasados" in content
     assert "Productos más vendidos" in content
     assert reverse("core:reports") in content
 

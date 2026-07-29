@@ -105,7 +105,7 @@ def test_export_contains_excel_compatible_relational_csv_files(tmp_path):
         assert customers[0]["observaciones"] == "'=2+2"
         assert sales[0]["cliente_id"] == str(sale.customer_id)
         assert sales[0]["precio_producto"] == "400000.00"
-        assert sales[0]["entrega_inicial"] == "0.00"
+        assert sales[0]["pago_inicial"] == "0.00"
         assert sales[0]["total_en_cuotas"] == "20000.00"
         assert installments[0]["venta_id"] == str(sale.pk)
         assert payments[0]["id"] == str(payment.pk)
@@ -134,8 +134,8 @@ def test_data_management_page_explains_backup_export_and_restore(client, setting
     content = response.content.decode()
 
     assert response.status_code == 200
-    assert "Crear backup ZIP" in content
-    assert "Descargar ZIP de CSV" in content
+    assert "Crear copia ZIP" in content
+    assert "Descargar ZIP con CSV" in content
     assert "RESTAURAR_DATOS.bat" in content
 
 
@@ -168,12 +168,8 @@ def test_missing_export_and_backup_return_not_found(client, settings, tmp_path):
     settings.EXPORT_DIR = tmp_path / "exports"
     settings.BACKUP_DIR = tmp_path / "backups"
 
-    export_response = client.get(
-        reverse("core:data_export_download", args=["export_missing.zip"])
-    )
-    backup_response = client.get(
-        reverse("core:backup_download", args=["gestion_missing.sqlite3"])
-    )
+    export_response = client.get(reverse("core:data_export_download", args=["export_missing.zip"]))
+    backup_response = client.get(reverse("core:backup_download", args=["gestion_missing.sqlite3"]))
 
     assert export_response.status_code == 404
     assert backup_response.status_code == 404
@@ -230,6 +226,4 @@ def test_recovery_service_refreshes_fixed_copy(settings, tmp_path, monkeypatch):
         materialize_backup(recovery, working_directory=tmp_path) as extracted,
         closing(sqlite3.connect(extracted)) as connection,
     ):
-        assert connection.execute("SELECT value FROM sample").fetchone() == (
-            "estado reciente",
-        )
+        assert connection.execute("SELECT value FROM sample").fetchone() == ("estado reciente",)

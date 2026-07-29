@@ -15,7 +15,7 @@
             <div><dt>Cliente</dt><dd>{{ payment.customer.full_name }}</dd></div>
             <div><dt>Fecha</dt><dd>{{ payment.payment_date|date:"d/m/Y" }}</dd></div>
             <div><dt>Importe</dt><dd>{{ payment.amount|ars }}</dd></div>
-            <div><dt>Método</dt><dd>{{ payment.payment_method }}</dd></div>
+            <div><dt>Medio de pago</dt><dd>{{ payment.payment_method }}</dd></div>
         </dl>
         <form method="post" novalidate>
             {% csrf_token %}
@@ -33,4 +33,3 @@
     </section>
 </div>
 {% endblock %}
-

@@ -100,7 +100,7 @@ class RestorerApplication:
         self.window.minsize(520, 290)
         self.selected_backup: Path | None = None
         self.selected_path = StringVar(value="Buscando la copia más reciente…")
-        self.status = StringVar(value="El programa debe estar cerrado para restaurar.")
+        self.status = StringVar(value="El programa debe estar cerrado para restaurar los datos.")
         self.select_latest_backup()
 
     def select_latest_backup(self) -> None:
@@ -118,17 +118,17 @@ class RestorerApplication:
             return
         self.selected_backup = None
         self.selected_path.set("No se encontró una copia válida")
-        self.status.set("Usá “Elegir otra copia” para buscar un backup.")
+        self.status.set("Usá “Elegir otra copia” para buscar una copia de seguridad.")
 
     def choose_backup(self) -> None:
         self.backup_path.mkdir(parents=True, exist_ok=True)
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
         selected = filedialog.askopenfilename(
-            title="Seleccionar backup",
+            title="Seleccionar copia de seguridad",
             initialdir=self.backup_path,
             filetypes=[
-                ("Backup comprimido", "*.sqlite3.zip"),
-                ("Backup SQLite anterior", "*.sqlite3"),
+                ("Copia comprimida", "*.sqlite3.zip"),
+                ("Copia anterior", "*.sqlite3"),
                 ("Archivos ZIP", "*.zip"),
                 ("Todos los archivos", "*.*"),
             ],
@@ -153,28 +153,29 @@ class RestorerApplication:
         modified = datetime.fromtimestamp(self.selected_backup.stat().st_mtime)
         size_mb = self.selected_backup.stat().st_size / (1024 * 1024)
         self.selected_path.set(
-            f"{self.selected_backup.name}\n"
-            f"{modified:%d/%m/%Y %H:%M} · {size_mb:.2f} MB"
+            f"{self.selected_backup.name}\n{modified:%d/%m/%Y %H:%M} · {size_mb:.2f} MB"
         )
         self.status.set(status)
 
     def restore(self) -> None:
         selected = self.selected_backup
         if selected is None or not selected.is_file():
-            messagebox.showwarning("Falta una copia", "Seleccioná primero un backup válido.")
+            messagebox.showwarning(
+                "Falta una copia",
+                "Seleccioná primero una copia de seguridad válida.",
+            )
             return
         if local_application_is_running():
             messagebox.showerror(
                 "El programa está abierto",
-                "Cerrá Gestión Financiera con “Cerrar y crear respaldo” "
-                "antes de restaurar.",
+                "Cerrá Gestión Financiera con “Cerrar y respaldar” antes de restaurar.",
             )
             return
         if not messagebox.askyesno(
             "Confirmar restauración",
             (
                 "Se reemplazarán los datos actuales por la copia seleccionada.\n\n"
-                "Antes se creará automáticamente un backup preventivo.\n\n"
+                "Antes se creará automáticamente una copia preventiva.\n\n"
                 "¿Deseás continuar?"
             ),
         ):
@@ -194,15 +195,10 @@ class RestorerApplication:
             return
 
         self.status.set("Restauración completada correctamente.")
-        detail = (
-            f"\n\nBackup preventivo: {preventive.name}" if preventive else ""
-        )
+        detail = f"\n\nCopia preventiva: {preventive.name}" if preventive else ""
         messagebox.showinfo(
             "Datos restaurados",
-            (
-                "La copia fue restaurada correctamente. "
-                f"Gestión Financiera se abrirá ahora.{detail}"
-            ),
+            (f"La copia fue restaurada correctamente. Gestión Financiera se abrirá ahora.{detail}"),
         )
         try:
             launch_main_application(self.root_path)

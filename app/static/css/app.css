@@ -326,11 +326,11 @@ a.nav-link:hover {
     display: flex;
     gap: 0.5rem;
     align-items: baseline;
-    text-transform: capitalize;
 }
 
 .topbar-kicker {
     color: var(--muted);
+    text-transform: capitalize;
 }
 
 .topbar-actions {

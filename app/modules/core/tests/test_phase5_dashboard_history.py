@@ -78,6 +78,19 @@ def test_dashboard_portfolio_includes_future_installments(client):
     assert response.context["scheduled_today_count"] == 1
 
 
+def test_dashboard_counts_each_scheduled_customer_only_once(client):
+    first_sale = make_todays_sale()
+    make_todays_sale(
+        customer=first_sale.customer,
+        product=make_product(name="Segundo producto"),
+    )
+
+    response = client.get(reverse("core:home"))
+
+    assert response.context["clients_to_collect"] == 1
+    assert response.context["scheduled_today_count"] == 1
+
+
 def test_initial_payment_is_received_money_but_not_collection_progress(client):
     sale = make_todays_sale(
         amount=Decimal("400000.00"),
@@ -101,9 +114,7 @@ def test_initial_payment_is_received_money_but_not_collection_progress(client):
 
     history = client.get(reverse("core:customer_detail", args=[sale.customer_id]))
     assert history.context["total_paid"] == Decimal("200000.00")
-    assert "Entrega inicial" in {
-        event["title"] for event in history.context["events"]
-    }
+    assert "Pago inicial" in {event["title"] for event in history.context["events"]}
     assert Payment.objects.get(sale=sale).kind == Payment.Kind.INITIAL
 
 
@@ -209,4 +220,4 @@ def test_customer_history_marks_overdue_installments(client):
 
     assert response.context["overdue_installments"] == 1
     assert response.context["installment_rows"][0]["status"] == "overdue"
-    assert "1 día tarde" in response.context["installment_rows"][0]["status_label"]
+    assert "1 día de atraso" in response.context["installment_rows"][0]["status_label"]

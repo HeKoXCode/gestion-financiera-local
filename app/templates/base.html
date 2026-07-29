@@ -27,11 +27,11 @@
             </a>
 
             <nav class="main-nav" aria-label="Navegación principal">
-                <span class="nav-section-label">Operación</span>
+                <span class="nav-section-label">Uso diario</span>
                 <a class="nav-link {% if current == 'home' %}is-active{% endif %}"
                    href="{% url 'core:home' %}">
                     <span class="nav-icon" aria-hidden="true">⌂</span>
-                    <span>Resumen del día</span>
+                    <span>Resumen</span>
                 </a>
                 <a class="nav-link {% if 'customer' in current %}is-active{% endif %}"
                    href="{% url 'core:customer_list' %}">
@@ -90,7 +90,7 @@
                     <strong>{% now "d \d\e F \d\e Y" %}</strong>
                 </div>
                 <div class="topbar-actions">
-                    <span class="offline-pill"><i></i> Sincronizado localmente</span>
+                    <span class="offline-pill"><i></i> Datos guardados en este equipo</span>
                     <a class="btn btn-primary btn-compact" href="{% url 'core:sale_create' %}">
                         <span aria-hidden="true">＋</span> Nueva venta
                     </a>

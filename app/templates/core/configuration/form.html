@@ -44,12 +44,13 @@
             <section class="form-card">
                 <div class="form-section-heading">
                     <span>02</span>
-                    <div><h2>Condiciones financieras</h2><p>Los cambios de recargo se aplican a ventas nuevas.</p></div>
+                    <div><h2>Condiciones financieras</h2><p>Los cambios se aplican a ventas nuevas; las anteriores conservan su recargo.</p></div>
                 </div>
                 <div class="form-grid two-columns">
                     <div class="field">
                         <label for="{{ form.daily_late_fee.id_for_label }}">Recargo diario</label>
                         {{ form.daily_late_fee }}
+                        <p class="field-help">Importe que se suma por cada día de atraso.</p>
                         {% for error in form.daily_late_fee.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                     </div>
                     <div class="field">
@@ -68,7 +69,7 @@
                         {% for error in form.available_frequencies.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                     </div>
                     <div class="field">
-                        <label for="{{ form.payment_methods_text.id_for_label }}">Métodos de pago</label>
+                        <label for="{{ form.payment_methods_text.id_for_label }}">Medios de pago</label>
                         {{ form.payment_methods_text }}
                         <p class="field-help">{{ form.payment_methods_text.help_text }}</p>
                         {% for error in form.payment_methods_text.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
@@ -79,11 +80,11 @@
             <section class="form-card">
                 <div class="form-section-heading">
                     <span>03</span>
-                    <div><h2>Comportamiento</h2><p>Reglas generales para nuevas operaciones y recordatorios.</p></div>
+                    <div><h2>Comportamiento</h2><p>Reglas generales para ventas nuevas y recordatorios.</p></div>
                 </div>
                 <div class="toggle-list">
                     <label>{{ form.charge_sundays }} <span><strong>Generar recargos los domingos</strong><small>Cuenta el domingo como un día de atraso.</small></span></label>
-                    <label>{{ form.late_fee_after_partial_payment }} <span><strong>Continuar recargo tras un pago parcial</strong><small>Se mantiene mientras quede saldo en la cuota.</small></span></label>
+                    <label>{{ form.late_fee_after_partial_payment }} <span><strong>Seguir sumando recargo después de un pago parcial</strong><small>Se mantiene mientras quede saldo en la cuota.</small></span></label>
                     <label>{{ form.allow_advance_payments }} <span><strong>Permitir pagos adelantados</strong><small>Autoriza aplicar dinero a cuotas que aún no vencieron.</small></span></label>
                 </div>
                 <div class="field">

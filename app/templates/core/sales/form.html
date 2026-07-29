@@ -7,14 +7,14 @@
 <header class="page-header">
     <div>
         <a class="back-link" href="{% url 'core:sale_list' %}">‹ Volver a ventas</a>
-        <p class="eyebrow">Nueva financiación</p>
+        <p class="eyebrow">Nueva venta financiada</p>
         <h1>Registrar venta</h1>
         <p class="page-subtitle">Completá las condiciones y revisá las cuotas antes de confirmar.</p>
     </div>
     <div class="config-note">
         <span>Recargo diario</span>
         <strong>{{ settings.daily_late_fee|ars }}</strong>
-        <small>Quedará congelado en esta venta</small>
+        <small>Se mantendrá fijo para esta venta</small>
     </div>
 </header>
 
@@ -81,30 +81,30 @@
                     {% for error in form.cash_price.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
                 <div class="field">
-                    <label for="{{ form.down_payment.id_for_label }}">Entrega inicial</label>
+                    <label for="{{ form.down_payment.id_for_label }}">Pago inicial</label>
                     <div class="money-input"><span>$</span>{{ form.down_payment }}</div>
-                    <p class="field-help">Dinero que el cliente entrega al recibir el producto. Usá 0 si no entrega nada.</p>
+                    <p class="field-help">Dinero que el cliente paga al recibir el producto. Usá 0 si todo se pagará en cuotas.</p>
                     {% for error in form.down_payment.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
                 <div class="field span-2 financing-mode">
                     <label for="{{ form.custom_installment_total.id_for_label }}">
                         {{ form.custom_installment_total }}
                         <span>
-                            <strong>Usar un total en cuotas diferente</strong>
-                            <small>Activá esta opción solamente si acordaste un costo financiero o un descuento.</small>
+                            <strong>Modificar el total que se pagará en cuotas</strong>
+                            <small>Activá esta opción si acordaste un costo de financiación o un descuento.</small>
                         </span>
                     </label>
                 </div>
                 <div class="field">
-                    <label for="{{ form.down_payment_method.id_for_label }}">Método de la entrega</label>
+                    <label for="{{ form.down_payment_method.id_for_label }}">Medio del pago inicial</label>
                     {{ form.down_payment_method }}
-                    <p class="field-help">Solo es necesario cuando hay una entrega inicial.</p>
+                    <p class="field-help">Solo es necesario cuando el cliente realiza un pago inicial.</p>
                     {% for error in form.down_payment_method.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
                 <div class="field">
                     <label for="{{ form.financed_amount.id_for_label }}">Total en cuotas</label>
                     <div class="money-input"><span>$</span>{{ form.financed_amount }}</div>
-                    <p class="field-help" id="financing-mode-note">Se calcula automáticamente como precio menos entrega inicial.</p>
+                    <p class="field-help" id="financing-mode-note">Se calcula automáticamente como precio menos pago inicial.</p>
                     {% for error in form.financed_amount.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
             </div>
@@ -115,7 +115,7 @@
                 <span>03</span>
                 <div>
                     <h2>Entrega y plan de cuotas</h2>
-                    <p>La primera fecha define el día habitual de cobranza.</p>
+                    <p>La primera fecha determina los vencimientos siguientes.</p>
                 </div>
             </div>
             <div class="form-grid two-columns">
@@ -125,7 +125,7 @@
                     {% for error in form.delivery_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
                 <div class="field">
-                    <label for="{{ form.first_due_date.id_for_label }}">Primer día de cobro</label>
+                    <label for="{{ form.first_due_date.id_for_label }}">Fecha del primer cobro</label>
                     {{ form.first_due_date }}
                     {% for error in form.first_due_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
@@ -167,10 +167,10 @@
         </div>
         <dl class="sale-money-breakdown">
             <div><dt>Precio del producto</dt><dd id="preview-product-price">$ 0,00</dd></div>
-            <div><dt>Entrega inicial</dt><dd id="preview-down-payment">$ 0,00</dd></div>
-            <div><dt>Saldo base a financiar</dt><dd id="preview-base-balance">$ 0,00</dd></div>
-            <div><dt id="preview-adjustment-label">Diferencia financiera</dt><dd id="preview-adjustment">$ 0,00</dd></div>
-            <div class="breakdown-total"><dt>Total de la operación</dt><dd id="preview-operation-total">$ 0,00</dd></div>
+            <div><dt>Pago inicial</dt><dd id="preview-down-payment">$ 0,00</dd></div>
+            <div><dt>Saldo del producto</dt><dd id="preview-base-balance">$ 0,00</dd></div>
+            <div><dt id="preview-adjustment-label">Ajuste por financiación</dt><dd id="preview-adjustment">$ 0,00</dd></div>
+            <div class="breakdown-total"><dt>Total final de la venta</dt><dd id="preview-operation-total">$ 0,00</dd></div>
         </dl>
         <div id="preview-empty" class="preview-empty">
             <span aria-hidden="true">⌁</span>

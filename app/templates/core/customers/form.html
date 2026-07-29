@@ -68,7 +68,7 @@
                 {% for error in form.neighborhood.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
             </div>
             <div class="field">
-                <label for="{{ form.address_reference.id_for_label }}">Referencia <span>Opcional</span></label>
+                <label for="{{ form.address_reference.id_for_label }}">Referencia del domicilio <span>Opcional</span></label>
                 {{ form.address_reference }}
                 {% for error in form.address_reference.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
             </div>
@@ -86,4 +86,3 @@
     </div>
 </form>
 {% endblock %}
-

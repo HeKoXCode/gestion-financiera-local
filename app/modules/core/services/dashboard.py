@@ -27,12 +27,8 @@ def build_dashboard(*, as_of: date) -> dict:
         kind=Payment.Kind.INITIAL,
     )
 
-    remaining_to_collect = as_money(
-        sum((row["total_due"] for row in collection_rows), ZERO)
-    )
-    collected_amount = as_money(
-        sum(registered_payments.values_list("amount", flat=True), ZERO)
-    )
+    remaining_to_collect = as_money(sum((row["total_due"] for row in collection_rows), ZERO))
+    collected_amount = as_money(sum(registered_payments.values_list("amount", flat=True), ZERO))
     installment_collected_amount = as_money(
         sum(installment_payments.values_list("amount", flat=True), ZERO)
     )
@@ -46,23 +42,15 @@ def build_dashboard(*, as_of: date) -> dict:
         else 0
     )
 
-    portfolio_sales = (
-        Sale.objects.filter(
-            sale_effective_filter(as_of),
-            delivery_date__lte=as_of,
-        )
-        .prefetch_related(
-            "installments",
-            *installment_balance_prefetches("installments"),
-        )
+    portfolio_sales = Sale.objects.filter(
+        sale_effective_filter(as_of),
+        delivery_date__lte=as_of,
+    ).prefetch_related(
+        "installments",
+        *installment_balance_prefetches("installments"),
     )
-    portfolio_balances = [
-        get_sale_balance(sale, as_of=as_of)
-        for sale in portfolio_sales
-    ]
-    open_portfolio = [
-        balance for balance in portfolio_balances if balance.total_due > ZERO
-    ]
+    portfolio_balances = [get_sale_balance(sale, as_of=as_of) for sale in portfolio_sales]
+    open_portfolio = [balance for balance in portfolio_balances if balance.total_due > ZERO]
     portfolio_total = as_money(sum((balance.total_due for balance in open_portfolio), ZERO))
     upcoming_until = as_of + timedelta(days=7)
 
@@ -80,8 +68,8 @@ def build_dashboard(*, as_of: date) -> dict:
         "collection_progress": collection_progress,
         "portfolio_total": portfolio_total,
         "active_sales_count": len(open_portfolio),
-        "scheduled_today_count": sum(
-            1 for row in collection_rows if row["has_installment_today"]
+        "scheduled_today_count": len(
+            {row["customer"].pk for row in collection_rows if row["has_installment_today"]}
         ),
         "upcoming_installments": Installment.objects.filter(
             sale_effective_filter(as_of, "sale"),

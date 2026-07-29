@@ -22,7 +22,7 @@ COPY_CHUNK_SIZE = 1024 * 1024
 
 
 class BackupError(RuntimeError):
-    """El backup no pudo crearse o validarse."""
+    """La copia de seguridad no pudo crearse o validarse."""
 
 
 @dataclass(frozen=True)
@@ -39,17 +39,17 @@ class BackupInfo:
 def validate_sqlite_database(database_path: Path) -> None:
     database_path = database_path.resolve()
     if not database_path.is_file():
-        raise BackupError(f"No existe la base: {database_path}")
+        raise BackupError(f"No existe el archivo de datos: {database_path}")
 
     try:
         with closing(sqlite3.connect(database_path)) as connection:
             result = connection.execute("PRAGMA quick_check").fetchone()
     except sqlite3.Error as exc:
-        raise BackupError(f"No se pudo abrir la base: {database_path}") from exc
+        raise BackupError(f"No se pudo abrir el archivo de datos: {database_path}") from exc
 
     if not result or result[0] != "ok":
         detail = result[0] if result else "sin resultado"
-        raise BackupError(f"La base no superó la validación: {detail}")
+        raise BackupError(f"Los datos no superaron la validación: {detail}")
 
 
 def validate_application_database(database_path: Path) -> None:
@@ -58,18 +58,14 @@ def validate_application_database(database_path: Path) -> None:
         with closing(sqlite3.connect(database_path)) as connection:
             tables = {
                 row[0]
-                for row in connection.execute(
-                    "SELECT name FROM sqlite_master WHERE type = 'table'"
-                )
+                for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
             }
     except sqlite3.Error as exc:
-        raise BackupError("No se pudo revisar la estructura de la base.") from exc
+        raise BackupError("No se pudo revisar la estructura de los datos.") from exc
 
     missing = APPLICATION_TABLES - tables
     if missing:
-        raise BackupError(
-            "La copia no pertenece a Gestión Financiera o está incompleta."
-        )
+        raise BackupError("La copia no pertenece a Gestión Financiera o está incompleta.")
 
 
 def validate_backup_archive(archive_path: Path) -> None:
@@ -82,7 +78,7 @@ def validate_backup_archive(archive_path: Path) -> None:
     except BackupError:
         raise
     except (OSError, RuntimeError, zipfile.BadZipFile, zipfile.LargeZipFile) as exc:
-        raise BackupError(f"El backup comprimido no es válido: {archive_path.name}") from exc
+        raise BackupError(f"La copia comprimida no es válida: {archive_path.name}") from exc
 
     if corrupted:
         raise BackupError(f"El archivo comprimido está dañado: {corrupted}")
@@ -105,7 +101,7 @@ def materialize_backup(
         return
 
     if not _is_archive_backup(backup_path):
-        raise BackupError("La copia debe ser un backup .sqlite3.zip o .sqlite3.")
+        raise BackupError("La copia debe ser un archivo .sqlite3.zip o .sqlite3.")
 
     temporary_directory = (working_directory or backup_path.parent).resolve()
     temporary_directory.mkdir(parents=True, exist_ok=True)
@@ -154,13 +150,9 @@ def create_backup(
         destination = backup_directory / _archive_name(fixed_name)
     else:
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S_%f")
-        destination = (
-            backup_directory / f"gestion_{label}_{timestamp}{ARCHIVE_SUFFIX}"
-        )
+        destination = backup_directory / f"gestion_{label}_{timestamp}{ARCHIVE_SUFFIX}"
 
-    temporary_database = destination.with_name(
-        f".{destination.name}.building{LEGACY_SUFFIX}"
-    )
+    temporary_database = destination.with_name(f".{destination.name}.building{LEGACY_SUFFIX}")
     temporary_archive = destination.with_name(f".{destination.name}.tmp")
     for temporary in (temporary_database, temporary_archive):
         if temporary.exists():
@@ -188,7 +180,7 @@ def create_backup(
         validate_backup_archive(temporary_archive)
         temporary_archive.replace(destination)
     except (OSError, sqlite3.Error, BackupError) as exc:
-        raise BackupError(f"No se pudo crear el backup {destination.name}") from exc
+        raise BackupError(f"No se pudo crear la copia de seguridad {destination.name}") from exc
     finally:
         for temporary in (temporary_database, temporary_archive):
             if temporary.exists():
@@ -286,12 +278,12 @@ def list_backups(backup_directory: Path) -> list[BackupInfo]:
 def resolve_backup_path(backup_directory: Path, name: str) -> Path:
     backup_directory = backup_directory.resolve()
     if Path(name).name != name or not name.startswith("gestion_"):
-        raise BackupError("El nombre del backup no es válido.")
+        raise BackupError("El nombre de la copia no es válido.")
     candidate = (backup_directory / name).resolve()
     if candidate.parent != backup_directory or not _is_supported_backup(candidate):
-        raise BackupError("La ruta del backup no es válida.")
+        raise BackupError("La ubicación de la copia no es válida.")
     if not candidate.is_file():
-        raise BackupError("El backup solicitado no existe.")
+        raise BackupError("La copia solicitada no existe.")
     return candidate
 
 
@@ -304,7 +296,7 @@ def restore_database(
     database_path = database_path.resolve()
     backup_directory = backup_directory.resolve()
     if backup_path == database_path:
-        raise BackupError("La copia seleccionada no puede ser la base activa.")
+        raise BackupError("La copia seleccionada no puede ser el archivo de datos actual.")
 
     database_path.parent.mkdir(parents=True, exist_ok=True)
     temporary = database_path.with_suffix(database_path.suffix + ".restore.tmp")
@@ -334,7 +326,7 @@ def restore_database(
     except (OSError, sqlite3.Error, BackupError) as exc:
         if temporary.exists():
             temporary.unlink()
-        raise BackupError("No se pudo restaurar la base seleccionada.") from exc
+        raise BackupError("No se pudieron restaurar los datos seleccionados.") from exc
 
     return preventive
 
@@ -350,12 +342,12 @@ def _rotate_backups(backup_directory: Path, *, label: str, retention: int) -> No
 
 def _archive_name(name: str) -> str:
     if Path(name).name != name or not name.startswith("gestion_"):
-        raise BackupError("El nombre del backup no es válido.")
+        raise BackupError("El nombre de la copia no es válido.")
     if name.endswith(ARCHIVE_SUFFIX):
         return name
     if name.endswith(LEGACY_SUFFIX):
         return f"{name}.zip"
-    raise BackupError("El nombre del backup debe terminar en .sqlite3 o .sqlite3.zip.")
+    raise BackupError("El nombre de la copia debe terminar en .sqlite3 o .sqlite3.zip.")
 
 
 def _is_archive_backup(path: Path) -> bool:
@@ -373,16 +365,16 @@ def _is_supported_backup(path: Path) -> bool:
 def _archive_database_member(archive: zipfile.ZipFile) -> zipfile.ZipInfo:
     members = [member for member in archive.infolist() if not member.is_dir()]
     if len(members) != 1:
-        raise BackupError("El backup ZIP debe contener una única base SQLite.")
+        raise BackupError("La copia ZIP debe contener un único archivo de datos.")
     member = members[0]
     if (
         not member.filename.endswith(LEGACY_SUFFIX)
         or "/" in member.filename
         or "\\" in member.filename
     ):
-        raise BackupError("El contenido del backup ZIP no es válido.")
+        raise BackupError("El contenido de la copia ZIP no es válido.")
     if member.file_size < 1 or member.file_size > MAX_UNCOMPRESSED_BACKUP_BYTES:
-        raise BackupError("El tamaño interno del backup ZIP no es válido.")
+        raise BackupError("El tamaño interno de la copia ZIP no es válido.")
     return member
 
 
@@ -395,10 +387,10 @@ def _extract_archive_database(archive_path: Path, destination: Path) -> None:
                 while chunk := source.read(COPY_CHUNK_SIZE):
                     written += len(chunk)
                     if written > MAX_UNCOMPRESSED_BACKUP_BYTES:
-                        raise BackupError("El backup ZIP supera el tamaño permitido.")
+                        raise BackupError("La copia ZIP supera el tamaño permitido.")
                     target.write(chunk)
             if written != member.file_size:
-                raise BackupError("El backup ZIP está incompleto.")
+                raise BackupError("La copia ZIP está incompleta.")
     except BackupError:
         if destination.exists():
             destination.unlink()

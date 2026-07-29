@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 {% load finance %}
 
-{% block title %}Dashboard · Gestión Financiera{% endblock %}
+{% block title %}Resumen · Gestión Financiera{% endblock %}
 
 {% block content %}
 <header class="dashboard-header">
     <div>
-        <p class="eyebrow">Resumen operativo</p>
-        <h1>{% if selected_date == today %}Así viene el día{% else %}Resumen del {{ selected_date|date:"d/m/Y" }}{% endif %}</h1>
+        <p class="eyebrow">Resumen del día</p>
+        <h1>{% if selected_date == today %}Resumen de hoy{% else %}Resumen del {{ selected_date|date:"d/m/Y" }}{% endif %}</h1>
         <p class="page-subtitle">
-            Lo importante para cobrar, priorizar atrasos y controlar la cartera.
+            Lo importante para cobrar, priorizar atrasos y controlar los saldos pendientes.
         </p>
     </div>
     <div class="dashboard-header-actions">
@@ -38,22 +38,22 @@
         <small>{{ scheduled_today_count }} con vencimiento en la fecha</small>
     </article>
     <article class="dashboard-kpi">
-        <span class="kpi-label">Queda por cobrar</span>
+        <span class="kpi-label">Pendiente de cobro</span>
         <strong>{{ remaining_to_collect|ars }}</strong>
-        <small>Deuda exigible de la fecha</small>
+        <small>Incluye vencimientos del día y anteriores</small>
     </article>
     <article class="dashboard-kpi is-danger">
-        <span class="kpi-label">Clientes atrasados</span>
+        <span class="kpi-label">Clientes con atraso</span>
         <strong>{{ overdue_clients }}</strong>
-        <small>{{ overdue_total|ars }} en mora</small>
+        <small>{{ overdue_total|ars }} vencido</small>
     </article>
     <article class="dashboard-kpi is-success">
         <span class="kpi-label">Dinero recibido</span>
         <strong>{{ collected_amount|ars }}</strong>
-        <small>{{ installment_collected_amount|ars }} en cuotas · {{ initial_collected_amount|ars }} en entregas</small>
+        <small>{{ installment_collected_amount|ars }} en cuotas · {{ initial_collected_amount|ars }} en pagos iniciales</small>
     </article>
     <article class="dashboard-kpi is-dark">
-        <span class="kpi-label">Cartera pendiente</span>
+        <span class="kpi-label">Saldo total pendiente</span>
         <strong>{{ portfolio_total|ars }}</strong>
         <small>Incluye cuotas futuras activas</small>
     </article>
@@ -61,10 +61,10 @@
 
 <section class="progress-panel">
     <div>
-        <p class="eyebrow">Avance de cobranza</p>
+        <p class="eyebrow">Avance de la cobranza</p>
         <div class="progress-title">
-            <h2>{{ collection_progress }}% del objetivo diario</h2>
-            <span>{{ installment_collected_amount|ars }} de {{ day_target|ars }}</span>
+            <h2>{{ collection_progress }}% de la cobranza del día</h2>
+            <span>{{ installment_collected_amount|ars }} cobrado de {{ day_target|ars }}</span>
         </div>
         <div class="progress-track" role="progressbar" aria-valuenow="{{ collection_progress }}"
              aria-valuemin="0" aria-valuemax="100">
@@ -94,11 +94,11 @@
                 </div>
                 <div class="priority-product">
                     <strong>{{ row.sale.product_description }}</strong>
-                    <small>{{ row.due_installment_count }} cuota{{ row.due_installment_count|pluralize }} exigible{{ row.due_installment_count|pluralize }}</small>
+                    <small>{{ row.due_installment_count }} cuota{{ row.due_installment_count|pluralize }} por cobrar</small>
                 </div>
                 <div>
                     {% if row.days_overdue %}
-                        <span class="badge badge-danger">{{ row.days_overdue }} días tarde</span>
+                        <span class="badge badge-danger">{{ row.days_overdue }} días de atraso</span>
                     {% else %}
                         <span class="badge badge-success">Vence hoy</span>
                     {% endif %}
@@ -116,18 +116,18 @@
         <div class="empty-state compact">
             <span class="empty-icon" aria-hidden="true">✓</span>
             <h3>No queda cobranza pendiente</h3>
-            <p>La fecha seleccionada no tiene deuda exigible restante.</p>
+            <p>La fecha seleccionada no tiene cuotas pendientes de cobro.</p>
         </div>
         {% endif %}
     </section>
 
     <aside class="dashboard-side">
         <section class="panel mini-overview">
-            <div class="panel-header compact"><h2>Panorama</h2></div>
+            <div class="panel-header compact"><h2>Estado general</h2></div>
             <dl>
                 <div><dt>Ventas activas</dt><dd>{{ active_sales_count }}</dd></div>
-                <div><dt>Próximas 7 días</dt><dd>{{ upcoming_installments }} cuotas</dd></div>
-                <div><dt>Visitas registradas</dt><dd>{{ visits_today }}</dd></div>
+                <div><dt>Cuotas en los próximos 7 días</dt><dd>{{ upcoming_installments }}</dd></div>
+                <div><dt>Visitas en la fecha</dt><dd>{{ visits_today }}</dd></div>
             </dl>
             <a class="btn btn-secondary btn-compact" href="{% url 'core:agenda' %}">Ver semana completa</a>
         </section>

@@ -54,7 +54,7 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
             elif installment.due_date < as_of:
                 status = "overdue"
                 day_word = "día" if installment_balance.days_overdue == 1 else "días"
-                status_label = f"{installment_balance.days_overdue} {day_word} tarde"
+                status_label = f"{installment_balance.days_overdue} {day_word} de atraso"
                 overdue_installments += 1
             elif installment.due_date == as_of:
                 status = "today"
@@ -74,9 +74,7 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
             )
 
     payments = list(
-        customer.payments.select_related("sale").order_by(
-            "-payment_date", "-created_at", "-pk"
-        )
+        customer.payments.select_related("sale").order_by("-payment_date", "-created_at", "-pk")
     )
     attempts = list(
         customer.collection_attempts.select_related("sale").order_by(
@@ -85,11 +83,7 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
     )
     total_paid = as_money(
         sum(
-            (
-                payment.amount
-                for payment in payments
-                if payment.status == Payment.Status.REGISTERED
-            ),
+            (payment.amount for payment in payments if payment.status == Payment.Status.REGISTERED),
             ZERO,
         )
     )
@@ -123,18 +117,12 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
             {
                 "date": payment.payment_date,
                 "kind": (
-                    "payment"
-                    if payment.status == Payment.Status.REGISTERED
-                    else "payment_voided"
+                    "payment" if payment.status == Payment.Status.REGISTERED else "payment_voided"
                 ),
                 "title": (
-                    ("Entrega inicial" if is_initial else "Pago de cuota")
+                    ("Pago inicial" if is_initial else "Pago de cuota")
                     if payment.status == Payment.Status.REGISTERED
-                    else (
-                        "Entrega inicial anulada"
-                        if is_initial
-                        else "Pago de cuota anulado"
-                    )
+                    else ("Pago inicial anulado" if is_initial else "Pago de cuota anulado")
                 ),
                 "detail": payment.notes or payment.payment_method,
                 "amount": payment.amount,
@@ -169,10 +157,6 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
         "paid_installments": paid_installments,
         "active_sales": sum(sale.status == Sale.Status.ACTIVE for sale in sales),
         "product_count": len(
-            {
-                sale.product_id
-                for sale in sales
-                if sale.status != Sale.Status.CANCELLED
-            }
+            {sale.product_id for sale in sales if sale.status != Sale.Status.CANCELLED}
         ),
     }

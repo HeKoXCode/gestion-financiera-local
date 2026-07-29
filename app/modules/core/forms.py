@@ -113,7 +113,7 @@ class BusinessSettingsForm(StyledModelForm):
         widget=forms.CheckboxSelectMultiple,
     )
     payment_methods_text = forms.CharField(
-        label="Métodos de pago",
+        label="Medios de pago",
         help_text="Escribí uno por línea. Por ejemplo: Efectivo, Transferencia y Otro.",
         widget=forms.Textarea(attrs={"rows": 4}),
     )
@@ -151,12 +151,8 @@ class BusinessSettingsForm(StyledModelForm):
         self._apply_styles()
         if self.instance and self.instance.pk:
             self.initial["collection_days"] = self.instance.collection_days
-            self.initial["payment_methods_text"] = "\n".join(
-                self.instance.payment_methods
-            )
-            self.initial["available_frequencies"] = (
-                self.instance.available_frequencies
-            )
+            self.initial["payment_methods_text"] = "\n".join(self.instance.payment_methods)
+            self.initial["available_frequencies"] = self.instance.available_frequencies
 
     def clean_business_name(self):
         return self.cleaned_data["business_name"].strip()
@@ -177,18 +173,14 @@ class BusinessSettingsForm(StyledModelForm):
         methods = []
         for line in raw_value.replace(",", "\n").splitlines():
             method = line.strip()
-            if method and method.casefold() not in {
-                existing.casefold() for existing in methods
-            }:
+            if method and method.casefold() not in {existing.casefold() for existing in methods}:
                 methods.append(method)
         if not methods:
-            raise ValidationError("Indicá al menos un método de pago.")
+            raise ValidationError("Indicá al menos un medio de pago.")
         if len(methods) > 20:
-            raise ValidationError("Podés configurar hasta 20 métodos de pago.")
+            raise ValidationError("Podés configurar hasta 20 medios de pago.")
         if any(len(method) > 40 for method in methods):
-            raise ValidationError(
-                "Cada método de pago puede tener hasta 40 caracteres."
-            )
+            raise ValidationError("Cada medio de pago puede tener hasta 40 caracteres.")
         return methods
 
     def clean_whatsapp_message(self):
@@ -216,9 +208,7 @@ class BusinessSettingsForm(StyledModelForm):
         settings = super().save(commit=False)
         settings.collection_days = self.cleaned_data["collection_days"]
         settings.payment_methods = self.cleaned_data["payment_methods_text"]
-        settings.available_frequencies = self.cleaned_data[
-            "available_frequencies"
-        ]
+        settings.available_frequencies = self.cleaned_data["available_frequencies"]
         if commit:
             settings.save()
         return settings
@@ -240,7 +230,7 @@ class SaleForm(StyledModelForm):
         ),
     )
     down_payment = forms.DecimalField(
-        label="Entrega inicial",
+        label="Pago inicial",
         max_digits=14,
         decimal_places=2,
         min_value=Decimal("0.00"),
@@ -256,11 +246,11 @@ class SaleForm(StyledModelForm):
         ),
     )
     down_payment_method = forms.ChoiceField(
-        label="Método de la entrega",
+        label="Medio del pago inicial",
         required=False,
     )
     custom_installment_total = forms.BooleanField(
-        label="Usar un total en cuotas diferente",
+        label="Modificar el total que se pagará en cuotas",
         required=False,
     )
     financed_amount = forms.DecimalField(
@@ -303,7 +293,7 @@ class SaleForm(StyledModelForm):
         }
         labels = {
             "product_description": "Descripción en esta venta",
-            "first_due_date": "Primer día de cobro",
+            "first_due_date": "Fecha del primer cobro",
         }
 
     def __init__(
@@ -324,14 +314,14 @@ class SaleForm(StyledModelForm):
             if choice[0] in self.settings.available_frequencies
         ]
         self.fields["down_payment_method"].choices = [
-            ("", "Seleccionar método"),
+            ("", "Seleccionar medio"),
             *((method, method) for method in self.settings.payment_methods),
         ]
         self.fields["product_description"].required = False
         self.fields["installment_count"].widget.attrs["max"] = self.settings.max_installments
-        self.fields["installment_count"].help_text = (
-            f"Máximo configurado: {self.settings.max_installments} cuotas."
-        )
+        self.fields[
+            "installment_count"
+        ].help_text = f"Máximo configurado: {self.settings.max_installments} cuotas."
         self._apply_styles()
         self.fields["customer"].widget.attrs["autofocus"] = True
 
@@ -392,12 +382,12 @@ class SaleForm(StyledModelForm):
         if down_payment > ZERO and not payment_method:
             self.add_error(
                 "down_payment_method",
-                "Elegí cómo se recibió la entrega inicial.",
+                "Elegí cómo se recibió el pago inicial.",
             )
         if down_payment > ZERO and delivery_date and delivery_date > timezone.localdate():
             self.add_error(
                 "delivery_date",
-                "Una venta con entrega inicial no puede tener una fecha de entrega futura.",
+                "Una venta con pago inicial no puede tener una fecha de entrega futura.",
             )
         return cleaned
 
@@ -411,7 +401,7 @@ class SaleCancellationForm(forms.Form):
             attrs={
                 "class": "form-control",
                 "rows": 4,
-                "placeholder": "Explicá brevemente por qué se cancela la operación",
+                "placeholder": "Explicá brevemente por qué se cancela la venta",
                 "autofocus": True,
             }
         ),
@@ -441,7 +431,7 @@ class PaymentForm(forms.Form):
         widget=forms.DateInput(attrs={"class": "form-control", "type": "date"}),
     )
     payment_method = forms.ChoiceField(
-        label="Método de pago",
+        label="Medio de pago",
         widget=forms.Select(attrs={"class": "form-control"}),
     )
     notes = forms.CharField(

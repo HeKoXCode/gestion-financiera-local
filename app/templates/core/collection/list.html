@@ -9,7 +9,7 @@
         <p class="eyebrow">Trabajo del día</p>
         <h1>Cobranza del {{ selected_date|date:"d/m/Y" }}</h1>
         <p class="page-subtitle">
-            Cuotas exigibles agrupadas por venta, con sus recargos y saldo actualizado.
+            Cuotas pendientes hasta la fecha, agrupadas por venta, con recargos y saldo actualizado.
         </p>
     </div>
     <div class="collection-header-actions">
@@ -41,19 +41,19 @@
 <section class="stats-grid collection-stats">
     <article class="stat-card stat-primary">
         <div class="stat-icon" aria-hidden="true">◎</div>
-        <div><span>Clientes a cobrar</span><strong>{{ client_count }}</strong><small>Con deuda exigible</small></div>
+        <div><span>Clientes a cobrar</span><strong>{{ client_count }}</strong><small>Con pagos pendientes hasta la fecha</small></div>
     </article>
     <article class="stat-card">
         <div class="stat-icon" aria-hidden="true">$</div>
-        <div><span>Total esperado</span><strong>{{ total_expected|ars }}</strong><small>Capital y recargos</small></div>
+        <div><span>Pendiente de cobro</span><strong>{{ total_expected|ars }}</strong><small>Cuotas y recargos pendientes</small></div>
     </article>
     <article class="stat-card stat-warning">
         <div class="stat-icon" aria-hidden="true">!</div>
-        <div><span>Clientes atrasados</span><strong>{{ overdue_count }}</strong><small>{{ overdue_total|ars }} pendiente</small></div>
+        <div><span>Clientes con atraso</span><strong>{{ overdue_count }}</strong><small>{{ overdue_total|ars }} vencido</small></div>
     </article>
     <article class="stat-card stat-dark">
         <div class="stat-icon" aria-hidden="true">✓</div>
-        <div><span>Cuotas cobradas</span><strong>{{ collected_amount|ars }}</strong><small>Solo pagos de cobranza no anulados</small></div>
+        <div><span>Cobrado en cuotas</span><strong>{{ collected_amount|ars }}</strong><small>Pagos registrados en la fecha, sin anulados</small></div>
     </article>
 </section>
 
@@ -75,7 +75,7 @@
                 <div class="title-with-badge">
                     <h2><a href="{% url 'core:customer_detail' row.customer.pk %}">{{ row.customer.full_name }}</a></h2>
                     {% if row.days_overdue %}
-                        <span class="badge badge-danger">{{ row.days_overdue }} día{{ row.days_overdue|pluralize }} tarde</span>
+                        <span class="badge badge-danger">{{ row.days_overdue }} día{{ row.days_overdue|pluralize }} de atraso</span>
                     {% else %}
                         <span class="badge badge-success">Vence hoy</span>
                     {% endif %}
@@ -90,12 +90,12 @@
             <strong>{{ row.sale.product_description }}</strong>
             <small>
                 Desde cuota {{ row.oldest_installment.number }}/{{ row.sale.installment_count }}
-                · {{ row.due_installment_count }} pendiente{{ row.due_installment_count|pluralize }}
+                · {{ row.due_installment_count }} cuota{{ row.due_installment_count|pluralize }} por cobrar
             </small>
         </div>
 
         <div class="collection-breakdown">
-            <div><span>Capital</span><strong>{{ row.capital_due|ars }}</strong></div>
+            <div><span>Cuotas pendientes</span><strong>{{ row.capital_due|ars }}</strong></div>
             <div><span>Recargos</span><strong>{{ row.late_fees_due|ars }}</strong></div>
             <div class="collection-total"><span>Total</span><strong>{{ row.total_due|ars }}</strong></div>
         </div>
@@ -108,7 +108,7 @@
                     <input type="hidden" name="fecha" value="{{ selected_date|date:'Y-m-d' }}">
                     <button class="btn btn-warning" type="submit">No pagó</button>
                 </form>
-                <a class="btn btn-ghost" href="{% url 'core:collection_attempt_create' row.sale.pk %}">Otra visita</a>
+                <a class="btn btn-ghost" href="{% url 'core:collection_attempt_create' row.sale.pk %}">Otro resultado</a>
             {% endif %}
             {% if row.whatsapp_url %}
                 <a class="whatsapp-action" href="{{ row.whatsapp_url }}" target="_blank" rel="noopener">
@@ -121,8 +121,8 @@
     {% empty %}
     <section class="panel empty-state">
         <span class="empty-icon" aria-hidden="true">✓</span>
-        <h3>La cobranza está al día</h3>
-        <p>No hay ventas con deuda exigible para esta fecha.</p>
+        <h3>No hay cobros pendientes para esta fecha</h3>
+        <p>No existen cuotas vencidas ni con vencimiento en la fecha seleccionada.</p>
         <a class="btn btn-secondary" href="{% url 'core:home' %}?fecha={{ selected_date|date:'Y-m-d' }}">Volver al resumen</a>
     </section>
     {% endfor %}

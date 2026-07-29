@@ -99,8 +99,7 @@ def format_counts(counts: dict[str, int]) -> str:
 def archive_and_reset(label: str) -> tuple[Path, dict[str, int], Path]:
     if local_application_is_running():
         raise BackupError(
-            "Gestión Financiera está abierta. Cerrala con "
-            "“Cerrar y crear respaldo” antes de continuar."
+            "Gestión Financiera está abierta. Cerrala con “Cerrar y respaldar” antes de continuar."
         )
 
     settings = configure_django()
@@ -111,7 +110,7 @@ def archive_and_reset(label: str) -> tuple[Path, dict[str, int], Path]:
     ).resolve()
 
     if not database_path.is_file():
-        raise BackupError("No existe una base activa para archivar.")
+        raise BackupError("No existen datos actuales para archivar.")
 
     validate_application_database(database_path)
     before_counts = business_counts()
@@ -125,7 +124,7 @@ def archive_and_reset(label: str) -> tuple[Path, dict[str, int], Path]:
         fixed_name=archive_name,
     )
     if archive is None:
-        raise BackupError("No se pudo crear el archivo histórico.")
+        raise BackupError("No se pudo crear la copia histórica.")
     validate_application_backup(archive, working_directory=database_path.parent)
 
     reset_started = False
@@ -139,9 +138,7 @@ def archive_and_reset(label: str) -> tuple[Path, dict[str, int], Path]:
 
         after_counts = business_counts()
         if any(after_counts.values()):
-            raise BackupError(
-                "La nueva base no quedó vacía: " + format_counts(after_counts)
-            )
+            raise BackupError("La nueva base no quedó vacía: " + format_counts(after_counts))
 
         recovery = create_backup(
             database_path,
@@ -181,7 +178,7 @@ def archive_and_reset(label: str) -> tuple[Path, dict[str, int], Path]:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Archiva la base actual y crea una base vacía."
+        description="Archiva los datos actuales y deja el programa vacío."
     )
     parser.add_argument(
         "--name",
@@ -204,7 +201,7 @@ def main() -> int:
 
     if not arguments.yes:
         print()
-        print("Se guardará una copia completa y la base activa quedará vacía.")
+        print("Se guardará una copia completa y el programa quedará sin datos.")
         confirmation = input("Escribí ARCHIVAR para continuar: ").strip().upper()
         if confirmation != "ARCHIVAR":
             print("Operación cancelada. No se modificó ningún dato.")
@@ -222,7 +219,7 @@ def main() -> int:
     print(f"Archivo: {archive}")
     print(f"SHA256: {file_sha256(archive)}")
     print(f"Recuperación vacía actualizada: {recovery}")
-    print("La base activa está limpia y lista para comenzar.")
+    print("El programa está limpio y listo para comenzar.")
     return 0
 
 

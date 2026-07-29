@@ -82,11 +82,7 @@ BACKUP_LABELS = {
 
 def _selected_date(request):
     requested = parse_date(request.GET.get("fecha", ""))
-    if (
-        requested is None
-        or requested < MIN_NAVIGATION_DATE
-        or requested > MAX_NAVIGATION_DATE
-    ):
+    if requested is None or requested < MIN_NAVIGATION_DATE or requested > MAX_NAVIGATION_DATE:
         return timezone.localdate()
     return requested
 
@@ -193,9 +189,7 @@ def collection_print(request):
             "today": today,
             "rows": rows,
             "client_count": len({row["customer"].pk for row in rows}),
-            "total_expected": as_money(
-                sum((row["total_due"] for row in rows), ZERO)
-            ),
+            "total_expected": as_money(sum((row["total_due"] for row in rows), ZERO)),
         },
     )
 
@@ -268,7 +262,7 @@ def backup_create(request):
         messages.error(request, str(exc))
     else:
         if backup:
-            messages.success(request, f"Backup creado: {backup.name}")
+            messages.success(request, f"Copia de seguridad creada: {backup.name}")
         else:
             messages.error(request, "Todavía no existe una base para respaldar.")
     return redirect("core:data_management")
@@ -286,9 +280,7 @@ def backup_download(request, name):
         as_attachment=True,
         filename=backup.name,
         content_type=(
-            "application/zip"
-            if backup.name.endswith(".zip")
-            else "application/vnd.sqlite3"
+            "application/zip" if backup.name.endswith(".zip") else "application/vnd.sqlite3"
         ),
     )
 
@@ -438,9 +430,7 @@ def product_list(request):
     )
 
     if query:
-        products = products.filter(
-            Q(name__icontains=query) | Q(description__icontains=query)
-        )
+        products = products.filter(Q(name__icontains=query) | Q(description__icontains=query))
     if state == "active":
         products = products.filter(is_active=True)
     elif state == "archived":
@@ -518,9 +508,11 @@ def product_toggle(request, pk):
 def sale_list(request):
     query = request.GET.get("q", "").strip()
     state = request.GET.get("estado", "active")
-    sales = Sale.objects.select_related("customer", "product").annotate(
-        generated_installments=Count("installments")
-    ).order_by("-delivery_date", "-pk")
+    sales = (
+        Sale.objects.select_related("customer", "product")
+        .annotate(generated_installments=Count("installments"))
+        .order_by("-delivery_date", "-pk")
+    )
 
     if query:
         sales = sales.filter(
@@ -615,11 +607,7 @@ def sale_detail(request, pk):
     payments = list(sale.payments.prefetch_related("allocations").all())
     total_received = as_money(
         sum(
-            (
-                payment.amount
-                for payment in payments
-                if payment.status == Payment.Status.REGISTERED
-            ),
+            (payment.amount for payment in payments if payment.status == Payment.Status.REGISTERED),
             ZERO,
         )
     )
@@ -728,7 +716,7 @@ def payment_create(request, pk):
     generate_missing_late_fees(as_of=today, settings=settings, sale=sale)
     due_balance = get_due_sale_balance(sale, as_of=today)
     if due_balance.total_due <= ZERO:
-        messages.info(request, "La venta no tiene deuda exigible hoy.")
+        messages.info(request, "La venta no tiene cuotas pendientes hasta hoy.")
         return redirect("core:sale_detail", pk=sale.pk)
 
     form = PaymentForm(
@@ -782,7 +770,7 @@ def collection_did_not_pay(request, pk):
         return redirect("core:sale_detail", pk=sale.pk)
     selected_date = parse_date(request.POST.get("fecha", "")) or timezone.localdate()
     if selected_date > timezone.localdate() or selected_date < sale.delivery_date:
-        messages.error(request, "La fecha del intento de cobranza no es válida.")
+        messages.error(request, "La fecha de la visita de cobranza no es válida.")
         return _collection_redirect(timezone.localdate())
 
     _, created = CollectionAttempt.objects.get_or_create(

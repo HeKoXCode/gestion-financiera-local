@@ -6,10 +6,10 @@
 {% block content %}
 <header class="page-header reports-header">
     <div>
-        <p class="eyebrow">Análisis de cartera</p>
+        <p class="eyebrow">Estado de las ventas</p>
         <h1>Reportes al {{ selected_date|date:"d/m/Y" }}</h1>
         <p class="page-subtitle">
-            Cobranza, morosidad y saldos calculados desde los movimientos registrados.
+            Cobros, atrasos y saldos calculados a partir de los movimientos registrados.
         </p>
     </div>
     <div class="reports-header-actions">
@@ -18,7 +18,7 @@
             Imprimir planilla
         </a>
         <form class="date-picker" method="get">
-            <label for="report-date">Fecha de corte</label>
+            <label for="report-date">Consultar hasta</label>
             <div>
                 <input id="report-date" class="form-control" type="date" name="fecha"
                        value="{{ selected_date|date:'Y-m-d' }}">
@@ -32,28 +32,28 @@
     <article class="report-kpi is-success">
         <span>Cobrado en la fecha</span>
         <strong>{{ collected_today|ars }}</strong>
-        <small>Cuotas y entregas iniciales, sin anulados</small>
+        <small>Cuotas y pagos iniciales, sin anulados</small>
     </article>
     <article class="report-kpi">
         <span>Cobrado esta semana</span>
         <strong>{{ collected_week|ars }}</strong>
-        <small>Desde {{ week_start|date:"d/m" }} hasta la fecha de corte</small>
+        <small>Desde {{ week_start|date:"d/m" }} hasta la fecha seleccionada</small>
     </article>
     <article class="report-kpi">
         <span>Cobrado este mes</span>
         <strong>{{ collected_month|ars }}</strong>
-        <small>Desde {{ month_start|date:"d/m" }} hasta la fecha de corte</small>
+        <small>Desde {{ month_start|date:"d/m" }} hasta la fecha seleccionada</small>
     </article>
     <article class="report-kpi is-dark">
         <span>Total pendiente</span>
         <strong>{{ portfolio_pending|ars }}</strong>
-        <small>{{ open_sales }} venta{{ open_sales|pluralize }} con saldo</small>
+        <small>Incluye cuotas vencidas y futuras de {{ open_sales }} venta{{ open_sales|pluralize }}</small>
     </article>
 </section>
 
 <section class="portfolio-strip">
     <div>
-        <span>Deuda exigible</span>
+        <span>Pendiente hasta la fecha</span>
         <strong>{{ due_total|ars }}</strong>
     </div>
     <div class="is-danger">
@@ -61,7 +61,7 @@
         <strong>{{ overdue_total|ars }}</strong>
     </div>
     <div>
-        <span>Clientes morosos</span>
+        <span>Clientes con atraso</span>
         <strong>{{ overdue_clients }}</strong>
     </div>
     <div class="is-success">
@@ -104,20 +104,20 @@
 </div>
 
 <div class="report-section-heading">
-    <div><p class="eyebrow">Seguimiento prioritario</p><h2>Morosidad y deuda</h2></div>
+    <div><p class="eyebrow">Seguimiento prioritario</p><h2>Atrasos y saldos</h2></div>
 </div>
 
 <div class="report-grid">
     <section class="panel">
         <div class="panel-header">
-            <div><h2>Clientes morosos</h2><p>Ordenados por deuda vencida.</p></div>
+            <div><h2>Clientes con pagos atrasados</h2><p>Ordenados por el monto vencido.</p></div>
             <span class="record-count">{{ overdue_clients }}</span>
         </div>
         {% if debtors %}
         <div class="table-wrap">
             <table class="data-table responsive-table report-table">
                 <thead>
-                    <tr><th>Cliente</th><th>Atraso</th><th class="align-right">Vencido</th><th class="align-right">Saldo total</th><th></th></tr>
+                    <tr><th>Cliente</th><th>Atraso</th><th class="align-right">Monto vencido</th><th class="align-right">Saldo total</th><th></th></tr>
                 </thead>
                 <tbody>
                     {% for row in debtors|slice:":10" %}
@@ -127,7 +127,7 @@
                             <small>{{ row.customer.neighborhood|default:row.customer.address }}</small>
                         </td>
                         <td data-label="Atraso"><span class="badge badge-danger">{{ row.max_days_overdue }} día{{ row.max_days_overdue|pluralize }}</span></td>
-                        <td data-label="Vencido" class="money-cell">{{ row.overdue_total|ars }}</td>
+                        <td data-label="Monto vencido" class="money-cell">{{ row.overdue_total|ars }}</td>
                         <td data-label="Saldo total" class="money-cell">{{ row.total_balance|ars }}</td>
                         <td class="row-action"><a class="icon-button" href="{% url 'core:customer_detail' row.customer.pk %}">›</a></td>
                     </tr>
@@ -136,7 +136,7 @@
             </table>
         </div>
         {% else %}
-        <div class="empty-state compact"><span class="empty-icon">✓</span><h3>Sin clientes morosos</h3><p>No hay cuotas vencidas a la fecha.</p></div>
+        <div class="empty-state compact"><span class="empty-icon">✓</span><h3>Sin clientes con atraso</h3><p>No hay cuotas vencidas a la fecha.</p></div>
         {% endif %}
     </section>
 
@@ -158,7 +158,7 @@
             {% endfor %}
         </ol>
         {% else %}
-        <div class="empty-state compact"><span class="empty-icon">✓</span><h3>Cartera saldada</h3><p>No existen clientes con saldo pendiente.</p></div>
+        <div class="empty-state compact"><span class="empty-icon">✓</span><h3>Sin saldos pendientes</h3><p>No existen clientes con saldo pendiente.</p></div>
         {% endif %}
     </section>
 </div>
@@ -166,7 +166,7 @@
 <div class="report-grid report-grid-lower">
     <section class="panel">
         <div class="panel-header">
-            <div><p class="eyebrow">Cartera sana</p><h2>Clientes al día</h2></div>
+            <div><p class="eyebrow">Sin atrasos</p><h2>Clientes al día</h2></div>
             <span class="record-count">{{ up_to_date_clients }}</span>
         </div>
         {% if up_to_date %}
@@ -189,24 +189,24 @@
             </table>
         </div>
         {% else %}
-        <div class="empty-state compact"><span class="empty-icon">—</span><h3>Sin cartera activa al día</h3><p>Los clientes con saldo sin atraso aparecerán aquí.</p></div>
+        <div class="empty-state compact"><span class="empty-icon">—</span><h3>Sin clientes al día con saldo</h3><p>Los clientes con saldo y sin atraso aparecerán aquí.</p></div>
         {% endif %}
     </section>
 
     <section class="panel">
         <div class="panel-header">
-            <div><p class="eyebrow">Histórico hasta la fecha</p><h2>Productos más vendidos</h2></div>
+            <div><p class="eyebrow">Hasta la fecha elegida</p><h2>Productos más vendidos</h2></div>
         </div>
         {% if products_most_sold %}
         <div class="table-wrap">
             <table class="data-table responsive-table report-table">
-                <thead><tr><th>Producto</th><th class="align-right">Ventas</th><th class="align-right">En cuotas</th><th class="align-right">Pendiente</th></tr></thead>
+                <thead><tr><th>Producto</th><th class="align-right">Ventas</th><th class="align-right">Vendido en cuotas</th><th class="align-right">Pendiente</th></tr></thead>
                 <tbody>
                     {% for row in products_most_sold|slice:":10" %}
                     <tr>
                         <td data-label="Producto"><strong>{{ row.product.name }}</strong></td>
                         <td data-label="Ventas" class="align-right">{{ row.units }}</td>
-                        <td data-label="En cuotas" class="money-cell">{{ row.financed|ars }}</td>
+                        <td data-label="Vendido en cuotas" class="money-cell">{{ row.financed|ars }}</td>
                         <td data-label="Pendiente" class="money-cell">{{ row.pending|ars }}</td>
                     </tr>
                     {% endfor %}

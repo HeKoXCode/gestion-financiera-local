@@ -28,7 +28,7 @@
 </section>
 
 <section class="customer-kpis">
-    <article><span>Total en cuotas</span><strong>{{ total_installments|ars }}</strong><small>{{ product_count }} producto{{ product_count|pluralize }}</small></article>
+    <article><span>Total vendido en cuotas</span><strong>{{ total_installments|ars }}</strong><small>{{ product_count }} producto{{ product_count|pluralize }} diferente{{ product_count|pluralize }}</small></article>
     <article class="is-success"><span>Total abonado</span><strong>{{ total_paid|ars }}</strong><small>Pagos no anulados</small></article>
     <article class="{% if total_balance > 0 %}is-warning{% endif %}"><span>Saldo pendiente</span><strong>{{ total_balance|ars }}</strong><small>{{ active_sales }} venta{{ active_sales|pluralize }} activa{{ active_sales|pluralize }}</small></article>
     <article class="{% if overdue_installments %}is-danger{% endif %}"><span>Cuotas atrasadas</span><strong>{{ overdue_installments }}</strong><small>{{ paid_installments }} cuota{{ paid_installments|pluralize }} pagada{{ paid_installments|pluralize }}</small></article>
@@ -49,13 +49,13 @@
             <div><dt>Teléfono</dt><dd>{{ customer.phone|default:"No informado" }}</dd></div>
             <div><dt>Dirección</dt><dd>{{ customer.address }}</dd></div>
             <div><dt>Barrio</dt><dd>{{ customer.neighborhood|default:"No informado" }}</dd></div>
-            <div><dt>Referencia</dt><dd>{{ customer.address_reference|default:"Sin referencia" }}</dd></div>
+            <div><dt>Referencia del domicilio</dt><dd>{{ customer.address_reference|default:"Sin referencia" }}</dd></div>
             <div class="detail-wide"><dt>Observaciones</dt><dd>{{ customer.notes|default:"Sin observaciones"|linebreaksbr }}</dd></div>
         </dl>
     </section>
 
     <aside class="panel action-card">
-        <p class="eyebrow">Administración</p>
+        <p class="eyebrow">Disponibilidad</p>
         <h2>{% if customer.is_active %}Archivar cliente{% else %}Reactivar cliente{% endif %}</h2>
         <p>
             {% if customer.is_active %}
@@ -81,18 +81,18 @@
     {% if sale_rows %}
     <div class="table-wrap">
         <table class="data-table responsive-table">
-            <thead><tr><th>Entrega</th><th>Producto</th><th>Plan</th><th>Estado</th><th class="align-right">En cuotas</th><th class="align-right">Saldo exigible</th><th></th></tr></thead>
+            <thead><tr><th>Fecha de entrega</th><th>Producto</th><th>Plan</th><th>Estado</th><th class="align-right">Total en cuotas</th><th class="align-right">Pendiente hasta hoy</th><th></th></tr></thead>
             <tbody>
                 {% for row in sale_rows %}
                 <tr>
-                    <td data-label="Entrega">{{ row.sale.delivery_date|date:"d/m/Y" }}</td>
+                    <td data-label="Fecha de entrega">{{ row.sale.delivery_date|date:"d/m/Y" }}</td>
                     <td data-label="Producto"><a class="table-primary" href="{% url 'core:sale_detail' row.sale.pk %}">{{ row.sale.product_description }}</a></td>
                     <td data-label="Plan">{{ row.sale.installment_count }} cuotas<small>{{ row.sale.get_frequency_display }}</small></td>
                     <td data-label="Estado"><span class="badge badge-{{ row.sale.status }}">{{ row.sale.get_status_display }}</span></td>
-                    <td data-label="En cuotas" class="money-cell">{{ row.sale.financed_amount|ars }}</td>
-                    <td data-label="Saldo" class="money-cell">
+                    <td data-label="Total en cuotas" class="money-cell">{{ row.sale.financed_amount|ars }}</td>
+                    <td data-label="Pendiente hasta hoy" class="money-cell">
                         {{ row.exigible_total|ars }}
-                        {% if row.sale.status == "cancelled" %}<small>No exigible</small>{% endif %}
+                        {% if row.sale.status == "cancelled" %}<small>Fuera de cobranza</small>{% endif %}
                     </td>
                     <td class="row-action"><a class="icon-button" href="{% url 'core:sale_detail' row.sale.pk %}">›</a></td>
                 </tr>
@@ -107,13 +107,13 @@
 
 <section class="panel" id="cuotas">
     <div class="panel-header">
-        <div><p class="eyebrow">Cronogramas consolidados</p><h2>Todas las cuotas</h2></div>
+        <div><p class="eyebrow">Estado de las cuotas</p><h2>Todas las cuotas</h2></div>
         <span class="record-count">{{ installment_rows|length }} cuota{{ installment_rows|length|pluralize }}</span>
     </div>
     {% if installment_rows %}
     <div class="table-wrap history-table-wrap">
         <table class="data-table responsive-table">
-            <thead><tr><th>Producto</th><th>Cuota</th><th>Vencimiento</th><th>Estado</th><th class="align-right">Original</th><th class="align-right">Recargos</th><th class="align-right">Saldo</th></tr></thead>
+            <thead><tr><th>Producto</th><th>Cuota</th><th>Vencimiento</th><th>Estado</th><th class="align-right">Importe de cuota</th><th class="align-right">Recargos</th><th class="align-right">Saldo</th></tr></thead>
             <tbody>
                 {% for row in installment_rows %}
                 <tr>
@@ -121,7 +121,7 @@
                     <td data-label="Cuota">{{ row.installment.number }}/{{ row.sale.installment_count }}</td>
                     <td data-label="Vencimiento">{{ row.installment.due_date|date:"d/m/Y" }}</td>
                     <td data-label="Estado"><span class="badge badge-history-{{ row.status }}">{{ row.status_label }}</span></td>
-                    <td data-label="Original" class="money-cell">{{ row.installment.original_amount|ars }}</td>
+                    <td data-label="Importe de cuota" class="money-cell">{{ row.installment.original_amount|ars }}</td>
                     <td data-label="Recargos" class="money-cell">{{ row.balance.late_fees_due|ars }}</td>
                     <td data-label="Saldo" class="money-cell">{{ row.balance.total_due|ars }}</td>
                 </tr>
@@ -142,14 +142,14 @@
     {% if payments %}
     <div class="table-wrap">
         <table class="data-table responsive-table">
-            <thead><tr><th>Fecha</th><th>Tipo</th><th>Producto</th><th>Método</th><th>Estado</th><th>Observaciones</th><th class="align-right">Importe</th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Tipo</th><th>Producto</th><th>Medio de pago</th><th>Estado</th><th>Observaciones</th><th class="align-right">Importe</th></tr></thead>
             <tbody>
                 {% for payment in payments %}
                 <tr>
                     <td data-label="Fecha">{{ payment.payment_date|date:"d/m/Y" }}</td>
                     <td data-label="Tipo">{{ payment.get_kind_display }}</td>
                     <td data-label="Producto"><a class="table-primary" href="{% url 'core:sale_detail' payment.sale_id %}">{{ payment.sale.product_description }}</a></td>
-                    <td data-label="Método">{{ payment.payment_method }}</td>
+                    <td data-label="Medio de pago">{{ payment.payment_method }}</td>
                     <td data-label="Estado">
                         {% if payment.status == "registered" %}<span class="badge badge-success">Registrado</span>{% else %}<span class="badge badge-danger">Anulado</span><small>{{ payment.void_reason }}</small>{% endif %}
                     </td>
@@ -161,13 +161,13 @@
         </table>
     </div>
     {% else %}
-    <div class="empty-state compact"><span class="empty-icon" aria-hidden="true">$</span><h3>Sin pagos</h3><p>Las entregas iniciales y los pagos de cuotas aparecerán aquí.</p></div>
+    <div class="empty-state compact"><span class="empty-icon" aria-hidden="true">$</span><h3>Sin pagos</h3><p>Los pagos iniciales y los pagos de cuotas aparecerán aquí.</p></div>
     {% endif %}
 </section>
 
 <section class="panel activity-panel" id="actividad">
     <div class="panel-header">
-        <div><p class="eyebrow">Trazabilidad</p><h2>Actividad completa</h2></div>
+        <div><p class="eyebrow">Seguimiento</p><h2>Historial completo</h2></div>
         <span class="record-count">{{ events|length }} evento{{ events|length|pluralize }}</span>
     </div>
     {% if events %}

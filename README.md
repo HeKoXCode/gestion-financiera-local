@@ -6,9 +6,9 @@ cuotas, recargos y cobranzas.
 Estado actual: Fases 0 a 8 terminadas. El MVP está terminado y permite administrar
 clientes, productos y ventas; generar cuotas y recargos; consultar la cobranza;
 registrar pagos completos o parciales; anularlos; conservar las visitas; revisar
-el dashboard, comparar la carga semanal, consultar el historial consolidado,
-imprimir la planilla A4, analizar reportes de cobranza y cartera, crear y
-descargar backups, exportar CSV y restaurar una copia de forma segura.
+el resumen diario, comparar la carga semanal, consultar el historial completo,
+imprimir la planilla A4, analizar reportes de cobranza y saldos, crear y
+descargar copias de seguridad, exportar CSV y restaurar una copia de forma segura.
 
 La entrega portable validada se encuentra en:
 
@@ -41,13 +41,13 @@ El lanzador:
 
 - aplica migraciones pendientes;
 - actualiza los recargos diarios faltantes;
-- crea un backup de inicio;
+- crea una copia de seguridad al iniciar;
 - muestra una ventana de inicio clara, sin abrir el navegador automáticamente;
-- permite entrar al sistema con “Abrir sistema”;
+- permite entrar al programa con “Abrir programa”;
 - permite cerrar de forma segura y crear el respaldo final.
 
-La sección “Datos y respaldo” del menú permite crear y descargar backups
-SQLite comprimidos (`.sqlite3.zip`) y exportar un ZIP de CSV compatible con
+La sección “Datos y respaldo” del menú permite crear y descargar copias
+comprimidas (`.sqlite3.zip`) y exportar un ZIP con archivos CSV compatible con
 Excel. Al cerrar se actualiza una sola copia por día y se conservan hasta 90
 días de cierres.
 
@@ -58,7 +58,7 @@ scripts\Restaurar.bat
 ```
 
 El restaurador selecciona automáticamente la copia válida más reciente, valida
-y descomprime el ZIP, y crea un backup preventivo antes de reemplazar la base.
+y descomprime el ZIP, y crea una copia preventiva antes de reemplazar los datos.
 Después vuelve a abrir el programa. También admite copias `.sqlite3` anteriores.
 
 Para guardar la base completa con un nombre reconocible y comenzar otra desde
@@ -98,7 +98,7 @@ El proceso ejecuta las pruebas, genera los dos ejecutables, prueba una copia
 aislada, crea un manifiesto de integridad y produce el ZIP.
 
 La carpeta portable comienza sin datos reales. Para trasladar una base
-existente, cerrá el programa de origen, copiá un backup `.sqlite3.zip` a
+existente, cerrá el programa de origen, copiá una copia `.sqlite3.zip` a
 `backups` del paquete y ejecutá `RESTAURAR_DATOS.bat`. El archivo aparecerá
 seleccionado automáticamente si es la copia más reciente.
 
@@ -130,11 +130,12 @@ Documentos:
 - [Modelos y motor base de la Fase 2](docs/FASE_2_MODELOS_Y_MOTOR.md).
 - [Interfaz y flujos de la Fase 3](docs/FASE_3_INTERFAZ_COMERCIAL.md).
 - [Cobranza y pagos de la Fase 4](docs/FASE_4_COBRANZA_Y_PAGOS.md).
-- [Dashboard, semana e historial de la Fase 5](docs/FASE_5_DASHBOARD_AGENDA_HISTORIAL.md).
+- [Resumen, semana e historial de la Fase 5](docs/FASE_5_DASHBOARD_AGENDA_HISTORIAL.md).
 - [Impresión, reportes y configuración de la Fase 6](docs/FASE_6_IMPRESION_Y_REPORTES.md).
 - [Respaldo, exportación y restauración de la Fase 7](docs/FASE_7_RESPALDO_EXPORTACION_RESTAURACION.md).
 - [Pruebas y paquete portable de la Fase 8](docs/FASE_8_PRUEBAS_Y_PAQUETE_PORTABLE.md).
 - [Auditoría y sistema de pulido visual final](docs/PULIDO_VISUAL_FINAL.md).
+- [Revisión terminológica para Argentina](docs/REVISION_TERMINOLOGICA_AR.md).
 - [Manual rápido incluido en la entrega](docs/MANUAL_USO_PORTABLE.txt).
 - [Auditoría del equipo](docs/ENTORNO_Y_PORTABILIDAD.md).
 - [Plan empresarial anterior, conservado como referencia](docs/PLAN_MAESTRO.md).

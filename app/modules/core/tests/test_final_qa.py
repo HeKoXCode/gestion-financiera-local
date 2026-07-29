@@ -219,7 +219,7 @@ def test_configuration_limits_payment_methods_to_database_capacity():
     assert too_long.is_valid() is False
     assert "40 caracteres" in too_long.errors["payment_methods_text"][0]
     assert too_many.is_valid() is False
-    assert "20 métodos" in too_many.errors["payment_methods_text"][0]
+    assert "20 medios" in too_many.errors["payment_methods_text"][0]
 
 
 def test_sale_form_rejects_money_overflow_instead_of_raising_an_error():
@@ -255,7 +255,7 @@ def test_export_protects_formulas_even_after_leading_spaces(tmp_path):
         first_name="CSV",
         last_name="Seguro",
         address="Domicilio inventado",
-        notes="   =HYPERLINK(\"malicioso\")",
+        notes='   =HYPERLINK("malicioso")',
     )
 
     export_path = create_data_export(tmp_path)
@@ -313,7 +313,7 @@ def test_cancelled_sale_detail_labels_its_balance_as_non_collectible(client):
     content = response.content.decode()
 
     assert response.status_code == 200
-    assert "Saldo no exigible" in content
+    assert "Saldo fuera de cobranza" in content
     assert "no forma parte de la cobranza" in content
     assert "badge-cancelled" in content
 

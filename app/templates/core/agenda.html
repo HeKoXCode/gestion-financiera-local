@@ -9,7 +9,7 @@
         <p class="eyebrow">Vista semanal</p>
         <h1>Semana del {{ week_start|date:"d/m" }} al {{ week_end|date:"d/m/Y" }}</h1>
         <p class="page-subtitle">
-            Compará la carga de lunes a sábado y abrí la cobranza del día que quieras trabajar.
+            Compará clientes e importes de lunes a sábado y abrí el día que quieras cobrar.
         </p>
     </div>
     <form class="date-picker" method="get">
@@ -44,18 +44,18 @@
         <small>Vencimientos de lunes a sábado</small>
     </article>
     <article class="weekly-amount-card">
-        <span>Monto programado</span>
+        <span>Monto que vence</span>
         <strong>{{ weekly_scheduled_amount|ars }}</strong>
-        <small>Sin repetir el arrastre diario</small>
+        <small>Suma de las cuotas que vencen en la semana</small>
     </article>
     <article class="agenda-total">
-        <span>Día con mayor recorrido</span>
+        <span>Día con más clientes</span>
         {% if busiest_day %}
             <strong>{{ busiest_day.date|date:"l"|capfirst }}</strong>
             <small>{{ busiest_day.client_count }} cliente{{ busiest_day.client_count|pluralize }}</small>
         {% else %}
-            <strong>Sin recorrido</strong>
-            <small>No hay cobranzas exigibles</small>
+            <strong>Sin cobranzas</strong>
+            <small>No hay pagos pendientes hasta esas fechas</small>
         {% endif %}
     </article>
 </section>
@@ -86,30 +86,30 @@
                 <strong>{{ day.client_count }}</strong>
             </div>
             <div>
-                <span>Programado</span>
+                <span>Vence ese día</span>
                 <strong>{{ day.scheduled_amount|ars }}</strong>
             </div>
             <div class="{% if day.overdue_client_count %}is-danger{% endif %}">
-                <span>Atrasados</span>
+                <span>Con atraso</span>
                 <strong>{{ day.overdue_client_count }}</strong>
             </div>
             <div>
-                <span>Total recorrido</span>
+                <span>Total a cobrar</span>
                 <strong>{{ day.route_total|ars }}</strong>
             </div>
         </div>
 
         <p class="weekly-day-breakdown">
-            {{ day.scheduled_client_count }} programado{{ day.scheduled_client_count|pluralize }}
-            · {{ day.carryover_client_count }} de arrastre
-            · {{ day.scheduled_installments }} cuota{{ day.scheduled_installments|pluralize }}
+            {{ day.scheduled_client_count }} con vencimiento
+            · {{ day.carryover_client_count }} pendiente{{ day.carryover_client_count|pluralize }} de días anteriores
+            · {{ day.scheduled_installments }} cuota{{ day.scheduled_installments|pluralize }} con vencimiento
         </p>
 
         <div class="weekly-neighborhoods">
             {% for neighborhood in day.neighborhoods %}
                 <span>{{ neighborhood.name }} <strong>{{ neighborhood.count }}</strong></span>
             {% empty %}
-                <span class="is-muted">Sin barrios para recorrer</span>
+                <span class="is-muted">Sin barrios cargados</span>
             {% endfor %}
         </div>
 
@@ -124,8 +124,9 @@
 <aside class="weekly-agenda-note">
     <strong>Cómo leer esta semana</strong>
     <p>
-        “Programado” cuenta únicamente las cuotas que vencen ese día. “Total recorrido”
-        agrega también lo pendiente de días anteriores, por eso no se suma como total semanal.
+        “Vence ese día” cuenta únicamente las cuotas con esa fecha de vencimiento.
+        “Total a cobrar” agrega lo pendiente de días anteriores; por eso esos totales
+        diarios no deben sumarse entre sí.
     </p>
 </aside>
 {% endblock %}

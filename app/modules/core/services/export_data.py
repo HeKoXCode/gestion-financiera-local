@@ -51,9 +51,7 @@ EXPECTED_FILES = {
 
 
 def _safe_text(value: str) -> str:
-    if value.lstrip().startswith(("=", "+", "-", "@")) or value.startswith(
-        ("\t", "\r", "\n")
-    ):
+    if value.lstrip().startswith(("=", "+", "-", "@")) or value.startswith(("\t", "\r", "\n")):
         return f"'{value}"
     return value
 
@@ -141,7 +139,7 @@ def _export_tables() -> dict[str, tuple[list[str], list[tuple]]]:
                 "descripcion_producto",
                 "fecha_entrega",
                 "precio_producto",
-                "entrega_inicial",
+                "pago_inicial",
                 "total_en_cuotas",
                 "frecuencia",
                 "cantidad_cuotas",
@@ -360,7 +358,7 @@ def create_data_export(export_directory: Path | None = None) -> Path:
             counts = {name: len(rows) for name, (_, rows) in tables.items()}
             summary = "\n".join(
                 [
-                    "GESTIÓN FINANCIERA - EXPORTACIÓN RELACIONAL",
+                    "GESTIÓN FINANCIERA - EXPORTACIÓN DE DATOS",
                     f"Generada: {generated_at.isoformat(timespec='seconds')}",
                     f"Negocio: {BusinessSettings.get_solo().business_name}",
                     "",
@@ -369,14 +367,11 @@ def create_data_export(export_directory: Path | None = None) -> Path:
                     "Las columnas *_id conservan las relaciones entre archivos.",
                     "Los textos que podrían ejecutarse como fórmula están protegidos.",
                     (
-                        "Este ZIP es para consulta; el backup .sqlite3.zip "
-                        "es la copia restaurable."
+                        "Este ZIP es para consulta; la copia .sqlite3.zip "
+                        "es la que permite restaurar todos los datos."
                     ),
                     "",
-                    *[
-                        f"{name}: {count} registros"
-                        for name, count in counts.items()
-                    ],
+                    *[f"{name}: {count} registros" for name, count in counts.items()],
                 ]
             )
             archive.writestr("resumen.txt", summary.encode("utf-8-sig"))

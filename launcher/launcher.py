@@ -237,17 +237,17 @@ class LocalApplication:
         opened = webbrowser.open_new_tab(f"http://{HOST}:{self.port}/")
         if opened:
             self.status.set(
-                "El sistema está abierto en el navegador. "
+                "El programa está abierto en el navegador. "
                 "Dejá esta ventana abierta mientras trabajás."
             )
-            self.open_button.configure(text="Volver a abrir el sistema")
+            self.open_button.configure(text="Volver a abrir el programa")
             return
 
         self.status.set("No se pudo abrir el navegador automáticamente.")
         messagebox.showwarning(
             "Abrir Gestión Financiera",
             (
-                "No se pudo abrir el navegador automáticamente.\n\n"
+                "No se pudo abrir el programa en el navegador automáticamente.\n\n"
                 f"Abrí esta dirección manualmente:\nhttp://{HOST}:{self.port}/"
             ),
         )
@@ -268,12 +268,12 @@ class LocalApplication:
                 retention_days=CLOSE_BACKUP_RETENTION_DAYS,
             )
             if backup:
-                self.status.set(f"Backup final: {backup.name}")
+                self.status.set(f"Copia final: {backup.name}")
         except BackupError as exc:
             self.closing = False
             messagebox.showerror(
                 "No se pudo cerrar",
-                f"El programa sigue abierto porque falló el backup:\n\n{exc}",
+                f"El programa sigue abierto porque falló la copia de seguridad:\n\n{exc}",
             )
             return
 
@@ -290,9 +290,7 @@ class LocalApplication:
         screen_height = self.window.winfo_screenheight()
         position_x = max((screen_width - WINDOW_WIDTH) // 2, 0)
         position_y = max((screen_height - WINDOW_HEIGHT) // 2, 0)
-        self.window.geometry(
-            f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{position_x}+{position_y}"
-        )
+        self.window.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{position_x}+{position_y}")
 
     def build_window(self) -> None:
         self.window = Tk()
@@ -302,9 +300,7 @@ class LocalApplication:
         self.window.protocol("WM_DELETE_WINDOW", self.close_and_backup)
         self._center_window()
 
-        self.status = StringVar(
-            value="Todo está listo. Presioná “Abrir sistema” para comenzar."
-        )
+        self.status = StringVar(value="Todo está listo. Presioná “Abrir programa” para comenzar.")
 
         header = Frame(
             self.window,
@@ -342,7 +338,7 @@ class LocalApplication:
         brand_copy.pack(side="left", fill="x", expand=True)
         Label(
             brand_copy,
-            text="GESTIÓN FINANCIERA · SISTEMA LOCAL",
+            text="GESTIÓN FINANCIERA · PROGRAMA LOCAL",
             font=("Segoe UI Semibold", 9),
             foreground="#A9E7CD",
             background=COLOR_PRIMARY,
@@ -396,7 +392,7 @@ class LocalApplication:
         ).pack(side="left", padx=(0, 8))
         Label(
             ready_row,
-            text="Sistema preparado",
+            text="Programa listo",
             font=("Segoe UI Semibold", 11),
             foreground=COLOR_TEXT,
             background=COLOR_SURFACE,
@@ -404,7 +400,7 @@ class LocalApplication:
         Label(
             status_card,
             text=(
-                "Tus datos permanecen en este equipo. Abrí el sistema para "
+                "Tus datos permanecen en este equipo. Abrí el programa para "
                 "consultar clientes, ventas y cobranzas."
             ),
             font=("Segoe UI", 9),
@@ -419,7 +415,7 @@ class LocalApplication:
 
         self.open_button = Button(
             actions,
-            text="Abrir sistema",
+            text="Abrir programa",
             command=self.open_browser,
             font=("Segoe UI Semibold", 10),
             foreground="#FFFFFF",
@@ -441,7 +437,7 @@ class LocalApplication:
 
         close_button = Button(
             actions,
-            text="Cerrar y crear respaldo",
+            text="Cerrar y respaldar",
             command=self.close_and_backup,
             font=("Segoe UI Semibold", 10),
             foreground=COLOR_TEXT,

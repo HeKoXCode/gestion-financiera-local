@@ -61,6 +61,19 @@ El restaurador selecciona automáticamente la copia válida más reciente, valid
 y descomprime el ZIP, y crea un backup preventivo antes de reemplazar la base.
 Después vuelve a abrir el programa. También admite copias `.sqlite3` anteriores.
 
+Para guardar la base completa con un nombre reconocible y comenzar otra desde
+cero, cerrar primero el programa y hacer doble clic en:
+
+```text
+scripts\ArchivarYReiniciar.bat
+```
+
+La herramienta pide un nombre y una confirmación. Crea en `storage/` un archivo
+`.sqlite3.zip` con ese nombre y la fecha, comprueba que sea restaurable y recién
+entonces deja vacía la base activa. Ese archivo puede recuperarse más adelante
+con `scripts\Restaurar.bat`, usando “Elegir otra copia…”. No elimina los archivos
+históricos guardados en `storage/`.
+
 Para ejecutar el servidor de desarrollo con consola:
 
 ```powershell
@@ -95,6 +108,7 @@ seleccionado automáticamente si es la copia más reciente.
 data/       Base SQLite y clave local
 backups/    Copias de seguridad
 exports/    Exportaciones CSV
+storage/    Bases completas archivadas para retomarlas más adelante
 media/      Logo y archivos cargados
 ```
 

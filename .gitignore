@@ -23,6 +23,8 @@ backups/*
 !backups/.gitignore
 exports/*
 !exports/.gitignore
+storage/*
+!storage/.gitignore
 media/*
 !media/.gitignore
 

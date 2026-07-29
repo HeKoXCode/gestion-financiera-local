@@ -86,6 +86,15 @@
                     <p class="field-help">Dinero que el cliente entrega al recibir el producto. Usá 0 si no entrega nada.</p>
                     {% for error in form.down_payment.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
+                <div class="field span-2 financing-mode">
+                    <label for="{{ form.custom_installment_total.id_for_label }}">
+                        {{ form.custom_installment_total }}
+                        <span>
+                            <strong>Usar un total en cuotas diferente</strong>
+                            <small>Activá esta opción solamente si acordaste un costo financiero o un descuento.</small>
+                        </span>
+                    </label>
+                </div>
                 <div class="field">
                     <label for="{{ form.down_payment_method.id_for_label }}">Método de la entrega</label>
                     {{ form.down_payment_method }}
@@ -95,7 +104,7 @@
                 <div class="field">
                     <label for="{{ form.financed_amount.id_for_label }}">Total en cuotas</label>
                     <div class="money-input"><span>$</span>{{ form.financed_amount }}</div>
-                    <p class="field-help">Se sugiere precio menos entrega. Podés cambiarlo si acordaste un costo financiero.</p>
+                    <p class="field-help" id="financing-mode-note">Se calcula automáticamente como precio menos entrega inicial.</p>
                     {% for error in form.financed_amount.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
             </div>

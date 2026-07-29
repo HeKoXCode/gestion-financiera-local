@@ -19,6 +19,7 @@ def sale_form_data(customer, product, **overrides):
         "product_description": "Smart TV 50 pulgadas",
         "delivery_date": "2026-08-15",
         "cash_price": "400000",
+        "custom_installment_total": "on",
         "financed_amount": "480000",
         "frequency": Sale.Frequency.WEEKLY,
         "installment_count": "12",
@@ -167,6 +168,76 @@ def test_sale_creation_freezes_settings_and_generates_installments(client):
     assert sum(sale.installments.values_list("original_amount", flat=True)) == Decimal(
         "480000.00"
     )
+
+
+def test_automatic_total_ignores_stale_browser_value_before_creating_installments(
+    client,
+):
+    customer = make_customer()
+    product = make_product()
+
+    response = client.post(
+        reverse("core:sale_create"),
+        sale_form_data(
+            customer,
+            product,
+            delivery_date=timezone.localdate().isoformat(),
+            first_due_date=timezone.localdate().isoformat(),
+            cash_price="750000",
+            down_payment="250000",
+            down_payment_method="Efectivo",
+            custom_installment_total="",
+            financed_amount="550000",
+            installment_count="5",
+        ),
+    )
+
+    sale = Sale.objects.get()
+
+    assert response.status_code == 302
+    assert sale.cash_price == Decimal("750000.00")
+    assert sale.down_payment == Decimal("250000.00")
+    assert sale.financed_amount == Decimal("500000.00")
+    assert list(sale.installments.values_list("original_amount", flat=True)) == [
+        Decimal("100000.00"),
+        Decimal("100000.00"),
+        Decimal("100000.00"),
+        Decimal("100000.00"),
+        Decimal("100000.00"),
+    ]
+
+
+def test_custom_total_is_used_only_when_explicitly_selected(client):
+    customer = make_customer()
+    product = make_product()
+
+    response = client.post(
+        reverse("core:sale_create"),
+        sale_form_data(
+            customer,
+            product,
+            delivery_date=timezone.localdate().isoformat(),
+            first_due_date=timezone.localdate().isoformat(),
+            cash_price="750000",
+            down_payment="250000",
+            down_payment_method="Efectivo",
+            custom_installment_total="on",
+            financed_amount="550000",
+            installment_count="5",
+        ),
+    )
+
+    sale = Sale.objects.get()
+
+    assert response.status_code == 302
+    assert sale.financed_amount == Decimal("550000.00")
+    assert list(sale.installments.values_list("original_amount", flat=True)) == [
+        Decimal("110000.00"),
+        Decimal("110000.00"),
+        Decimal("110000.00"),
+        Decimal("110000.00"),
+        Decimal("110000.00"),
+    ]
 
 
 def test_sale_creation_supports_monthly_installments(client):

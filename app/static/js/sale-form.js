@@ -7,6 +7,9 @@
     const productPriceInput = document.querySelector("#id_cash_price");
     const downPaymentInput = document.querySelector("#id_down_payment");
     const downPaymentMethodInput = document.querySelector("#id_down_payment_method");
+    const customInstallmentTotalInput = document.querySelector(
+        "#id_custom_installment_total"
+    );
     const financedInput = document.querySelector("#id_financed_amount");
     const countInput = document.querySelector("#id_installment_count");
     const frequencyInput = document.querySelector("#id_frequency");
@@ -20,6 +23,7 @@
     const adjustmentLabel = document.querySelector("#preview-adjustment-label");
     const adjustmentOutput = document.querySelector("#preview-adjustment");
     const operationTotalOutput = document.querySelector("#preview-operation-total");
+    const financingModeNote = document.querySelector("#financing-mode-note");
     const captionOutput = document.querySelector("#preview-caption");
     const frequencyOutput = document.querySelector("#preview-frequency");
     const rowsOutput = document.querySelector("#preview-rows");
@@ -27,7 +31,6 @@
     const tableOutput = document.querySelector("#preview-table-wrap");
     const submitButton = document.querySelector("#sale-submit");
     let lastAutomaticDescription = "";
-    let financedWasEdited = Boolean(financedInput?.value.trim());
 
     const currency = new Intl.NumberFormat("es-AR", {
         style: "currency",
@@ -145,17 +148,25 @@
         tableOutput.hidden = false;
     }
 
-    function suggestInstallmentTotal() {
+    function synchronizeFinancing() {
         const productPriceCents = parseMoneyToCents(productPriceInput.value);
         const downPaymentCents = parseMoneyToCents(downPaymentInput.value);
         const suggestedCents = Math.max(productPriceCents - downPaymentCents, 0);
+        const usesCustomTotal = customInstallmentTotalInput.checked;
 
-        if (!financedWasEdited) {
+        if (!usesCustomTotal) {
             financedInput.value =
                 suggestedCents > 0
                     ? (suggestedCents / 100).toFixed(2).replace(".", ",")
                     : "";
         }
+        financedInput.readOnly = !usesCustomTotal;
+        financedInput.required = usesCustomTotal;
+        financedInput.classList.toggle("is-calculated", !usesCustomTotal);
+        financedInput.setAttribute("aria-readonly", String(!usesCustomTotal));
+        financingModeNote.textContent = usesCustomTotal
+            ? "Modo personalizado: este valor no cambia al modificar el precio o la entrega."
+            : "Automático: siempre es el precio del producto menos la entrega inicial.";
 
         const hasDownPayment = downPaymentCents > 0;
         downPaymentMethodInput.disabled = !hasDownPayment;
@@ -178,23 +189,24 @@
         control?.addEventListener("input", updatePreview);
         control?.addEventListener("change", updatePreview);
     });
-    financedInput?.addEventListener("input", () => {
-        financedWasEdited = Boolean(financedInput.value.trim());
-        updatePreview();
-    });
+    financedInput?.addEventListener("input", updatePreview);
     financedInput?.addEventListener("change", updatePreview);
     [productPriceInput, downPaymentInput].forEach((control) => {
-        control?.addEventListener("input", suggestInstallmentTotal);
-        control?.addEventListener("change", suggestInstallmentTotal);
+        control?.addEventListener("input", synchronizeFinancing);
+        control?.addEventListener("change", synchronizeFinancing);
     });
+    customInstallmentTotalInput?.addEventListener("change", synchronizeFinancing);
     productInput?.addEventListener("change", updateProductDescription);
 
     form.addEventListener("submit", () => {
+        // This is synchronous: the latest visible values are copied before the
+        // browser builds the POST request. The server recalculates them again.
+        synchronizeFinancing();
         if (submitButton && form.checkValidity()) {
             submitButton.disabled = true;
             submitButton.textContent = "Guardando venta…";
         }
     });
 
-    suggestInstallmentTotal();
+    synchronizeFinancing();
 })();

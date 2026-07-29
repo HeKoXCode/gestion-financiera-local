@@ -1545,6 +1545,49 @@ textarea.form-control {
     padding-left: 1.8rem;
 }
 
+.financing-mode {
+    margin-bottom: 0;
+}
+
+.financing-mode > label {
+    display: flex;
+    gap: 0.7rem;
+    align-items: flex-start;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    background: var(--surface-soft);
+    cursor: pointer;
+}
+
+.financing-mode input {
+    margin-top: 0.25rem;
+    accent-color: var(--primary);
+}
+
+.financing-mode strong,
+.financing-mode small {
+    display: block;
+}
+
+.financing-mode strong {
+    font-size: 0.76rem;
+}
+
+.financing-mode small {
+    margin-top: 0.12rem;
+    color: var(--muted);
+    font-size: 0.66rem;
+    font-weight: 500;
+}
+
+.money-input .form-control.is-calculated {
+    border-color: #b9d9d0;
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+    font-weight: 800;
+}
+
 .sale-summary-grid {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));

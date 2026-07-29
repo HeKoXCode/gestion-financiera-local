@@ -103,6 +103,11 @@ dinero recibido al entregar el producto. El **total en cuotas** es lo que se
 divide entre las cuotas y puede ser distinto del saldo base si se acordó un
 costo financiero o un descuento; no incluye futuros recargos por atraso.
 
+Por defecto, el total en cuotas se recalcula en cada cambio como precio menos
+entrega inicial y el servidor vuelve a calcularlo al guardar. Para usar otro
+importe es obligatorio activar explícitamente “Usar un total en cuotas
+diferente”; así un valor escrito anteriormente no puede conservarse por error.
+
 Mientras se completa, una vista previa local muestra:
 
 - número de cada cuota;

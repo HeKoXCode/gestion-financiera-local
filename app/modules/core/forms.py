@@ -230,11 +230,16 @@ class SaleForm(StyledModelForm):
         label="Método de la entrega",
         required=False,
     )
+    custom_installment_total = forms.BooleanField(
+        label="Usar un total en cuotas diferente",
+        required=False,
+    )
     financed_amount = forms.DecimalField(
         label="Total en cuotas",
         max_digits=14,
         decimal_places=2,
         min_value=Decimal("0.01"),
+        required=False,
         localize=True,
         widget=forms.TextInput(
             attrs={
@@ -330,6 +335,8 @@ class SaleForm(StyledModelForm):
         product_price = cleaned.get("cash_price")
         down_payment = cleaned.get("down_payment") or Decimal("0.00")
         payment_method = cleaned.get("down_payment_method")
+        custom_installment_total = cleaned.get("custom_installment_total", False)
+        financed_amount = cleaned.get("financed_amount")
 
         if delivery_date and first_due_date and first_due_date < delivery_date:
             self.add_error(
@@ -341,6 +348,18 @@ class SaleForm(StyledModelForm):
                 "down_payment",
                 "Debe ser menor al precio del producto porque quedará un saldo en cuotas.",
             )
+        elif product_price is not None:
+            base_installment_total = product_price - down_payment
+            if custom_installment_total:
+                if financed_amount is None or financed_amount <= ZERO:
+                    self.add_error(
+                        "financed_amount",
+                        "Indicá el total acordado que se dividirá entre las cuotas.",
+                    )
+            else:
+                # The server is the final source of truth. Ignore any stale value
+                # posted by the browser while automatic calculation is selected.
+                cleaned["financed_amount"] = base_installment_total
         if down_payment > ZERO and not payment_method:
             self.add_error(
                 "down_payment_method",

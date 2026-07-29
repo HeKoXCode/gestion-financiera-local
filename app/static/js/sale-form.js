@@ -53,10 +53,21 @@
         return new Date(Date.UTC(year, month - 1, day));
     }
 
+    function addUtcMonths(anchor, months) {
+        const monthIndex = anchor.getUTCMonth() + months;
+        const year = anchor.getUTCFullYear() + Math.floor(monthIndex / 12);
+        const month = ((monthIndex % 12) + 12) % 12;
+        const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+        return new Date(
+            Date.UTC(year, month, Math.min(anchor.getUTCDate(), lastDay))
+        );
+    }
+
     function updatePreview() {
         const totalCents = parseMoneyToCents(financedInput.value);
         const count = Number.parseInt(countInput.value, 10);
         const firstDate = dateFromIso(firstDueInput.value);
+        const isMonthly = frequencyInput.value === "monthly";
         const interval = frequencyInput.value === "biweekly" ? 14 : 7;
         const frequencyLabel =
             frequencyInput.options[frequencyInput.selectedIndex]?.text || "Sin datos";
@@ -84,8 +95,10 @@
         for (let number = 1; number <= count; number += 1) {
             const amountCents =
                 number === count ? totalCents - regularCents * (count - 1) : regularCents;
-            const dueDate = new Date(firstDate);
-            dueDate.setUTCDate(firstDate.getUTCDate() + (number - 1) * interval);
+            const dueDate = isMonthly ? addUtcMonths(firstDate, number - 1) : new Date(firstDate);
+            if (!isMonthly) {
+                dueDate.setUTCDate(firstDate.getUTCDate() + (number - 1) * interval);
+            }
 
             const row = document.createElement("tr");
             const numberCell = document.createElement("td");
@@ -99,7 +112,9 @@
         }
 
         rowsOutput.replaceChildren(fragment);
-        captionOutput.textContent = `${count} cuotas · cada ${interval} días`;
+        captionOutput.textContent = isMonthly
+            ? `${count} cuotas · una por mes`
+            : `${count} cuotas · cada ${interval} días`;
         emptyOutput.hidden = true;
         tableOutput.hidden = false;
     }
@@ -129,4 +144,3 @@
 
     updatePreview();
 })();
-

@@ -87,7 +87,7 @@ Cobranza:                        lunes a sábado
 Domingos generan recargo:        sí
 Recargo tras un pago parcial:    sí
 Pagos adelantados:               no
-Frecuencias:                     semanal y quincenal
+Frecuencias:                     semanal, quincenal y mensual
 Máximo de cuotas:                60
 Métodos:                         efectivo, transferencia y otro
 ```

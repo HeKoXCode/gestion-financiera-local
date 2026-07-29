@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from calendar import monthrange
 from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import ROUND_DOWN, Decimal
@@ -16,6 +17,15 @@ class PlannedInstallment:
     number: int
     due_date: date
     amount: Decimal
+
+
+def add_months(anchor: date, months: int) -> date:
+    """Move from the original due date, using month-end when needed."""
+    month_index = anchor.month - 1 + months
+    year = anchor.year + month_index // 12
+    month = month_index % 12 + 1
+    day = min(anchor.day, monthrange(year, month)[1])
+    return date(year, month, day)
 
 
 def calculate_installment_amounts(financed_amount: Decimal, count: int) -> list[Decimal]:
@@ -40,6 +50,8 @@ def calculate_installment_schedule(sale: Sale) -> list[PlannedInstallment]:
         interval_days = 7
     elif sale.frequency == Sale.Frequency.BIWEEKLY:
         interval_days = 14
+    elif sale.frequency == Sale.Frequency.MONTHLY:
+        interval_days = None
     else:
         raise ValidationError({"frequency": "La frecuencia de la venta no es válida."})
 
@@ -59,7 +71,12 @@ def calculate_installment_schedule(sale: Sale) -> list[PlannedInstallment]:
     return [
         PlannedInstallment(
             number=index,
-            due_date=sale.first_due_date + timedelta(days=(index - 1) * interval_days),
+            due_date=(
+                add_months(sale.first_due_date, index - 1)
+                if interval_days is None
+                else sale.first_due_date
+                + timedelta(days=(index - 1) * interval_days)
+            ),
             amount=amount,
         )
         for index, amount in enumerate(amounts, start=1)
@@ -85,4 +102,3 @@ def create_installments(sale: Sale) -> list[Installment]:
             for item in schedule
         ]
     )
-

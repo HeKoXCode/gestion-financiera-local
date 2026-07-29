@@ -169,6 +169,37 @@ def test_sale_creation_freezes_settings_and_generates_installments(client):
     )
 
 
+def test_sale_creation_supports_monthly_installments(client):
+    customer = make_customer()
+    product = make_product()
+
+    response = client.post(
+        reverse("core:sale_create"),
+        sale_form_data(
+            customer,
+            product,
+            financed_amount="360000",
+            frequency=Sale.Frequency.MONTHLY,
+            installment_count="3",
+            first_due_date="2026-08-31",
+        ),
+    )
+    sale = Sale.objects.get()
+
+    assert response.status_code == 302
+    assert sale.frequency == Sale.Frequency.MONTHLY
+    assert list(sale.installments.values_list("due_date", flat=True)) == [
+        date(2026, 8, 31),
+        date(2026, 9, 30),
+        date(2026, 10, 31),
+    ]
+    assert list(sale.installments.values_list("original_amount", flat=True)) == [
+        Decimal("120000.00"),
+        Decimal("120000.00"),
+        Decimal("120000.00"),
+    ]
+
+
 def test_sale_creation_respects_maximum_installments(client):
     settings = BusinessSettings.get_solo()
     settings.max_installments = 6

@@ -132,6 +132,7 @@ try {
     }
 
     & $pythonExecutable -c @"
+import sqlite3
 from pathlib import Path
 from launcher.backup import validate_application_backup, validate_application_database
 validate_application_database(Path(r'$databasePath'))
@@ -139,6 +140,13 @@ validate_application_backup(
     Path(r'$recoveryPath'),
     working_directory=Path(r'$databasePath').parent,
 )
+with sqlite3.connect(r'$databasePath') as connection:
+    monthly_migration = connection.execute(
+        'SELECT 1 FROM django_migrations WHERE app = ? AND name = ?',
+        ('core', '0004_add_monthly_frequency'),
+    ).fetchone()
+if monthly_migration is None:
+    raise RuntimeError('El portable no aplico la migracion de frecuencia mensual.')
 print('Base portable: integridad y estructura correctas')
 "@
     if ($LASTEXITCODE -ne 0) {

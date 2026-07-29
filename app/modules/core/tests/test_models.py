@@ -25,6 +25,11 @@ def test_default_settings_are_created_by_migration():
     assert settings.pk == 1
     assert settings.daily_late_fee == Decimal("5000.00")
     assert settings.collection_days == [0, 1, 2, 3, 4, 5]
+    assert settings.available_frequencies == [
+        Sale.Frequency.WEEKLY,
+        Sale.Frequency.BIWEEKLY,
+        Sale.Frequency.MONTHLY,
+    ]
     assert settings.charge_sundays is True
     assert settings.late_fee_after_partial_payment is True
     assert settings.allow_advance_payments is False

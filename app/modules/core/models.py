@@ -23,7 +23,11 @@ def default_payment_methods() -> list[str]:
 
 
 def default_frequencies() -> list[str]:
-    return [Sale.Frequency.WEEKLY, Sale.Frequency.BIWEEKLY]
+    return [
+        Sale.Frequency.WEEKLY,
+        Sale.Frequency.BIWEEKLY,
+        Sale.Frequency.MONTHLY,
+    ]
 
 
 class TimestampedModel(models.Model):
@@ -214,6 +218,7 @@ class Sale(TimestampedModel):
     class Frequency(models.TextChoices):
         WEEKLY = "weekly", "Semanal"
         BIWEEKLY = "biweekly", "Quincenal"
+        MONTHLY = "monthly", "Mensual"
 
     class Status(models.TextChoices):
         ACTIVE = "active", "Activa"

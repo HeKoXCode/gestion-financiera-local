@@ -5,6 +5,7 @@ import pytest
 from django.core.exceptions import ValidationError
 
 from modules.core.services.installments import (
+    add_months,
     calculate_installment_amounts,
     calculate_installment_schedule,
     create_installments,
@@ -52,6 +53,29 @@ def test_biweekly_schedule_uses_fourteen_day_interval():
     ]
 
 
+def test_monthly_schedule_keeps_original_day_and_uses_month_end_when_needed():
+    sale = make_sale(
+        frequency="monthly",
+        installment_count=4,
+        financed_amount=Decimal("120000.00"),
+        first_due_date=date(2027, 1, 31),
+    )
+
+    schedule = calculate_installment_schedule(sale)
+
+    assert [item.due_date for item in schedule] == [
+        date(2027, 1, 31),
+        date(2027, 2, 28),
+        date(2027, 3, 31),
+        date(2027, 4, 30),
+    ]
+    assert all(item.amount == Decimal("30000.00") for item in schedule)
+
+
+def test_add_months_handles_leap_year():
+    assert add_months(date(2028, 1, 31), 1) == date(2028, 2, 29)
+
+
 def test_installments_are_created_only_once():
     sale = make_sale(installment_count=2, financed_amount=Decimal("20000.00"))
 
@@ -61,4 +85,3 @@ def test_installments_are_created_only_once():
     assert sale.installments.count() == 2
     with pytest.raises(ValidationError):
         create_installments(sale)
-

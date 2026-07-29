@@ -188,7 +188,7 @@ código. Actualizar el programa no deberá reemplazar los datos.
 - fecha de entrega;
 - precio contado;
 - monto financiado;
-- frecuencia semanal o quincenal;
+- frecuencia semanal, quincenal o mensual;
 - cantidad de cuotas;
 - recargo diario congelado;
 - primer vencimiento;
@@ -425,7 +425,7 @@ Acciones:
 Aceptación:
 
 - una venta de $480.000 genera 12 cuotas de $40.000;
-- las fechas semanales y quincenales son correctas;
+- las fechas semanales, quincenales y mensuales son correctas;
 - el total de cuotas coincide con la venta.
 
 ### Paso 4. Cobranza y pagos — 5 a 7 horas
@@ -556,7 +556,7 @@ uso.
 
 1. Cliente con y sin DNI.
 2. Venta semanal.
-3. Venta quincenal.
+3. Venta quincenal y mensual.
 4. Redondeo de última cuota.
 5. Pago en término.
 6. Uno, dos y tres días de atraso.

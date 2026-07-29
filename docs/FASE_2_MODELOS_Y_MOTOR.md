@@ -62,7 +62,7 @@ La migración crea automáticamente una configuración con:
 Nombre:                           Gestión Financiera
 Recargo diario:                  $5.000
 Días de cobranza:                lunes a sábado
-Frecuencias:                     semanal y quincenal
+Frecuencias:                     semanal, quincenal y mensual
 Máximo de cuotas:                60
 Domingos generan recargo:        sí
 Recargo tras pago parcial:       sí
@@ -143,7 +143,7 @@ Se verificaron:
 - cancelación y anulación con motivo;
 - coherencia cliente–venta–pago–cuota;
 - recargos duplicados;
-- cronogramas semanales y quincenales;
+- cronogramas semanales, quincenales y mensuales;
 - redondeo de última cuota;
 - recargo desde el día posterior;
 - tres días de atraso;

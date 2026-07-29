@@ -93,9 +93,13 @@ El formulario contiene:
 - fecha de entrega;
 - precio contado;
 - monto financiado;
-- frecuencia;
+- frecuencia semanal, quincenal o mensual;
 - cantidad de cuotas;
 - primer día de cobro.
+
+El **precio contado** es el valor de referencia si el producto se pagara
+completo al momento de la compra. El **monto financiado** es el total acordado
+que se divide entre las cuotas; no incluye futuros recargos por atraso.
 
 Mientras se completa, una vista previa local muestra:
 
@@ -145,6 +149,10 @@ las cuotas queden canceladas.
 - importes positivos y exactos;
 - descripción automática si se deja vacía;
 - ventas canceladas requieren motivo;
+
+En una frecuencia mensual se conserva el día del primer vencimiento. Cuando ese
+día no existe en un mes, la cuota vence el último día de ese mes y el siguiente
+mes vuelve al día original cuando sea posible.
 - acciones de archivar y cancelar usan solicitudes protegidas;
 - el formulario desactiva el botón tras enviarlo para reducir dobles cargas.
 

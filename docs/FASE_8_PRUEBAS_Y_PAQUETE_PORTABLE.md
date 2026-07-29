@@ -118,7 +118,7 @@ los comportamientos nuevos en lugar de reutilizar una copia anterior.
 | ---: | --- | --- |
 | 1 | Cliente con y sin DNI | Modelos y vistas de clientes |
 | 2 | Venta semanal | Generación de cuotas |
-| 3 | Venta quincenal | Intervalo de 14 días |
+| 3 | Venta quincenal y mensual | Intervalo de 14 días y calendario mensual |
 | 4 | Redondeo de última cuota | Diferencia de centavos |
 | 5 | Pago en término | Motor de pagos |
 | 6 | Uno, dos y tres días de atraso | Motor de recargos |

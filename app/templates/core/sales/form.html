@@ -77,11 +77,13 @@
                 <div class="field">
                     <label for="{{ form.cash_price.id_for_label }}">Precio contado</label>
                     <div class="money-input"><span>$</span>{{ form.cash_price }}</div>
+                    <p class="field-help">Lo que costaría el producto si se pagara todo en el momento.</p>
                     {% for error in form.cash_price.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
                 <div class="field">
                     <label for="{{ form.financed_amount.id_for_label }}">Monto financiado</label>
                     <div class="money-input"><span>$</span>{{ form.financed_amount }}</div>
+                    <p class="field-help">El total que se dividirá entre las cuotas, antes de posibles recargos por atraso.</p>
                     {% for error in form.financed_amount.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
             </div>

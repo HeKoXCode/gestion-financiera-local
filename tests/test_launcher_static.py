@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 from types import SimpleNamespace
 from wsgiref.util import setup_testing_defaults
 
@@ -102,3 +103,11 @@ def test_open_browser_updates_the_launcher_message(monkeypatch):
 
     assert recorded["text"] == "Volver a abrir el sistema"
     assert "abierto en el navegador" in recorded["status"]
+
+
+def test_launcher_includes_creator_signature():
+    launcher_source = (
+        Path(__file__).resolve().parents[1] / "launcher" / "launcher.py"
+    ).read_text(encoding="utf-8")
+
+    assert "Creado por Percy I. Marzoratti Hill." in launcher_source

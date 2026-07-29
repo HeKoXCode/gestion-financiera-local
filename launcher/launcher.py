@@ -396,15 +396,25 @@ class LocalApplication:
             hover=COLOR_SECONDARY_HOVER,
         )
 
+        footer = Frame(content, background=COLOR_BACKGROUND)
+        footer.pack(fill="x", pady=(18, 0))
+
         Label(
-            content,
+            footer,
             textvariable=self.status,
             font=("Segoe UI", 9),
             foreground=COLOR_MUTED,
             background=COLOR_BACKGROUND,
             justify="left",
-            wraplength=530,
-        ).pack(anchor="w", pady=(18, 0))
+            wraplength=355,
+        ).pack(side="left", anchor="w")
+        Label(
+            footer,
+            text="Creado por Percy I. Marzoratti Hill.",
+            font=("Segoe UI", 7, "italic"),
+            foreground="#89958F",
+            background=COLOR_BACKGROUND,
+        ).pack(side="right", anchor="e", padx=(12, 0))
 
     def run(self) -> None:
         self.configure_django()

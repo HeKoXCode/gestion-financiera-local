@@ -108,8 +108,8 @@ Se habilitó la opción `Configuración` del menú. Permite modificar:
 - pagos adelantados;
 - mensaje manual de WhatsApp.
 
-Los logos se guardan en `media/` y el lanzador local puede mostrarlos también
-cuando se ejecuta en modo final.
+Los logos se guardan en `media/` y se muestran también en el panel local que
+aparece antes de abrir el programa.
 
 ## Criterios de cálculo
 

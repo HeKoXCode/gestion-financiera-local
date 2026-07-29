@@ -13,7 +13,13 @@
     <div class="app-shell">
         <aside class="sidebar">
             <a class="brand" href="{% url 'core:home' %}">
-                <span class="brand-mark" aria-hidden="true">GF</span>
+                <span class="brand-mark{% if app_settings.logo %} has-logo{% endif %}" aria-hidden="true">
+                    {% if app_settings.logo %}
+                        <img src="{{ app_settings.logo.url }}" alt="">
+                    {% else %}
+                        GF
+                    {% endif %}
+                </span>
                 <span>
                     <strong>{{ app_settings.business_name }}</strong>
                     <small>Control de cobranzas</small>

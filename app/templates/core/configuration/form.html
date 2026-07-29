@@ -33,7 +33,9 @@
                     <div class="field">
                         <label for="{{ form.logo.id_for_label }}">Logo <span>Opcional</span></label>
                         {{ form.logo }}
-                        <p class="field-help">PNG, JPG o WEBP de hasta 2 MB.</p>
+                        <p class="field-help">
+                            PNG, JPG o WEBP de hasta 2 MB. También aparecerá en el panel de inicio.
+                        </p>
                         {% for error in form.logo.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                     </div>
                 </div>

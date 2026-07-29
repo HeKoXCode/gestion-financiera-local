@@ -13,6 +13,8 @@ from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 from wsgiref.simple_server import WSGIServer, make_server
 
+from PIL import Image, ImageOps, ImageTk
+
 if not getattr(sys, "frozen", False):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -28,7 +30,7 @@ HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 CLOSE_BACKUP_RETENTION_DAYS = 90
 WINDOW_WIDTH = 620
-WINDOW_HEIGHT = 430
+WINDOW_HEIGHT = 450
 
 COLOR_BACKGROUND = "#F3F6F4"
 COLOR_SURFACE = "#FFFFFF"
@@ -81,6 +83,9 @@ class LocalApplication:
         self.window = None
         self.status = None
         self.open_button = None
+        self.business_name = "Gestión Financiera"
+        self.business_logo_path = None
+        self.logo_image = None
         self.closing = False
 
     def configure_django(self) -> None:
@@ -116,6 +121,7 @@ class LocalApplication:
         django.setup()
         call_command("migrate", interactive=False, verbosity=0)
         call_command("update_late_fees", verbosity=0)
+        self.load_branding()
         create_backup(
             self.database_path,
             self.backup_path,
@@ -128,6 +134,34 @@ class LocalApplication:
             label="recovery",
             fixed_name="gestion_recovery.sqlite3.zip",
         )
+
+    def load_branding(self) -> None:
+        from modules.core.models import BusinessSettings
+
+        settings = BusinessSettings.get_solo()
+        self.business_name = settings.business_name.strip() or "Gestión Financiera"
+        self.business_logo_path = None
+        if settings.logo:
+            try:
+                logo_path = Path(settings.logo.path).resolve()
+                if logo_path.is_file():
+                    self.business_logo_path = logo_path
+            except (OSError, ValueError):
+                self.business_logo_path = None
+
+    def build_logo_image(self):
+        if self.business_logo_path is None:
+            return None
+        try:
+            with Image.open(self.business_logo_path) as source:
+                logo = ImageOps.exif_transpose(source).convert("RGBA")
+                logo.thumbnail((58, 58), Image.Resampling.LANCZOS)
+                canvas = Image.new("RGBA", (64, 64), "#FFFFFF")
+                position = ((64 - logo.width) // 2, (64 - logo.height) // 2)
+                canvas.alpha_composite(logo, position)
+            return ImageTk.PhotoImage(canvas)
+        except (OSError, ValueError):
+            return None
 
     def start_server(self) -> None:
         self.server = make_server(
@@ -262,7 +296,7 @@ class LocalApplication:
 
     def build_window(self) -> None:
         self.window = Tk()
-        self.window.title("Gestión Financiera")
+        self.window.title(f"{self.business_name} · Gestión Financiera")
         self.window.configure(background=COLOR_BACKGROUND)
         self.window.resizable(False, False)
         self.window.protocol("WM_DELETE_WINDOW", self.close_and_backup)
@@ -276,26 +310,57 @@ class LocalApplication:
             self.window,
             background=COLOR_PRIMARY,
             padx=38,
-            pady=28,
+            pady=24,
         )
         header.pack(fill="x")
 
+        brand_row = Frame(header, background=COLOR_PRIMARY)
+        brand_row.pack(fill="x")
+        self.logo_image = self.build_logo_image()
+        if self.logo_image is not None:
+            logo_widget = Label(
+                brand_row,
+                image=self.logo_image,
+                background="#FFFFFF",
+                borderwidth=0,
+                padx=2,
+                pady=2,
+            )
+        else:
+            logo_widget = Label(
+                brand_row,
+                text="GF",
+                font=("Segoe UI Semibold", 15),
+                foreground="#18332B",
+                background="#E7AA45",
+                width=4,
+                height=2,
+            )
+        logo_widget.pack(side="left", padx=(0, 16))
+
+        brand_copy = Frame(brand_row, background=COLOR_PRIMARY)
+        brand_copy.pack(side="left", fill="x", expand=True)
         Label(
-            header,
-            text="GESTIÓN LOCAL",
+            brand_copy,
+            text="GESTIÓN FINANCIERA · SISTEMA LOCAL",
             font=("Segoe UI Semibold", 9),
             foreground="#A9E7CD",
             background=COLOR_PRIMARY,
         ).pack(anchor="w")
         Label(
-            header,
-            text="Gestión Financiera",
-            font=("Segoe UI Semibold", 25),
+            brand_copy,
+            text=self.business_name,
+            font=(
+                "Segoe UI Semibold",
+                23 if len(self.business_name) <= 34 else 18,
+            ),
             foreground="#FFFFFF",
             background=COLOR_PRIMARY,
-        ).pack(anchor="w", pady=(3, 0))
+            justify="left",
+            wraplength=430,
+        ).pack(anchor="w", pady=(2, 0))
         Label(
-            header,
+            brand_copy,
             text="Ventas financiadas y cobranza diaria",
             font=("Segoe UI", 10),
             foreground="#D3E9E0",

@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from wsgiref.util import setup_testing_defaults
 
 import pytest
+from modules.core.models import BusinessSettings
 from modules.core.templatetags.finance import versioned_static
 
 from launcher.launcher import LocalApplication, build_local_wsgi_application
@@ -111,3 +112,36 @@ def test_launcher_includes_creator_signature():
     ).read_text(encoding="utf-8")
 
     assert "Creado por Percy I. Marzoratti Hill." in launcher_source
+
+
+@pytest.mark.django_db
+def test_launcher_loads_configured_business_name_and_logo(settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path
+    logo_directory = tmp_path / "logos"
+    logo_directory.mkdir()
+    logo_path = logo_directory / "marca.png"
+    logo_path.write_bytes(b"logo-de-prueba")
+    business_settings = BusinessSettings.get_solo()
+    business_settings.business_name = "Comercio de prueba"
+    business_settings.logo.name = "logos/marca.png"
+    business_settings.save()
+    application = LocalApplication()
+
+    application.load_branding()
+
+    assert application.business_name == "Comercio de prueba"
+    assert application.business_logo_path == logo_path.resolve()
+
+
+def test_visual_system_includes_gradients_and_warning_action():
+    project_root = Path(__file__).resolve().parents[1]
+    css = (project_root / "app" / "static" / "css" / "app.css").read_text(
+        encoding="utf-8"
+    )
+    collection_template = (
+        project_root / "app" / "templates" / "core" / "collection" / "list.html"
+    ).read_text(encoding="utf-8")
+
+    assert "--gradient-primary:" in css
+    assert ".btn-warning" in css
+    assert 'class="btn btn-warning"' in collection_template

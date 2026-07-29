@@ -134,6 +134,7 @@ Documentos:
 - [Impresión, reportes y configuración de la Fase 6](docs/FASE_6_IMPRESION_Y_REPORTES.md).
 - [Respaldo, exportación y restauración de la Fase 7](docs/FASE_7_RESPALDO_EXPORTACION_RESTAURACION.md).
 - [Pruebas y paquete portable de la Fase 8](docs/FASE_8_PRUEBAS_Y_PAQUETE_PORTABLE.md).
+- [Auditoría y sistema de pulido visual final](docs/PULIDO_VISUAL_FINAL.md).
 - [Manual rápido incluido en la entrega](docs/MANUAL_USO_PORTABLE.txt).
 - [Auditoría del equipo](docs/ENTORNO_Y_PORTABILIDAD.md).
 - [Plan empresarial anterior, conservado como referencia](docs/PLAN_MAESTRO.md).

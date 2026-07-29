@@ -106,7 +106,7 @@
                 <form method="post" action="{% url 'core:collection_did_not_pay' row.sale.pk %}">
                     {% csrf_token %}
                     <input type="hidden" name="fecha" value="{{ selected_date|date:'Y-m-d' }}">
-                    <button class="btn btn-secondary" type="submit">No pagó</button>
+                    <button class="btn btn-warning" type="submit">No pagó</button>
                 </form>
                 <a class="btn btn-ghost" href="{% url 'core:collection_attempt_create' row.sale.pk %}">Otra visita</a>
             {% endif %}

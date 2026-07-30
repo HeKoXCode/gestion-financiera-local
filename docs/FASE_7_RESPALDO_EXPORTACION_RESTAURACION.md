@@ -5,7 +5,7 @@ Fecha: 24/07/2026
 
 ## Objetivo
 
-Proteger los datos del programa sin depender de Internet, permitir su consulta
+Proteger los datos del sistema sin depender de Internet, permitir su consulta
 en Excel y ofrecer una restauración segura que no requiera manipular archivos a
 mano.
 
@@ -57,13 +57,13 @@ aceptados por el restaurador para conservar compatibilidad.
 
 | Tipo | Momento | Retención |
 | --- | --- | ---: |
-| Inicio | Al abrir el programa | 5 |
+| Inicio | Al abrir el sistema | 5 |
 | Antes de actualizar | Antes de aplicar migraciones | 5 |
 | Recuperación | Al iniciar y después de cada alta o cambio importante | 1 fija |
 | Cierre | Al usar “Cerrar y crear respaldo” | 1 por día, 90 días |
 | Preventiva | Antes de una restauración | 10 |
 
-Las copias manuales conservan las 30 más recientes. Si el programa se cierra
+Las copias manuales conservan las 30 más recientes. Si el sistema se cierra
 varias veces durante el mismo día, la copia de cierre de esa fecha se actualiza
 en lugar de crear archivos repetidos.
 
@@ -114,7 +114,7 @@ Características:
 
 El ZIP sirve para consultar, filtrar o analizar datos. No es el medio de
 restauración porque varios CSV no reconstruyen automáticamente todas las
-relaciones y restricciones. Para recuperar el programa se usa un backup
+relaciones y restricciones. Para recuperar el sistema se usa un backup
 `.sqlite3.zip`.
 
 ## 4. Restaurador externo
@@ -134,7 +134,7 @@ scripts\Restaurar.bat
 4. Revisar la copia más reciente seleccionada automáticamente.
 5. Presionar “Restaurar la copia mostrada” y confirmar.
 6. Esperar el mensaje “Datos restaurados”.
-7. El programa volverá a abrirse automáticamente.
+7. El sistema volverá a abrirse automáticamente.
 8. Comprobar clientes, ventas y cobranza.
 
 “Elegir otra copia…” permite recuperar una fecha anterior o seleccionar un
@@ -146,7 +146,7 @@ El restaurador:
 2. localiza y preselecciona la copia válida más reciente;
 3. comprueba la estructura y el CRC del ZIP;
 4. descomprime la base en una ubicación temporal controlada;
-5. comprueba que sea SQLite íntegro y contenga las tablas del programa;
+5. comprueba que sea SQLite íntegro y contenga las tablas del sistema;
 6. crea un backup preventivo comprimido de la base actual;
 7. reemplaza la base;
 8. vuelve a comprobar la integridad;
@@ -179,7 +179,7 @@ La suite verifica:
 - rechazo de ZIP dañados o con rutas internas inseguras;
 - catálogo y descarga segura de copias;
 - rechazo de rutas manipuladas;
-- rechazo de archivos que no pertenecen al programa;
+- rechazo de archivos que no pertenecen al sistema;
 - restauración completa sobre archivos temporales;
 - conservación preventiva de la base anterior;
 - ZIP con todos los CSV esperados;

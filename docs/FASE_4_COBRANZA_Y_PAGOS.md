@@ -17,7 +17,7 @@ de Internet.
 
 ## Actualización automática de recargos
 
-Al abrir el programa, el lanzador:
+Al abrir el sistema, el lanzador:
 
 1. aplica migraciones;
 2. genera los recargos faltantes hasta la fecha local;
@@ -26,7 +26,7 @@ Al abrir el programa, el lanzador:
    “Abrir sistema”.
 
 La portada y la pantalla de cobranza también actualizan los recargos del día.
-Esto cubre el caso en que el programa permanece abierto durante la noche.
+Esto cubre el caso en que el sistema permanece abierto durante la noche.
 
 El proceso es idempotente: abrir o actualizar varias veces no duplica cargos.
 
@@ -192,7 +192,7 @@ Integridad SQLite: ok
 
 ## Estado de portabilidad
 
-Actualmente el programa ya se abre con `scripts\Iniciar.bat` en esta PC y
+Actualmente el sistema ya se abre con `scripts\Iniciar.bat` en esta PC y
 funciona sin Internet. Esta modalidad utiliza el Python instalado dentro del
 entorno de desarrollo.
 

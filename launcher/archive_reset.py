@@ -178,7 +178,7 @@ def archive_and_reset(label: str) -> tuple[Path, dict[str, int], Path]:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Archiva los datos actuales y deja el programa vacío."
+        description="Archiva los datos actuales y deja el sistema vacío."
     )
     parser.add_argument(
         "--name",
@@ -201,7 +201,7 @@ def main() -> int:
 
     if not arguments.yes:
         print()
-        print("Se guardará una copia completa y el programa quedará sin datos.")
+        print("Se guardará una copia completa y el sistema quedará sin datos.")
         confirmation = input("Escribí ARCHIVAR para continuar: ").strip().upper()
         if confirmation != "ARCHIVAR":
             print("Operación cancelada. No se modificó ningún dato.")
@@ -219,7 +219,7 @@ def main() -> int:
     print(f"Archivo: {archive}")
     print(f"SHA256: {file_sha256(archive)}")
     print(f"Recuperación vacía actualizada: {recovery}")
-    print("El programa está limpio y listo para comenzar.")
+    print("El sistema está limpio y listo para comenzar.")
     return 0
 
 

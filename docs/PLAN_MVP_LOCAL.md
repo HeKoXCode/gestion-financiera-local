@@ -23,7 +23,7 @@ Estado al 24/07/2026:
 ## 1. Cambio de enfoque
 
 El sistema no se diseñará como plataforma empresarial ni como servicio en la
-nube. Será un programa local para una persona que necesita:
+nube. Será un sistema local para una persona que necesita:
 
 - abrir el sistema;
 - consultar qué debe cobrar hoy o un día determinado;
@@ -92,12 +92,12 @@ validaciones, reportes y plantillas rápidamente. SQLite es suficiente para una
 persona y guarda toda la base en un archivo portable.
 
 Docker seguirá instalado como herramienta disponible, pero no será necesario
-para abrir ni utilizar el programa.
+para abrir ni utilizar el sistema.
 
 ## 3. Experiencia de uso final
 
 1. La persona hace doble clic en `GestionFinanciera.exe` o `Iniciar.bat`.
-2. El programa valida la base de datos.
+2. El sistema valida la base de datos.
 3. Crea una copia de seguridad de inicio si corresponde.
 4. Aplica recargos diarios faltantes.
 5. Abre automáticamente el navegador.
@@ -105,7 +105,7 @@ para abrir ni utilizar el programa.
 7. La persona trabaja normalmente.
 8. Puede crear un backup o exportar CSV en cualquier momento.
 9. Presiona “Cerrar y crear respaldo”.
-10. El programa crea una copia final y se cierra.
+10. El sistema crea una copia final y se cierra.
 
 Si el equipo se apaga inesperadamente, SQLite protege las transacciones y
 existirá una copia de recuperación reciente.
@@ -146,7 +146,7 @@ GestionFinanciera/
 ```
 
 Las carpetas `data`, `backups`, `exports` y `media` estarán separadas del
-código. Actualizar el programa no deberá reemplazar los datos.
+código. Actualizar el sistema no deberá reemplazar los datos.
 
 ## 5. Base de datos simplificada
 
@@ -320,7 +320,7 @@ importes sin símbolos monetarios.
 
 ### 7.5 Restauración
 
-La restauración se hará con el programa cerrado:
+La restauración se hará con el sistema cerrado:
 
 1. detectar y preseleccionar la copia válida más reciente;
 2. permitir elegir otra copia solo si se necesita;

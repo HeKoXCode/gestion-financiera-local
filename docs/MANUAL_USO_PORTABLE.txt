@@ -1,14 +1,14 @@
 GESTIÓN FINANCIERA — MANUAL RÁPIDO
 ==================================
 
-1. ABRIR EL PROGRAMA
+1. ABRIR EL SISTEMA
 
 Conservá completa la carpeta GestionFinanciera.
 Hacé doble clic en INICIAR.bat o GestionFinanciera.exe.
 Se abrirá el panel de inicio de Gestión Financiera.
-Presioná “Abrir programa” cuando quieras entrar; recién entonces se abrirá el
+Presioná “Abrir sistema” cuando quieras entrar; recién entonces se abrirá el
 navegador. Dejá el panel abierto mientras trabajás.
-El programa funciona en este equipo mediante http://127.0.0.1:8765/.
+El sistema funciona en este equipo mediante http://127.0.0.1:8765/.
 No necesita Internet, Docker ni Python instalado.
 
 Si Windows muestra una advertencia la primera vez, comprobá que el archivo
@@ -37,7 +37,7 @@ Cobranza > seleccionar fecha > Imprimir planilla.
 
 No cierres solamente la pestaña del navegador.
 En el panel de Gestión Financiera presioná “Cerrar y respaldar”.
-El programa detendrá el servidor y guardará una copia final.
+El sistema detendrá el servidor y guardará una copia final.
 Se guarda una copia por día durante 90 días. Si cerrás varias veces en la misma
 fecha, se actualiza la copia de ese día sin ocupar otro lugar.
 
@@ -48,7 +48,7 @@ backups\   Copias comprimidas y restaurables.
 exports\   ZIP con archivos CSV para Excel.
 media\     Logo y archivos locales.
 
-Para trasladar el programa, copiá la carpeta GestionFinanciera completa.
+Para trasladar el sistema, copiá la carpeta GestionFinanciera completa.
 No muevas solamente GestionFinanciera.exe ni la carpeta _internal.
 
 5. CREAR UNA COPIA O EXPORTAR
@@ -62,21 +62,21 @@ Conviene guardar periódicamente una copia .sqlite3.zip en otro disco o pendrive
 
 6. RESTAURAR UNA COPIA
 
-1) Cerrá el programa con “Cerrar y respaldar”.
+1) Cerrá el sistema con “Cerrar y respaldar”.
 2) Ejecutá RESTAURAR_DATOS.bat o Restaurador.exe.
 3) Revisá la copia más reciente que aparece seleccionada automáticamente.
 4) Presioná “Restaurar la copia mostrada” y confirmá.
-5) El programa volverá a abrirse automáticamente para que compruebes los datos.
+5) El sistema volverá a abrirse automáticamente para que compruebes los datos.
 
 Antes de reemplazar la base, el restaurador guarda automáticamente otra copia
 preventiva. El ZIP se valida y descomprime automáticamente. Para usar otra
 fecha, presioná “Elegir otra copia…”. También se aceptan copias .sqlite3
-anteriores. No intentes restaurar mientras el programa está abierto.
+anteriores. No intentes restaurar mientras el sistema está abierto.
 
-7. SI EL PROGRAMA NO ABRE
+7. SI EL SISTEMA NO ABRE
 
 Comprobá que GestionFinanciera.exe y la carpeta _internal sigan juntas.
 Reiniciá Windows si otra ejecución quedó bloqueando el puerto local.
 No borres las carpetas data ni backups.
 Si el problema continúa, conservá la carpeta completa y la copia más reciente
-antes de reemplazar o volver a copiar el programa.
+antes de reemplazar o volver a copiar el sistema.

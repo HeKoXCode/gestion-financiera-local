@@ -56,7 +56,7 @@ El logo configurado se utiliza en:
 El panel de inicio también utiliza el nombre configurado como título. Los logos
 PNG, JPG, JPEG y WEBP se adaptan a un recuadro de 64 × 64 píxeles sin
 deformarse. Si el archivo no existe o no puede leerse, se muestra el monograma
-`GF`, por lo que un logo defectuoso nunca impide abrir el programa.
+`GF`, por lo que un logo defectuoso nunca impide abrir el sistema.
 
 ## Criterio responsive
 

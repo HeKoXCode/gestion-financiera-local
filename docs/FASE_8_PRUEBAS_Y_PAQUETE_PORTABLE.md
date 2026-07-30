@@ -53,11 +53,11 @@ automáticamente la base real utilizada durante el desarrollo.
 
 Para trasladar datos existentes:
 
-1. cerrar el programa de origen con “Cerrar y crear respaldo”;
+1. cerrar el sistema de origen con “Cerrar y crear respaldo”;
 2. copiar un backup `.sqlite3.zip` a `backups` del paquete portable;
 3. ejecutar `RESTAURAR_DATOS.bat`;
 4. revisar la copia seleccionada automáticamente;
-5. confirmar la restauración; el programa volverá a abrirse automáticamente.
+5. confirmar la restauración; el sistema volverá a abrirse automáticamente.
 
 ## 3. Construcción reproducible
 
@@ -109,7 +109,7 @@ La construcción normal no debe omitir pruebas.
 El ensayo nunca usa `data`, `backups`, `exports` o `media` del proyecto real.
 
 Los archivos CSS y JavaScript incluyen automáticamente una versión derivada de
-su contenido. Al actualizar el programa, el navegador descarga la estética y
+su contenido. Al actualizar el sistema, el navegador descarga la estética y
 los comportamientos nuevos en lugar de reutilizar una copia anterior.
 
 ## 5. Casos obligatorios

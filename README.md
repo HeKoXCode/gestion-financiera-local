@@ -43,7 +43,7 @@ El lanzador:
 - actualiza los recargos diarios faltantes;
 - crea una copia de seguridad al iniciar;
 - muestra una ventana de inicio clara, sin abrir el navegador automáticamente;
-- permite entrar al programa con “Abrir programa”;
+- permite entrar al sistema con “Abrir sistema”;
 - permite cerrar de forma segura y crear el respaldo final.
 
 La sección “Datos y respaldo” del menú permite crear y descargar copias
@@ -51,7 +51,7 @@ comprimidas (`.sqlite3.zip`) y exportar un ZIP con archivos CSV compatible con
 Excel. Al cerrar se actualiza una sola copia por día y se conservan hasta 90
 días de cierres.
 
-Para restaurar una copia, primero cerrar el programa y hacer doble clic en:
+Para restaurar una copia, primero cerrar el sistema y hacer doble clic en:
 
 ```text
 scripts\Restaurar.bat
@@ -59,10 +59,10 @@ scripts\Restaurar.bat
 
 El restaurador selecciona automáticamente la copia válida más reciente, valida
 y descomprime el ZIP, y crea una copia preventiva antes de reemplazar los datos.
-Después vuelve a abrir el programa. También admite copias `.sqlite3` anteriores.
+Después vuelve a abrir el sistema. También admite copias `.sqlite3` anteriores.
 
 Para guardar la base completa con un nombre reconocible y comenzar otra desde
-cero, cerrar primero el programa y hacer doble clic en:
+cero, cerrar primero el sistema y hacer doble clic en:
 
 ```text
 scripts\ArchivarYReiniciar.bat
@@ -98,7 +98,7 @@ El proceso ejecuta las pruebas, genera los dos ejecutables, prueba una copia
 aislada, crea un manifiesto de integridad y produce el ZIP.
 
 La carpeta portable comienza sin datos reales. Para trasladar una base
-existente, cerrá el programa de origen, copiá una copia `.sqlite3.zip` a
+existente, cerrá el sistema de origen, copiá una copia `.sqlite3.zip` a
 `backups` del paquete y ejecutá `RESTAURAR_DATOS.bat`. El archivo aparecerá
 seleccionado automáticamente si es la copia más reciente.
 

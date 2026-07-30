@@ -171,7 +171,7 @@ def test_reports_page_and_main_navigation_render(client):
 
     assert response.status_code == 200
     assert "Cobrado en la fecha" in content
-    assert "Clientes con pagos atrasados" in content
+    assert "Clientes morosos" in content
     assert "Productos más vendidos" in content
     assert reverse("core:reports") in content
 

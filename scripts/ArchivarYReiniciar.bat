@@ -3,7 +3,7 @@ setlocal
 cd /d "%~dp0.."
 
 if not exist ".venv\Scripts\python.exe" (
-    echo El programa todavia no fue preparado en este equipo.
+    echo El sistema todavia no fue preparado en este equipo.
     echo Ejecuta primero scripts\Iniciar.bat.
     pause
     exit /b 1

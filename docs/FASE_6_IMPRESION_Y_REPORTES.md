@@ -109,7 +109,7 @@ Se habilitó la opción `Configuración` del menú. Permite modificar:
 - mensaje manual de WhatsApp.
 
 Los logos se guardan en `media/` y se muestran también en el panel local que
-aparece antes de abrir el programa.
+aparece antes de abrir el sistema.
 
 ## Criterios de cálculo
 

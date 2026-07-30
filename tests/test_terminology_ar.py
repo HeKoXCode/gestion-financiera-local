@@ -17,11 +17,13 @@ def test_main_pages_use_plain_argentine_spanish(client):
     reports = client.get(reverse("core:reports")).content.decode()
     data = client.get(reverse("core:data_management")).content.decode()
 
-    assert "Datos guardados en este equipo" in home
-    assert "Sincronizado localmente" not in home
+    assert "Sincronizado localmente" in home
+    assert "Datos guardados en este equipo" not in home
+    assert "Así viene el día" in home
+    assert "Clientes atrasados" in home
     assert "Total a cobrar" in agenda
     assert "Total recorrido" not in agenda
-    assert "Clientes con pagos atrasados" in reports
-    assert "Clientes morosos" not in reports
+    assert "Clientes morosos" in reports
+    assert "Clientes con pagos atrasados" not in reports
     assert "Crear copia ZIP" in data
     assert "Crear backup ZIP" not in data

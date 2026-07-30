@@ -61,7 +61,7 @@
         <strong>{{ overdue_total|ars }}</strong>
     </div>
     <div>
-        <span>Clientes con atraso</span>
+        <span>Clientes atrasados</span>
         <strong>{{ overdue_clients }}</strong>
     </div>
     <div class="is-success">
@@ -110,7 +110,7 @@
 <div class="report-grid">
     <section class="panel">
         <div class="panel-header">
-            <div><h2>Clientes con pagos atrasados</h2><p>Ordenados por el monto vencido.</p></div>
+            <div><h2>Clientes morosos</h2><p>Ordenados por el monto vencido.</p></div>
             <span class="record-count">{{ overdue_clients }}</span>
         </div>
         {% if debtors %}
@@ -136,7 +136,7 @@
             </table>
         </div>
         {% else %}
-        <div class="empty-state compact"><span class="empty-icon">✓</span><h3>Sin clientes con atraso</h3><p>No hay cuotas vencidas a la fecha.</p></div>
+        <div class="empty-state compact"><span class="empty-icon">✓</span><h3>Sin clientes atrasados</h3><p>No hay cuotas vencidas a la fecha.</p></div>
         {% endif %}
     </section>
 

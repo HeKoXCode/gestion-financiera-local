@@ -7,7 +7,7 @@
 <header class="dashboard-header">
     <div>
         <p class="eyebrow">Resumen del día</p>
-        <h1>{% if selected_date == today %}Resumen de hoy{% else %}Resumen del {{ selected_date|date:"d/m/Y" }}{% endif %}</h1>
+        <h1>{% if selected_date == today %}Así viene el día{% else %}Resumen del {{ selected_date|date:"d/m/Y" }}{% endif %}</h1>
         <p class="page-subtitle">
             Lo importante para cobrar, priorizar atrasos y controlar los saldos pendientes.
         </p>
@@ -43,7 +43,7 @@
         <small>Incluye vencimientos del día y anteriores</small>
     </article>
     <article class="dashboard-kpi is-danger">
-        <span class="kpi-label">Clientes con atraso</span>
+        <span class="kpi-label">Clientes atrasados</span>
         <strong>{{ overdue_clients }}</strong>
         <small>{{ overdue_total|ars }} vencido</small>
     </article>

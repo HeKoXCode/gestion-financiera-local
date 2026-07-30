@@ -13,7 +13,7 @@ funcionarán las pantallas de clientes, ventas y cobranza.
 
 | Modelo | Responsabilidad |
 | --- | --- |
-| Configuración | Parámetros únicos del programa |
+| Configuración | Parámetros únicos del sistema |
 | Cliente | Datos personales, domicilio y estado |
 | Producto | Catálogo simple de artículos |
 | Venta | Condiciones financiadas y recargo congelado |

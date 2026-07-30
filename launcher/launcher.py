@@ -237,17 +237,17 @@ class LocalApplication:
         opened = webbrowser.open_new_tab(f"http://{HOST}:{self.port}/")
         if opened:
             self.status.set(
-                "El programa está abierto en el navegador. "
+                "El sistema está abierto en el navegador. "
                 "Dejá esta ventana abierta mientras trabajás."
             )
-            self.open_button.configure(text="Volver a abrir el programa")
+            self.open_button.configure(text="Volver a abrir el sistema")
             return
 
         self.status.set("No se pudo abrir el navegador automáticamente.")
         messagebox.showwarning(
             "Abrir Gestión Financiera",
             (
-                "No se pudo abrir el programa en el navegador automáticamente.\n\n"
+                "No se pudo abrir el sistema en el navegador automáticamente.\n\n"
                 f"Abrí esta dirección manualmente:\nhttp://{HOST}:{self.port}/"
             ),
         )
@@ -273,7 +273,7 @@ class LocalApplication:
             self.closing = False
             messagebox.showerror(
                 "No se pudo cerrar",
-                f"El programa sigue abierto porque falló la copia de seguridad:\n\n{exc}",
+                f"El sistema sigue abierto porque falló la copia de seguridad:\n\n{exc}",
             )
             return
 
@@ -300,7 +300,7 @@ class LocalApplication:
         self.window.protocol("WM_DELETE_WINDOW", self.close_and_backup)
         self._center_window()
 
-        self.status = StringVar(value="Todo está listo. Presioná “Abrir programa” para comenzar.")
+        self.status = StringVar(value="Todo está listo. Presioná “Abrir sistema” para comenzar.")
 
         header = Frame(
             self.window,
@@ -338,7 +338,7 @@ class LocalApplication:
         brand_copy.pack(side="left", fill="x", expand=True)
         Label(
             brand_copy,
-            text="GESTIÓN FINANCIERA · PROGRAMA LOCAL",
+            text="GESTIÓN FINANCIERA · SISTEMA LOCAL",
             font=("Segoe UI Semibold", 9),
             foreground="#A9E7CD",
             background=COLOR_PRIMARY,
@@ -392,7 +392,7 @@ class LocalApplication:
         ).pack(side="left", padx=(0, 8))
         Label(
             ready_row,
-            text="Programa listo",
+            text="Sistema listo",
             font=("Segoe UI Semibold", 11),
             foreground=COLOR_TEXT,
             background=COLOR_SURFACE,
@@ -400,7 +400,7 @@ class LocalApplication:
         Label(
             status_card,
             text=(
-                "Tus datos permanecen en este equipo. Abrí el programa para "
+                "Tus datos permanecen en este equipo. Abrí el sistema para "
                 "consultar clientes, ventas y cobranzas."
             ),
             font=("Segoe UI", 9),
@@ -415,7 +415,7 @@ class LocalApplication:
 
         self.open_button = Button(
             actions,
-            text="Abrir programa",
+            text="Abrir sistema",
             command=self.open_browser,
             font=("Segoe UI Semibold", 10),
             foreground="#FFFFFF",

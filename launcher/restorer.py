@@ -100,7 +100,7 @@ class RestorerApplication:
         self.window.minsize(520, 290)
         self.selected_backup: Path | None = None
         self.selected_path = StringVar(value="Buscando la copia más reciente…")
-        self.status = StringVar(value="El programa debe estar cerrado para restaurar los datos.")
+        self.status = StringVar(value="El sistema debe estar cerrado para restaurar los datos.")
         self.select_latest_backup()
 
     def select_latest_backup(self) -> None:
@@ -167,7 +167,7 @@ class RestorerApplication:
             return
         if local_application_is_running():
             messagebox.showerror(
-                "El programa está abierto",
+                "El sistema está abierto",
                 "Cerrá Gestión Financiera con “Cerrar y respaldar” antes de restaurar.",
             )
             return
@@ -203,7 +203,7 @@ class RestorerApplication:
         try:
             launch_main_application(self.root_path)
         except BackupError as exc:
-            self.status.set("Restauración completa; abrí el programa manualmente.")
+            self.status.set("Restauración completa; abrí el sistema manualmente.")
             messagebox.showwarning(
                 "Datos restaurados",
                 f"{exc}\n\nLos datos ya fueron recuperados correctamente.",

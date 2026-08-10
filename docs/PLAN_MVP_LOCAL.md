@@ -91,8 +91,7 @@ Django se conserva porque permite implementar formularios, relaciones,
 validaciones, reportes y plantillas rápidamente. SQLite es suficiente para una
 persona y guarda toda la base en un archivo portable.
 
-Docker seguirá instalado como herramienta disponible, pero no será necesario
-para abrir ni utilizar el sistema.
+Docker no forma parte de los requisitos para abrir, desarrollar ni utilizar el sistema.
 
 ## 3. Experiencia de uso final
 

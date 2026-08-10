@@ -1,141 +1,194 @@
-# Gestión Financiera
+# 💳 Gestión Financiera Local
 
-Aplicación local y monousuario para administrar clientes, ventas financiadas,
-cuotas, recargos y cobranzas.
+Aplicación gratuita, local y monousuario para administrar **clientes, ventas financiadas, préstamos, cuotas, recargos y cobranzas** sin depender de servicios en la nube.
 
-Estado actual: Fases 0 a 8 terminadas. El MVP está terminado y permite administrar
-clientes, productos y ventas; generar cuotas y recargos; consultar la cobranza;
-registrar pagos completos o parciales; anularlos; conservar las visitas; revisar
-el resumen diario, comparar la carga semanal, consultar el historial completo,
-imprimir la planilla A4, analizar reportes de cobranza y saldos, crear y
-descargar copias de seguridad, exportar CSV y restaurar una copia de forma segura.
+> 🧭 **Posicionamiento:** proyecto de ingeniería de producto aplicada al dominio financiero.<br>
+> 🔒 **Privacidad:** la base, los respaldos y las exportaciones permanecen en el equipo del usuario.<br>
+> 🪟 **Entrega prevista:** aplicación portable para Windows, sin requerir Python en la PC de destino.
 
-La entrega portable validada se encuentra en:
+![Panel principal con datos ficticios](docs/assets/dashboard-demo.png)
 
-```text
-portable\GestionFinanciera\
-portable\GestionFinanciera-portable.zip
+## ✨ Qué problema resuelve
+
+Gestión Financiera concentra el ciclo operativo de un negocio que vende o presta dinero en cuotas:
+
+- registra clientes, productos, ventas y préstamos;
+- genera calendarios semanales, quincenales o mensuales;
+- calcula saldos y recargos con importes decimales;
+- admite pagos completos, parciales y anulaciones trazables;
+- prioriza la cobranza diaria y semanal;
+- conserva el historial de cada cliente;
+- produce reportes, planillas y estados de cuenta en PDF;
+- crea, valida y restaura copias de seguridad;
+- permite acceso temporal desde un celular dentro de la red local.
+
+## 🖼️ Recorrido visual
+
+Todas las capturas utilizan la base demo incluida; nombres, documentos, domicilios, teléfonos e importes son ficticios.
+
+| Historial del cliente | Reportes operativos |
+|---|---|
+| ![Ficha de cliente ficticio](docs/assets/customer-detail-demo.png) | ![Reportes con datos ficticios](docs/assets/reports-demo.png) |
+
+### Ventas y préstamos en un mismo flujo
+
+![Formulario demo para registrar un préstamo](docs/assets/loan-form-demo.png)
+
+El préstamo se modela como una operación financiera y no como un producto ficticio. Así, los rankings de productos siguen siendo consistentes y los saldos reutilizan el mismo motor de cuotas, pagos y recargos.
+
+## 🧱 Arquitectura
+
+```mermaid
+flowchart LR
+  A[Interfaz Django] --> B[Servicios de dominio]
+  B --> C[Modelos y reglas financieras]
+  C --> D[(SQLite local)]
+  B --> E[PDF y CSV]
+  D --> F[Backups y restauración]
+  G[Lanzador Windows] --> A
+  G --> H[Acceso móvil temporal]
 ```
 
-Para utilizarla no es necesario instalar Python, Docker ni PostgreSQL.
+| Capa | Responsabilidad |
+|---|---|
+| `app/modules/core/models.py` | Integridad de clientes, operaciones, cuotas, pagos y visitas. |
+| `app/modules/core/services/` | Saldos, recargos, pagos, reportes, exportaciones y PDF. |
+| `app/templates/` + `app/static/` | Interfaz responsive y vistas imprimibles. |
+| `launcher/` | Inicio local, backups, restauración y acceso móvil temporal. |
+| `scripts/` | Instalación, pruebas y construcción del portable. |
 
-La aplicación se ejecutará localmente con Python/Django y SQLite. La versión
-final se entregará como una carpeta portable que podrá abrirse mediante acceso
-directo, sin necesitar PostgreSQL, Docker ni conexión a Internet.
+## 🧰 Stack
 
-## Inicio rápido de desarrollo
+- Python 3.12
+- Django 5.2
+- SQLite
+- Pytest + Coverage
+- Ruff
+- PyInstaller para la distribución portable
+- HTML, CSS y JavaScript sin framework de frontend
 
-La primera vez:
+## ▶️ Inicio rápido para desarrollo
+
+En Windows, desde la raíz del proyecto:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\InstalarDesarrollo.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\InstalarDesarrollo.ps1
 ```
 
-Después, hacer doble clic en:
+Después se puede iniciar con:
 
 ```text
 scripts\Iniciar.bat
 ```
 
-El lanzador:
-
-- aplica migraciones pendientes;
-- actualiza los recargos diarios faltantes;
-- crea una copia de seguridad al iniciar;
-- muestra una ventana de inicio clara, sin abrir el navegador automáticamente;
-- permite entrar al sistema con “Abrir sistema”;
-- permite cerrar de forma segura y crear el respaldo final.
-
-La sección “Datos y respaldo” del menú permite crear y descargar copias
-comprimidas (`.sqlite3.zip`) y exportar un ZIP con archivos CSV compatible con
-Excel. Al cerrar se actualiza una sola copia por día y se conservan hasta 90
-días de cierres.
-
-Para restaurar una copia, primero cerrar el sistema y hacer doble clic en:
-
-```text
-scripts\Restaurar.bat
-```
-
-El restaurador selecciona automáticamente la copia válida más reciente, valida
-y descomprime el ZIP, y crea una copia preventiva antes de reemplazar los datos.
-Después vuelve a abrir el sistema. También admite copias `.sqlite3` anteriores.
-
-Para guardar la base completa con un nombre reconocible y comenzar otra desde
-cero, cerrar primero el sistema y hacer doble clic en:
-
-```text
-scripts\ArchivarYReiniciar.bat
-```
-
-La herramienta pide un nombre y una confirmación. Crea en `storage/` un archivo
-`.sqlite3.zip` con ese nombre y la fecha, comprueba que sea restaurable y recién
-entonces deja vacía la base activa. Ese archivo puede recuperarse más adelante
-con `scripts\Restaurar.bat`, usando “Elegir otra copia…”. No elimina los archivos
-históricos guardados en `storage/`.
-
-Para ejecutar el servidor de desarrollo con consola:
+O ejecutar el servidor con consola:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\Desarrollo.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\Desarrollo.ps1
 ```
 
-Para ejecutar controles y pruebas:
+## 🧪 Demo reproducible y segura
+
+La demo debe ejecutarse contra una carpeta separada para no tocar una base real:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\Probar.ps1
+$env:GESTION_DATA_DIR="$PWD\tmp\demo\data"
+$env:GESTION_BACKUP_DIR="$PWD\tmp\demo\backups"
+$env:GESTION_EXPORT_DIR="$PWD\tmp\demo\exports"
+$env:GESTION_MEDIA_DIR="$PWD\tmp\demo\media"
+
+.\.venv\Scripts\python.exe app\manage.py migrate --noinput
+.\.venv\Scripts\python.exe app\manage.py seed_demo_data --confirm-reset
+.\.venv\Scripts\python.exe app\manage.py runserver
 ```
 
-## Paquete portable
+> ⚠️ `seed_demo_data --confirm-reset` elimina los datos comerciales de la base seleccionada. Por eso el ejemplo dirige todas las carpetas a `tmp/demo/`.
 
-Para construir nuevamente la entrega:
+## ✅ Calidad verificada
+
+Validación local del 10/08/2026:
+
+- **212 pruebas aprobadas**;
+- **88% de cobertura** de líneas y ramas combinadas;
+- análisis de Ruff sin observaciones;
+- `manage.py check` sin errores;
+- ninguna migración pendiente.
+
+Para repetir los controles:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\ConstruirPortable.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\Probar.ps1
 ```
 
-El proceso ejecuta las pruebas, genera los dos ejecutables, prueba una copia
-aislada, crea un manifiesto de integridad y produce el ZIP.
+El workflow de CI ejecuta análisis estático, chequeos de Django, control de migraciones, pruebas y cobertura mínima del 85% en cada push y pull request.
 
-La carpeta portable comienza sin datos reales. Para trasladar una base
-existente, cerrá el sistema de origen, copiá una copia `.sqlite3.zip` a
-`backups` del paquete y ejecutá `RESTAURAR_DATOS.bat`. El archivo aparecerá
-seleccionado automáticamente si es la copia más reciente.
+## 📦 Entrega portable
 
-## Datos locales
+La aplicación puede construirse como carpeta y ZIP portable:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\ConstruirPortable.ps1
+```
+
+El proceso ejecuta pruebas, genera los ejecutables, valida una copia aislada y crea un manifiesto de integridad. Los binarios, ZIP y carpetas generadas **no se versionan en Git**. Al publicar una versión deben adjuntarse a GitHub Releases junto con su hash SHA-256 y las notas del [changelog](CHANGELOG.md).
+
+## 💾 Datos, respaldo y recuperación
 
 ```text
 data/       Base SQLite y clave local
 backups/    Copias de seguridad
 exports/    Exportaciones CSV
-storage/    Bases completas archivadas para retomarlas más adelante
+storage/    Bases archivadas
 media/      Logo y archivos cargados
 ```
 
-Estas carpetas no se guardan en Git ni se mezclarán con el ejecutable.
+Estas carpetas conservan únicamente sus `.gitignore`; su contenido no entra al repositorio. El restaurador valida el ZIP y crea una copia preventiva antes de reemplazar la base activa.
 
-## Requisitos durante el desarrollo
+Para archivar una base completa y comenzar otra:
 
-- Windows 11.
-- Python 3.12.
-- Internet solamente para la instalación inicial de dependencias.
+```text
+scripts\ArchivarYReiniciar.bat
+```
 
-Docker y PostgreSQL no son necesarios para este MVP.
+## 📱 Acceso desde celular
 
-Documentos:
+El modo móvil está desactivado al iniciar. Cuando el usuario lo habilita:
 
-- [Plan vigente del MVP local](docs/PLAN_MVP_LOCAL.md).
-- [Reglas financieras de la Fase 0](docs/FASE_0_REGLAS_FINANCIERAS.md).
-- [Base técnica implementada](docs/FASE_1_BASE_LOCAL.md).
-- [Modelos y motor base de la Fase 2](docs/FASE_2_MODELOS_Y_MOTOR.md).
-- [Interfaz y flujos de la Fase 3](docs/FASE_3_INTERFAZ_COMERCIAL.md).
-- [Cobranza y pagos de la Fase 4](docs/FASE_4_COBRANZA_Y_PAGOS.md).
-- [Resumen, semana e historial de la Fase 5](docs/FASE_5_DASHBOARD_AGENDA_HISTORIAL.md).
-- [Impresión, reportes y configuración de la Fase 6](docs/FASE_6_IMPRESION_Y_REPORTES.md).
-- [Respaldo, exportación y restauración de la Fase 7](docs/FASE_7_RESPALDO_EXPORTACION_RESTAURACION.md).
-- [Pruebas y paquete portable de la Fase 8](docs/FASE_8_PRUEBAS_Y_PAQUETE_PORTABLE.md).
-- [Auditoría y sistema de pulido visual final](docs/PULIDO_VISUAL_FINAL.md).
-- [Revisión terminológica para Argentina](docs/REVISION_TERMINOLOGICA_AR.md).
-- [Manual rápido incluido en la entrega](docs/MANUAL_USO_PORTABLE.txt).
-- [Auditoría del equipo](docs/ENTORNO_Y_PORTABILIDAD.md).
-- [Plan empresarial anterior, conservado como referencia](docs/PLAN_MAESTRO.md).
+1. el servidor escucha temporalmente en la red local;
+2. se genera una clave aleatoria para esa ejecución;
+3. el QR contiene la dirección y la clave temporal;
+4. el acceso se invalida al desactivarlo o cerrar la aplicación.
+
+No se abre ningún puerto del router ni se habilita acceso desde Internet. La configuración detallada está en [ACCESO_DESDE_CELULAR.md](docs/ACCESO_DESDE_CELULAR.md).
+
+## ⚠️ Alcance y limitaciones
+
+- Diseñada para una sola persona y una instalación local.
+- No incluye cuentas multiusuario, sincronización cloud ni acceso público por Internet.
+- SQLite es adecuado para este alcance local; no se presenta como arquitectura empresarial distribuida.
+- No reemplaza un sistema contable, fiscal, bancario ni asesoramiento profesional.
+- Los cálculos dependen de las reglas configuradas y deben verificarse antes de utilizarlos para decisiones reales.
+- El usuario es responsable de conservar respaldos externos y proteger el equipo.
+
+## 📚 Documentación
+
+El [índice de documentación](docs/INDEX.md) separa el plan vigente, las guías operativas, la evidencia de calidad y los documentos históricos.
+
+Documentos principales:
+
+- [Plan vigente del MVP local](docs/PLAN_MVP_LOCAL.md)
+- [Reglas financieras](docs/FASE_0_REGLAS_FINANCIERAS.md)
+- [Acceso desde celular](docs/ACCESO_DESDE_CELULAR.md)
+- [Manual de uso portable](docs/MANUAL_USO_PORTABLE.txt)
+- [Guía de entrega](docs/GUIA_DE_ENTREGA_AL_CLIENTE.md)
+- [Préstamos integrados](docs/PRESTAMOS_2026-08-06.md)
+- [Política de seguridad](SECURITY.md)
+
+## ⚖️ Licencia
+
+El código y la documentación original se distribuyen bajo la [licencia MIT](LICENSE). Los nombres y marcas de terceros pertenecen a sus respectivos titulares.
+
+---
+
+**Percy Ignacio Marzoratti Hill**<br>
+*Aplicación gratuita de gestión financiera local · Product Engineering*

@@ -21,9 +21,9 @@ exportación.
 | Expresión anterior | Expresión elegida | Motivo |
 | --- | --- | --- |
 | Quincenal | Cada 2 semanas | El sistema genera vencimientos cada 14 días. “Quincenal” puede interpretarse como cada 15 días. |
-| Entrega inicial | Pago inicial | Evita confundir el dinero recibido con la entrega física del producto. |
+| Entrega inicial / Pago inicial | Pago inicial aparte | Aclara que es un anticipo separado y que no reemplaza el pago de la cuota 1. |
 | Método de pago | Medio de pago | Es la denominación más natural para efectivo, transferencia u otra forma de pago. |
-| Primer día de cobro | Fecha del primer cobro | El campo solicita una fecha completa, no solamente un día de la semana. |
+| Primer día de cobro / Fecha del primer cobro | Vencimiento de la cuota 1 | Indica que es la fecha pactada de la primera cuota, aunque todavía no se haya pagado. |
 | Capital pendiente | Cuotas pendientes / cuotas pendientes sin recargos | Explica directamente qué parte del saldo representa, sin jerga financiera. |
 | Deuda exigible | Pendiente hasta la fecha | Evita una expresión jurídica y aclara el período incluido. |
 | Clientes con pagos atrasados | Clientes morosos | Es la denominación solicitada para el informe específico de deuda vencida. En los resúmenes operativos se usa “Clientes atrasados”. |
@@ -55,12 +55,12 @@ exportación.
 ## Diferencias que conviene recordar
 
 - `Precio del producto`: valor acordado del artículo antes de dividir el pago.
-- `Pago inicial`: dinero recibido al entregar el producto.
-- `Saldo del producto`: precio menos pago inicial, antes de cualquier ajuste.
+- `Pago inicial aparte`: anticipo separado de las cuotas, recibido al entregar el producto.
+- `Saldo del producto`: precio menos pago inicial aparte, antes de cualquier ajuste.
 - `Total en cuotas`: suma que se repartirá entre todas las cuotas.
 - `Costo de financiación`: diferencia positiva entre el precio y el total que
   terminará pagando el cliente.
-- `Total final de la venta`: pago inicial más total en cuotas.
+- `Total final de la venta`: pago inicial aparte más total en cuotas.
 - `Cuotas pendientes`: parte impaga de las cuotas, sin contar recargos.
 - `Recargos pendientes`: importes acumulados por atraso que todavía no se pagaron.
 - `Pendiente hasta la fecha`: cuotas vencidas o que vencen ese día; no incluye

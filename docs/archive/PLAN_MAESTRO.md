@@ -2,13 +2,13 @@
 
 > **Documento reemplazado para la implementación actual.** El alcance fue
 > reducido a una aplicación local monousuario terminable en 2–3 días. El plan
-> vigente es [PLAN_MVP_LOCAL.md](PLAN_MVP_LOCAL.md). Este documento se conserva
+> vigente es [PLAN_MVP_LOCAL.md](../PLAN_MVP_LOCAL.md). Este documento se conserva
 > solamente como referencia de una posible versión empresarial futura.
 
 Versión: 1.0  
 Estado: listo para iniciar la fase 0  
 Proyecto: Sistema de Gestión de Ventas Financiadas y Cobranza  
-Carpeta: `C:\Users\HeKoX\Downloads\GestionFinanciera`
+Repositorio: raíz local del proyecto
 
 ## 1. Propósito de este documento
 

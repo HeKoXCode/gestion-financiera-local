@@ -1,82 +1,414 @@
-GESTIÓN FINANCIERA — MANUAL RÁPIDO
-==================================
+GESTIÓN FINANCIERA — LEEME PRIMERO
+=================================
+
+Este sistema sirve para guardar clientes, ventas y préstamos en cuotas, vencimientos,
+recargos, pagos y recorridos de cobranza. Está pensado para una sola persona y
+funciona en esta computadora, sin necesitar Internet.
+
 
 1. ABRIR EL SISTEMA
+-------------------
 
 Conservá completa la carpeta GestionFinanciera.
 Hacé doble clic en INICIAR.bat o GestionFinanciera.exe.
-Se abrirá el panel de inicio de Gestión Financiera.
-Presioná “Abrir sistema” cuando quieras entrar; recién entonces se abrirá el
-navegador. Dejá el panel abierto mientras trabajás.
-El sistema funciona en este equipo mediante http://127.0.0.1:8765/.
-No necesita Internet, Docker ni Python instalado.
+Cuando aparezca el panel, presioná “Abrir sistema”.
+Dejá ese panel abierto mientras trabajás.
 
-Si Windows muestra una advertencia la primera vez, comprobá que el archivo
-provenga de tu paquete y elegí “Más información” > “Ejecutar de todas formas”.
+La pantalla de trabajo se abre en el navegador, pero los datos permanecen en
+esta PC. No necesita Python, Docker, una base de datos externa ni Internet.
 
-2. TRABAJO DIARIO
+“Sincronizado localmente” quiere decir que los cambios están guardados en esta
+computadora. No significa que exista una nube.
 
-Resumen del día: muestra cobranzas, atrasos y total pendiente.
-Clientes: alta, edición, búsqueda, historial y archivado.
-Productos: catálogo usado al registrar ventas.
-Ventas: registra una venta financiada y genera sus cuotas.
-En una venta indicá el precio del producto, el pago inicial (si existe) y
-el total que se dividirá en cuotas. El pago inicial queda registrado como dinero
-recibido y no se descuenta nuevamente de las cuotas. El total se calcula solo;
-activá “Modificar el total que se pagará en cuotas” únicamente si acordaste un
-costo de financiación o un descuento.
-Cobranza: registra pagos, pagos parciales o que el cliente no pagó.
-Semana: compara de lunes a sábado clientes, vencimientos, atrasos y total a cobrar.
-Reportes: revisa lo cobrado y los saldos pendientes.
-Datos y respaldo: crea copias de seguridad y exportaciones.
+Si Windows muestra una advertencia la primera vez, comprobá que el archivo sea
+el que recibiste y elegí “Más información” > “Ejecutar de todas formas”. No es
+necesario desactivar Microsoft Defender.
 
-Para imprimir la hoja del cobrador:
-Cobranza > seleccionar fecha > Imprimir planilla.
+No muevas solamente GestionFinanciera.exe. El ejecutable y la carpeta _internal
+deben permanecer juntos.
 
-3. CERRAR CORRECTAMENTE
+
+2. CONFIGURARLO LA PRIMERA VEZ
+------------------------------
+
+Abrí “Configuración” y revisá:
+
+- nombre del negocio;
+- logo opcional;
+- recargo diario;
+- días habilitados para cobrar;
+- frecuencias: semanal, quincenal y mensual;
+- medios de pago;
+- cantidad máxima de cuotas;
+- recargo durante los domingos;
+- recargo después de un pago parcial;
+- permiso para pagos adelantados;
+- texto que se prepara para WhatsApp.
+
+Los cambios del recargo se aplican a ventas nuevas. Una venta anterior conserva
+el recargo que tenía cuando fue creada.
+
+
+3. QUÉ HACE CADA SECCIÓN
+------------------------
+
+INICIO — “ASÍ VIENE EL DÍA”
+
+Muestra rápidamente:
+
+- cuántos clientes hay que cobrar;
+- cuánto está pendiente hasta la fecha;
+- cuántos clientes están atrasados;
+- cuánto dinero ya se recibió;
+- cuánto queda pendiente en todas las ventas activas;
+- avance de la cobranza;
+- clientes prioritarios;
+- próximos vencimientos y últimos pagos.
+
+Podés elegir otro día o abrir la semana completa.
+
+CLIENTES
+
+Permite crear, buscar y editar clientes. Se puede guardar nombre, apellido, DNI
+opcional, teléfono, dirección, barrio, referencia del domicilio y observaciones.
+
+Al abrir un cliente se ve su historial completo: productos, ventas, préstamos, cuotas,
+recargos, pagos, anulaciones, visitas, total abonado y saldo.
+
+Hay tres acciones para entregar el estado de cuenta al cliente:
+
+- “Compartir por WhatsApp” prepara el PDF y usa el teléfono guardado;
+- “Guardar resumen PDF” descarga el archivo;
+- “Imprimir resumen” abre la hoja A4 y el cuadro de impresión.
+
+En un celular compatible, elegí WhatsApp en el menú para compartir y confirmá el
+contacto. En una computadora, el PDF queda en Descargas y se abre el chat del
+número guardado; adjuntá ese archivo desde WhatsApp. Una página web no puede
+adjuntar sola un archivo a un chat específico.
+
+El resumen para entregar muestra nombre, ventas, cuotas, vencimientos, recargos,
+pagos y saldo. No muestra DNI, teléfono, domicilio, referencias, observaciones
+internas, visitas de cobranza, medios de pago ni motivos de anulación. Esos datos
+siguen disponibles solamente dentro del historial del sistema.
+
+“Archivar” no borra al cliente. Solamente deja de ofrecerlo para ventas nuevas y
+conserva todo su historial. Después puede reactivarse.
+
+PRODUCTOS
+
+Es el catálogo que se usa al registrar ventas. Cada producto tiene nombre y
+descripción. También puede archivarse y reactivarse sin alterar ventas viejas.
+
+VENTAS Y PRÉSTAMOS
+
+Desde la misma pantalla se registra una venta de producto o un préstamo de
+dinero. Ambas operaciones crean sus cuotas y después se cobran de la misma forma.
+
+Al comenzar elegí:
+
+- “Venta de producto” para vender un artículo del catálogo;
+- “Préstamo de dinero” para entregar efectivo o hacer una transferencia.
+
+PRÉSTAMOS
+
+Un préstamo no necesita crear un producto ficticio. Elegí el cliente y completá:
+
+- dinero prestado: el capital que recibió el cliente;
+- cómo se entregó: efectivo, transferencia u otro medio configurado;
+- interés total: porcentaje aplicado una sola vez al capital;
+- frecuencia, cantidad de cuotas y primer vencimiento.
+
+Ejemplo:
+
+Dinero prestado:       $100.000
+Interés total:              20%
+Total a devolver:      $120.000
+10 cuotas:              $12.000 cada una
+
+El interés no es mensual: 20% significa $20.000 sobre todo el préstamo. Si ya
+se acordó directamente el importe final, activá “Usar otro total a devolver” y
+escribilo. También podés indicar cantidad y monto de cada cuota; el sistema
+calculará el total a devolver y el porcentaje efectivo.
+
+Después de guardarlo, el préstamo aparece en el historial del cliente, Cobranza,
+Semana, planilla diaria y saldos generales. Los reportes muestran un resumen de
+capital prestado y no cuentan el préstamo como un producto vendido.
+
+VENTAS DE PRODUCTOS
+
+Una venta elige cliente y producto, registra el acuerdo y crea todas las cuotas.
+
+Los datos principales son:
+
+- fecha de entrega;
+- precio del producto;
+- pago inicial aparte, si entregó una parte;
+- total que se pagará en cuotas;
+- frecuencia semanal, cada 2 semanas o mensual;
+- cantidad de cuotas;
+- vencimiento de la cuota 1.
+
+Cliente y Producto se eligen desde un único cuadro de búsqueda. Al tocarlo se
+muestran todas las opciones y, al escribir, la lista se filtra por nombre, DNI,
+domicilio o descripción. Si se usa “Crear cliente” o “Crear producto” desde esta
+pantalla, al guardar se vuelve a la venta con el nuevo registro seleccionado y
+sin perder lo que ya se había completado.
+
+Ejemplo normal:
+
+Precio del producto:  $600.000
+Pago inicial aparte:  $200.000
+Saldo del producto:   $400.000
+10 cuotas:             $40.000 cada una
+
+El total en cuotas se calcula solo como precio menos pago inicial aparte.
+
+Si se conoce el monto habitual de la cuota, también puede completarse “Cantidad
+de cuotas” y “Monto de cada cuota”. Por ejemplo, 10 cuotas de $50.000 calculan
+automáticamente un precio de $500.000. Si además hay un pago inicial aparte de
+$200.000, el precio calculado será $700.000 y quedarán $500.000 en cuotas.
+
+Activá la opción “Usar otro total en cuotas” únicamente cuando se haya
+acordado una financiación o un descuento diferente. Por ejemplo, si después de
+un pago inicial aparte de $200.000 se acuerdan $500.000 en 10 cuotas, cada cuota será
+de $50.000 y el total final de la venta será $700.000.
+
+La vista previa actualiza importes y fechas antes de confirmar. La última cuota
+absorbe cualquier diferencia de centavos. El sistema vuelve a calcular todo al
+guardar para evitar utilizar un valor anterior por error.
+
+Si el plan comienza al entregar el producto, activá “La cuota 1 vence el día de
+la entrega”. Después elegí qué ocurrió realmente:
+
+- “Pagó la cuota 1 al recibir el producto” registra esa cuota como un pago real;
+- “La cuota 1 quedó pendiente” la muestra en Cobranza y aplica recargo recién
+  desde el día siguiente si continúa impaga.
+
+El pago inicial aparte es independiente. Por eso, en la entrega se puede registrar
+solo la cuota 1 o registrar la cuota 1 y además un pago inicial aparte, cada uno
+con su monto y medio de pago correspondientes.
+
+Para cargar una venta o préstamo que comenzó antes de usar el sistema, completá la fecha y
+el plan originales y usá “Cantidad total de cuotas ya pagadas”. Por ejemplo, si ya pagó
+11 de 12 cuotas, escribí 11 y elegí el medio de esos pagos. El sistema registrará
+las primeras 11 cuotas una por una. Debajo aparecerán los números del 1 al 11:
+tocá solamente las cuotas que se pagaron tarde y escribí sus días de atraso. Las
+demás quedarán como pagadas en fecha. La cuota 12 mantendrá su fecha, saldo y
+atraso reales. No se permite marcar como pagada una cuota que todavía no venció
+ni indicar una cantidad de días que lleve el pago más allá de hoy.
+
+Ejemplo: si pagó 10 cuotas y solamente la 2 y la 7 se abonaron con atraso, escribí
+10, tocá los números 2 y 7 e indicá, por ejemplo, 3 días y 1 día. En el historial
+se leerá “Pagada con 3 días de atraso” y “Pagada con 1 día de atraso”. Los recargos
+correspondientes también quedan incluidos en esos pagos anteriores.
+
+Si tocás una cuota que vence hoy, una cuota futura o la cuota 1 ya registrada en
+la entrega, el sistema explicará por qué todavía no puede marcarse con atraso.
+Así ningún botón queda sin respuesta.
+
+Una venta o préstamo puede cancelarse escribiendo un motivo. Dejará de aparecer para
+cobrar, pero su información no se borra.
+
+COBRANZA
+
+Muestra lo que corresponde cobrar en la fecha elegida y también las cuotas
+anteriores que siguen impagas. Indica cliente, domicilio, operación, cuotas,
+recargos, total y atraso.
+
+Acciones:
+
+- “Registrar pago”: acepta el total o una parte. El saldo restante queda
+  guardado automáticamente.
+- “No pagó”: deja anotado que se hizo la visita, sin crear un pago.
+- “Otro resultado”: permite anotar, por ejemplo, “no estaba” o “volver el
+  viernes”.
+- “Abrir WhatsApp”: prepara un mensaje. Vos decidís si lo enviás; no se manda
+  automáticamente.
+- “Ver detalle”: abre la venta completa.
+- “Imprimir planilla”: prepara la hoja A4 del cobrador con espacio para firma y
+  observaciones.
+
+Un pago cargado por error puede anularse indicando el motivo. Queda visible en
+el historial y el saldo vuelve a calcularse.
+
+SEMANA
+
+Compara de lunes a sábado los clientes, cuotas, montos, atrasos, arrastre de
+deudas anteriores y barrios. Sirve para organizar el recorrido y detectar el
+día con mayor carga. Desde cada tarjeta se puede abrir la cobranza de ese día.
+
+No hay que crear una agenda aparte: las fechas ya salen de las cuotas de cada
+venta.
+
+REPORTES
+
+Permite revisar:
+
+- cobrado hoy, esta semana y este mes;
+- total pendiente y total vencido;
+- clientes morosos;
+- clientes con mayor deuda total;
+- clientes al día;
+- productos más vendidos;
+- movimiento de los últimos siete días.
+
+CONFIGURACIÓN
+
+Permite cambiar los datos del negocio, reglas de cobranza, frecuencias, medios
+de pago, máximo de cuotas, opciones de recargo, adelantos y mensaje de WhatsApp
+sin modificar el sistema.
+
+DATOS Y RESPALDO
+
+Permite crear y descargar copias completas y exportar los datos para Excel.
+Más abajo se explica la diferencia.
+
+
+4. USAR DESDE UN CELULAR
+------------------------
+
+Este paso es opcional.
+
+En una PC nueva, ejecutá una vez HABILITAR_ACCESO_CELULAR.bat y aceptá el permiso
+de administrador. Después:
+
+1) abrí el panel de Gestión Financiera;
+2) presioná “Usar desde celular”;
+3) conectá el celular a la misma red Wi-Fi que la computadora;
+4) escaneá el QR.
+
+El QR contiene una clave temporal. Copiar solamente la IP no permite entrar.
+La clave cambia al volver a abrir el sistema.
+
+La PC debe permanecer encendida y el panel abierto. El acceso funciona solo en
+la misma red local; no abre el router ni permite entrar desde Internet. No lo
+uses en un Wi-Fi público o compartido.
+
+Para retirar el permiso del Firewall ejecutá:
+
+DESHABILITAR_ACCESO_CELULAR.bat
+
+
+5. CERRAR CORRECTAMENTE
+-----------------------
 
 No cierres solamente la pestaña del navegador.
-En el panel de Gestión Financiera presioná “Cerrar y respaldar”.
-El sistema detendrá el servidor y guardará una copia final.
-Se guarda una copia por día durante 90 días. Si cerrás varias veces en la misma
-fecha, se actualiza la copia de ese día sin ocupar otro lugar.
 
-4. UBICACIÓN DE LOS DATOS
+En el panel presioná “Cerrar y respaldar”. El sistema detendrá el servidor y
+guardará la copia final del día.
 
-data\      Datos principales. No borrar.
-backups\   Copias comprimidas y restaurables.
-exports\   ZIP con archivos CSV para Excel.
-media\     Logo y archivos locales.
+Se conserva una copia de cierre por fecha durante 90 días. Si cerrás varias
+veces el mismo día, se actualiza la copia de esa fecha en vez de crear muchas
+iguales.
 
-Para trasladar el sistema, copiá la carpeta GestionFinanciera completa.
-No muevas solamente GestionFinanciera.exe ni la carpeta _internal.
 
-5. CREAR UNA COPIA O EXPORTAR
+6. COPIA COMPLETA O ARCHIVOS PARA EXCEL
+---------------------------------------
 
-Dentro del sistema abrí “Datos y respaldo”.
-“Crear copia ZIP” produce una copia .sqlite3.zip restaurable.
-“Descargar ZIP con CSV” crea archivos para consultar en Excel.
-El ZIP con CSV de exportación no reemplaza a la copia .sqlite3.zip.
+Dentro de “Datos y respaldo” existen dos opciones diferentes:
 
-Conviene guardar periódicamente una copia .sqlite3.zip en otro disco o pendrive.
+“Crear copia ZIP”
 
-6. RESTAURAR UNA COPIA
+- produce un archivo .sqlite3.zip;
+- conserva clientes, ventas, cuotas, pagos, recargos y configuración;
+- sirve para restaurar el sistema completo.
+
+“Descargar ZIP con CSV”
+
+- produce tablas que pueden abrirse en Excel;
+- sirve para consultar, filtrar o analizar;
+- no sirve para reconstruir automáticamente el sistema.
+
+Para proteger los datos, guardá periódicamente una copia .sqlite3.zip en un
+pendrive o disco distinto de esta PC.
+
+
+7. DÓNDE ESTÁN LOS ARCHIVOS
+---------------------------
+
+data\       Base principal y clave local. No borrar.
+backups\    Copias completas y restaurables.
+exports\    ZIP con archivos CSV para Excel.
+storage\    Bases completas archivadas para retomarlas más adelante.
+media\      Logo y otros archivos cargados.
+_internal\  Componentes necesarios para abrir el sistema. No borrar.
+
+Para trasladar todo a otra PC, cerrá y respaldá y después copiá la carpeta
+GestionFinanciera completa.
+
+
+8. RESTAURAR UNA COPIA
+----------------------
 
 1) Cerrá el sistema con “Cerrar y respaldar”.
 2) Ejecutá RESTAURAR_DATOS.bat o Restaurador.exe.
-3) Revisá la copia más reciente que aparece seleccionada automáticamente.
-4) Presioná “Restaurar la copia mostrada” y confirmá.
-5) El sistema volverá a abrirse automáticamente para que compruebes los datos.
+3) Revisá la copia más reciente que aparece seleccionada.
+4) Para recuperar otra fecha, elegí “Elegir otra copia”.
+5) Presioná “Restaurar la copia mostrada” y confirmá.
+6) Esperá a que el sistema vuelva a abrirse.
+7) Comprobá clientes, ventas y cobranza.
 
-Antes de reemplazar la base, el restaurador guarda automáticamente otra copia
-preventiva. El ZIP se valida y descomprime automáticamente. Para usar otra
-fecha, presioná “Elegir otra copia…”. También se aceptan copias .sqlite3
-anteriores. No intentes restaurar mientras el sistema está abierto.
+El restaurador valida y descomprime el ZIP automáticamente. Antes de reemplazar
+los datos guarda otra copia preventiva. También admite archivos .sqlite3
+anteriores. No restaures mientras Gestión Financiera esté abierta.
 
-7. SI EL SISTEMA NO ABRE
 
-Comprobá que GestionFinanciera.exe y la carpeta _internal sigan juntas.
-Reiniciá Windows si otra ejecución quedó bloqueando el puerto local.
-No borres las carpetas data ni backups.
-Si el problema continúa, conservá la carpeta completa y la copia más reciente
-antes de reemplazar o volver a copiar el sistema.
+9. GUARDAR TODO Y COMENZAR UNA BASE VACÍA
+-----------------------------------------
+
+Usá esta función solamente cuando quieras cerrar una etapa completa, por
+ejemplo antes de comenzar con clientes de otra ciudad.
+
+1) Cerrá el sistema con “Cerrar y respaldar”.
+2) Ejecutá ARCHIVAR_Y_REINICIAR.bat.
+3) Escribí un nombre fácil de reconocer, por ejemplo “clientes-cordoba-2026”.
+4) Revisá el aviso.
+5) Escribí ARCHIVAR para confirmar.
+
+La herramienta crea primero una copia completa en storage y comprueba que sea
+restaurable. Recién después deja vacía la base activa. Si el reinicio falla,
+intenta recuperar automáticamente los datos archivados.
+
+Para volver a esos datos, cerrá el sistema, abrí RESTAURAR_DATOS.bat, elegí
+“Elegir otra copia” y seleccioná el archivo guardado en storage. No borres la
+carpeta storage.
+
+
+10. CAMBIAR DE COMPUTADORA
+--------------------------
+
+La forma más sencilla es:
+
+1) cerrar y respaldar;
+2) copiar la carpeta GestionFinanciera completa;
+3) pegarla en la computadora nueva;
+4) abrir INICIAR.bat;
+5) ejecutar nuevamente HABILITAR_ACCESO_CELULAR.bat si vas a usar el QR.
+
+También se puede instalar una carpeta limpia, copiar un .sqlite3.zip a backups
+y ejecutar RESTAURAR_DATOS.bat.
+
+
+11. COSAS IMPORTANTES QUE HAY QUE SABER
+----------------------------------------
+
+- Está pensado para una persona; no tiene usuarios ni contraseñas internas.
+- Los datos no se sincronizan en Internet.
+- No conviene abrir la misma base desde dos computadoras al mismo tiempo.
+- WhatsApp no envía mensajes solo; abre un texto preparado.
+- El celular depende de que la PC y el sistema estén abiertos.
+- No hay actualizaciones automáticas.
+- Una copia CSV es para Excel; una copia .sqlite3.zip es para restaurar.
+- Archivar un cliente o producto conserva su historial.
+- Cancelar o anular conserva el motivo y no borra la operación.
+
+
+12. SI EL SISTEMA NO ABRE
+-------------------------
+
+1) Comprobá que GestionFinanciera.exe y _internal sigan juntos.
+2) Verificá que la carpeta haya sido extraída del ZIP.
+3) Reiniciá Windows si una ejecución anterior quedó abierta.
+4) No borres data ni backups.
+5) Conservá la carpeta completa y la copia más reciente antes de reemplazar
+   archivos o pedir asistencia.

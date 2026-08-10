@@ -33,6 +33,8 @@ build/
 dist/
 portable/
 tmp/
+output/
+staticfiles/
 *.spec
 !GestionFinanciera.spec
 

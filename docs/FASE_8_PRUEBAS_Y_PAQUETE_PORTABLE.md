@@ -23,14 +23,17 @@ La carpeta contiene:
 GestionFinanciera\
 |-- GestionFinanciera.exe
 |-- Restaurador.exe
+|-- ArchivarYReiniciar.exe
 |-- INICIAR.bat
 |-- RESTAURAR_DATOS.bat
+|-- ARCHIVAR_Y_REINICIAR.bat
 |-- LEEME_PRIMERO.txt
 |-- MANIFEST_SHA256.txt
 |-- _internal\
 |-- data\
 |-- backups\
 |-- exports\
+|-- storage\
 `-- media\
 ```
 
@@ -72,7 +75,7 @@ El script:
 1. ejecuta Ruff y toda la suite;
 2. elimina únicamente salidas anteriores de construcción;
 3. genera `GestionFinanciera.exe`;
-4. genera `Restaurador.exe`;
+4. genera `Restaurador.exe` y `ArchivarYReiniciar.exe`;
 5. añade lanzadores y manual;
 6. crea las carpetas externas de datos;
 7. prueba una copia aislada;
@@ -143,8 +146,8 @@ revierte la venta incompleta, evitando que un corte deje registros a medias.
 ## 6. Resultados de calidad
 
 ```text
-112 pruebas aprobadas
-90 % de cobertura
+190 pruebas aprobadas
+87 % de cobertura
 Ruff sin observaciones
 Django check sin observaciones
 Sin migraciones pendientes
@@ -156,8 +159,8 @@ ZIP íntegro
 Tamaño de la compilación validada:
 
 ```text
-Carpeta: aproximadamente 56,2 MB
-ZIP: aproximadamente 26,7 MB
+Carpeta: aproximadamente 75,6 MB
+ZIP: aproximadamente 38,44 MB
 ```
 
 El tamaño puede variar ligeramente entre construcciones.

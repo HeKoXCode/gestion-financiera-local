@@ -1,6 +1,6 @@
 [project]
 name = "gestion-financiera"
-version = "0.1.0"
+version = "1.0.0"
 description = "Aplicación local de ventas financiadas y cobranza"
 requires-python = ">=3.12,<3.13"
 

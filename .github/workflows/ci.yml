@@ -1,0 +1,44 @@
+name: Quality checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    env:
+      GESTION_DATA_DIR: ${{ runner.temp }}/gestion-data
+      GESTION_BACKUP_DIR: ${{ runner.temp }}/gestion-backups
+      GESTION_EXPORT_DIR: ${{ runner.temp }}/gestion-exports
+      GESTION_MEDIA_DIR: ${{ runner.temp }}/gestion-media
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.lock
+
+      - name: Install locked dependencies
+        run: python -m pip install --require-hashes -r requirements-dev.lock
+
+      - name: Lint
+        run: python -m ruff check .
+
+      - name: Django system check
+        run: python app/manage.py check
+
+      - name: Check migrations
+        run: python app/manage.py makemigrations --check --dry-run
+
+      - name: Tests and coverage
+        run: |
+          python -m coverage run -m pytest -q
+          python -m coverage report --fail-under=85

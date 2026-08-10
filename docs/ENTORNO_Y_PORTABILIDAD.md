@@ -1,194 +1,77 @@
-# Auditoría del entorno y estrategia de portabilidad
+# Entorno objetivo y estrategia de portabilidad
 
-Fecha de auditoría: 23 de julio de 2026.
+Fecha de revisión: 10 de agosto de 2026.
 
-> Nota de alcance: después de esta auditoría el proyecto se simplificó a una
-> aplicación local monousuario con Django y SQLite. Docker continúa instalado y
-> operativo, pero ya no será necesario para el uso diario ni para abrir la
-> versión portable. Ver [PLAN_MVP_LOCAL.md](PLAN_MVP_LOCAL.md).
+## Decisión vigente
 
-## Decisión final aplicada
+Gestión Financiera se distribuye como una aplicación local y monousuario para Windows. La implementación utiliza:
 
-La arquitectura empresarial descrita más abajo se conserva solamente como
-registro de la auditoría inicial. La implementación final usa:
-
+- Python 3.12 durante el desarrollo;
 - Django 5.2 y SQLite;
-- servidor exclusivo en `127.0.0.1`;
-- HTML y CSS incluidos localmente;
+- servidor local en `127.0.0.1` por defecto;
+- HTML, CSS y JavaScript incluidos en el paquete;
 - PyInstaller en modo carpeta;
-- datos, backups, exportaciones y media fuera del ejecutable;
-- `GestionFinanciera.exe` y `Restaurador.exe`;
-- funcionamiento sin Docker, WSL, PostgreSQL ni Python instalado.
+- datos, respaldos, exportaciones y archivos multimedia fuera del ejecutable;
+- ejecutables separados para la aplicación, restauración y archivado;
+- funcionamiento diario sin Docker, PostgreSQL, Node.js ni Python instalado.
 
-El paquete fue construido y probado desde una copia aislada el 24/07/2026. La
-documentación vigente es
-[FASE_8_PRUEBAS_Y_PAQUETE_PORTABLE.md](FASE_8_PRUEBAS_Y_PAQUETE_PORTABLE.md).
+Esta decisión reemplaza la arquitectura empresarial exploratoria conservada en [archive/PLAN_MAESTRO.md](archive/PLAN_MAESTRO.md).
 
-## Resultado
+## Entorno soportado
 
-El equipo está aprobado para desarrollar y ejecutar el sistema. Tiene recursos
-de sobra para Django, PostgreSQL, generación de PDF, pruebas y contenedores.
+| Uso | Requisito |
+|---|---|
+| Desarrollo | Windows 11 y Python `>=3.12,<3.13` |
+| Instalación portable | Windows 10/11 de 64 bits |
+| Persistencia | SQLite local |
+| Navegador | Navegador moderno incluido en Windows |
+| Red | No requerida, salvo acceso temporal desde otro dispositivo de la LAN |
 
-La virtualización AMD está habilitada y fue reconocida correctamente por
-Windows. WSL 2 y Docker Desktop están instalados y operativos.
+Las características específicas del equipo de desarrollo no forman parte de los requisitos del producto.
 
-## Equipo comprobado
+## Principios de portabilidad
 
-| Elemento | Resultado |
-| --- | --- |
-| Sistema operativo | Windows 11 Pro de 64 bits, compilación 26200 |
-| Procesador | AMD Ryzen 5 3600, 6 núcleos y 12 hilos |
-| Memoria | 31,9 GB |
-| Disco C | 55,8 GB libres de 930,5 GB |
-| SLAT | Disponible |
-| Virtualización en firmware | Habilitada y reconocida por Windows |
-| Placa madre | Gigabyte B550 AORUS ELITE AX V2 |
-| BIOS | F21a, 13/04/2026 |
+- No guardar rutas absolutas del equipo de desarrollo.
+- Resolver rutas con `pathlib` y variables de entorno.
+- Mantener `data/`, `backups/`, `exports/`, `storage/` y `media/` fuera del ejecutable.
+- Fijar dependencias mediante archivos lock.
+- No incluir claves, tokens, bases ni respaldos en Git o en paquetes limpios.
+- Construir y probar el portable desde una copia aislada.
+- Conservar un manifiesto de integridad de los archivos distribuidos.
 
-## Herramientas comprobadas
+## Variables de directorio
 
-| Herramienta | Estado |
-| --- | --- |
-| Git | Instalado, versión 2.54.0; identidad configurada |
-| VS Code | Instalado |
-| Python 3.12 | Instalado, versión 3.12.10 |
-| Python 3.14 | Instalado, versión 3.14.3 |
-| pip | Instalado para Python 3.12 |
-| WSL | Instalado, versión 2.7.10; backend predeterminado WSL 2 |
-| Docker Desktop | Instalado, versión 4.83.0 |
-| Docker Engine | Instalado, versión 29.6.2; Linux x86_64 |
-| Docker Compose | Instalado, versión 5.3.1 |
-| PostgreSQL / psql | No instalados |
-| WeasyPrint | No instalado |
-| Node.js / npm | No instalados y no son necesarios para el MVP |
-| Puertos 5432, 6379, 8000 y 8080 | Libres durante la auditoría |
+El desarrollo y las pruebas pueden aislar su estado mediante:
 
-Para el proyecto se usará Python 3.12. Es compatible con Django 5.2 LTS y
-reduce diferencias entre la ejecución nativa y la imagen Docker.
+- `GESTION_DATA_DIR`;
+- `GESTION_BACKUP_DIR`;
+- `GESTION_EXPORT_DIR`;
+- `GESTION_MEDIA_DIR`.
 
-PostgreSQL y WeasyPrint se instalarán dentro de contenedores. De esta forma no
-dependen de librerías globales de Windows y el mismo proyecto podrá ejecutarse
-en Windows, Linux o un servidor de nube. La imagen `postgres:18.4-bookworm` ya
-fue descargada y ejecutada correctamente.
+Esto permite ejecutar demos y QA sin tocar la instalación real.
 
-## Preparación pendiente del equipo
-
-1. Completado: habilitar `SVM Mode` en el BIOS/UEFI.
-2. Completado: guardar la configuración, reiniciar y verificarla en Windows.
-3. Completado: instalar y verificar WSL 2.
-4. Completado: instalar Docker Desktop en modalidad de usuario con backend
-   WSL 2 y solamente contenedores Linux.
-5. Completado: ejecutar `hello-world`.
-6. Completado: ejecutar `python:3.12-slim`.
-7. Completado: ejecutar `postgres:18.4-bookworm`.
-
-No hay una distribución Ubuntu de uso general instalada. Docker Desktop no la
-necesita porque administra su propia distribución WSL; podrá instalarse más
-adelante si aparece una necesidad concreta.
-
-No es necesario actualizar el BIOS solamente para habilitar SVM. La versión
-instalada ya es reciente; la actualización de firmware es una operación
-separada y no forma parte de la preparación del proyecto.
-
-## Política empresarial inicial, reemplazada por el MVP local
-
-La portabilidad significará que el código y la configuración podrán trasladarse
-a otra computadora o servidor sin depender de rutas, programas o configuraciones
-particulares de este equipo.
-
-Se aplicarán estas decisiones:
-
-- Un solo repositorio para la aplicación web, las tareas programadas y el PDF.
-- Imagen Linux basada en `python:3.12-slim`.
-- `compose.yaml` con aplicación, PostgreSQL y, más adelante, worker.
-- Versiones de dependencias fijadas en el archivo de bloqueo.
-- Configuración mediante variables de entorno y archivo `.env.example`.
-- Ninguna contraseña, token o clave dentro del repositorio.
-- Ninguna ruta absoluta de Windows dentro del código.
-- Uso de `pathlib` para manipular archivos.
-- Volúmenes separados para la base de datos y archivos subidos.
-- Scripts equivalentes para PowerShell y Bash.
-- PostgreSQL como base obligatoria para integración y producción.
-- SQLite permitido solamente para una demostración aislada o pruebas muy
-  rápidas, nunca como fuente de datos real.
-- WeasyPrint ejecutado dentro del contenedor Linux.
-- Migraciones de Django como única forma de cambiar el esquema.
-- Backups exportables con `pg_dump` y procedimiento documentado de restauración.
-- Pruebas automáticas ejecutables tanto en Windows como en Linux.
-- Interfaz web responsive; no dependerá de una aplicación nativa instalada.
-
-## Estructura portable prevista
-
-```text
-GestionFinanciera/
-├── app/
-│   ├── config/
-│   ├── modules/
-│   ├── templates/
-│   └── static/
-├── docker/
-│   ├── app/
-│   └── postgres/
-├── scripts/
-│   ├── dev.ps1
-│   ├── dev.sh
-│   ├── backup.ps1
-│   ├── backup.sh
-│   ├── restore.ps1
-│   └── restore.sh
-├── tests/
-├── docs/
-├── media/
-├── backups/
-├── compose.yaml
-├── Dockerfile
-├── pyproject.toml
-├── .env.example
-├── .gitignore
-├── .gitattributes
-└── README.md
-```
-
-`media/`, `backups/`, archivos `.env`, entornos virtuales y volúmenes de base
-de datos no se guardarán en Git.
-
-## Modos de ejecución previstos
-
-### Modo recomendado
+## Construcción
 
 ```powershell
-docker compose up --build
+powershell -ExecutionPolicy Bypass -File .\scripts\ConstruirPortable.ps1
 ```
 
-Este modo levantará aplicación y PostgreSQL con las mismas versiones en todos
-los equipos.
+El proceso debe:
 
-### Modo nativo de respaldo
+1. ejecutar los controles automáticos;
+2. generar los ejecutables;
+3. copiar únicamente recursos necesarios;
+4. iniciar una copia aislada;
+5. comprobar rutas y recursos visuales;
+6. generar el manifiesto y el ZIP.
 
-La aplicación Django podrá ejecutarse con Python 3.12 instalado en el equipo y
-una URL de conexión a PostgreSQL definida en el entorno. Este modo permitirá
-seguir trabajando si Docker Desktop no estuviera disponible, pero no será el
-modo principal para pruebas de integración o generación de PDF.
+## Verificación previa a una publicación
 
-## Criterio de preparación completa
+- El paquete inicia sin datos reales.
+- No contiene `.secret_key`, bases, respaldos ni exportaciones.
+- Las migraciones se aplican en una carpeta limpia.
+- Backup y restauración funcionan sobre datos ficticios.
+- El acceso móvil permanece desactivado por defecto.
+- El ZIP publicado incluye hash SHA-256 y notas de versión.
 
-El entorno fue aprobado para comenzar el desarrollo porque pasaron estas
-comprobaciones:
-
-```text
-[x] virtualización habilitada
-[x] WSL 2 operativo
-[x] Docker Engine operativo
-[x] Docker Compose operativo
-[x] contenedor de prueba ejecutado
-[x] Python 3.12 ejecutado en contenedor
-[x] PostgreSQL 18.4 ejecutado en contenedor
-[x] carpeta del proyecto accesible
-[x] puertos de desarrollo disponibles
-```
-
-## Referencias oficiales
-
-- [Instalación de WSL](https://learn.microsoft.com/es-es/windows/wsl/install)
-- [Docker Desktop para Windows](https://docs.docker.com/desktop/setup/install/windows-install/)
-- [Soporte de la placa Gigabyte](https://www.gigabyte.com/Motherboard/B550-AORUS-ELITE-AX-V2-rev-11/support)
+La evidencia funcional detallada está en [FASE_8_PRUEBAS_Y_PAQUETE_PORTABLE.md](FASE_8_PRUEBAS_Y_PAQUETE_PORTABLE.md) y [FASE_FINAL_3_QA.md](FASE_FINAL_3_QA.md).

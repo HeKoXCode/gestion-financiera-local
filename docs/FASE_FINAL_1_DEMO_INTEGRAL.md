@@ -2,9 +2,7 @@
 
 ## Resultado
 
-La demostración se entrega en una carpeta separada:
-
-`C:\Users\HeKoX\Downloads\GestionFinanciera_FaseFinal`
+La demostración se genera en una carpeta temporal separada de la instalación real, por ejemplo `tmp/GestionFinanciera_FaseFinal/`.
 
 Esa carpeta es autónoma. Su base de datos, copias, exportaciones y archivos
 multimedia no se mezclan con los de `GestionFinanciera`.
@@ -48,4 +46,3 @@ $env:GESTION_DATA_DIR = "C:\ruta\laboratorio\data"
 
 La protección y la cobertura del generador se verifican automáticamente en
 FaseFinal3.
-

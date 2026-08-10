@@ -1,0 +1,42 @@
+ACTUALIZACIÓN DE GESTIÓN FINANCIERA
+===================================
+
+Esta actualización conserva los clientes, ventas, cuotas, pagos, configuración,
+logo, respaldos, exportaciones y archivos históricos ya existentes.
+
+ANTES DE ACTUALIZAR
+
+1. Abrí el sistema del cliente.
+2. Elegí “Cerrar y respaldar”.
+3. Esperá a que la ventana confirme el cierre.
+4. Copiá a un pendrive o a otra carpeta el ZIP de respaldo más reciente.
+
+CÓMO INSTALAR LA ACTUALIZACIÓN
+
+1. NO borres ni renombres la carpeta GestiónFinanciera que ya usa el cliente.
+2. Abrí el ZIP de actualización.
+3. Extraé su carpeta “GestionFinanciera” en la misma ubicación donde está la
+   carpeta actual.
+4. Cuando Windows pregunte, elegí combinar carpetas y reemplazar archivos.
+5. Abrí GestiónFinanciera.exe normalmente.
+6. Comprobá un cliente, una venta y la pantalla Cobranza.
+
+IMPORTANTE
+
+El ZIP de actualización no contiene las carpetas data, backups, exports, media
+ni storage. Por eso reemplaza el programa pero no los datos del cliente.
+
+Nunca elimines la instalación actual antes de aplicar una actualización. Si se
+hiciera una instalación limpia en otra carpeta, los datos no se trasladarían
+automáticamente.
+
+MEJORAS DE ESTA VERSIÓN — 07/08/2026
+
+- resumen A4 imprimible de cada cliente;
+- buscadores de clientes y productos en Nueva venta;
+- carga de cuotas anteriores ya pagadas para ventas viejas;
+- opción de registrar la cuota 1 pagada o pendiente al entregar;
+- validaciones de cálculos y recargos reforzadas.
+- préstamos de dinero con capital, medio de entrega, interés y cuotas;
+- historial, cobranza, planillas, reportes y exportación compatibles con préstamos.
+- nueva identidad visual azul verdosa en el sistema y su ventana de inicio.

@@ -7,7 +7,7 @@ No depende solamente de probar botones a mano.
 
 ## Suite automática
 
-La suite contiene 159 pruebas y cubre:
+La suite contiene 212 pruebas y cubre:
 
 - modelos, restricciones e integridad;
 - generación semanal, quincenal y mensual;
@@ -26,7 +26,7 @@ La suite contiene 159 pruebas y cubre:
 - exactitud de consultas históricas;
 - límites de consultas para impedir el regreso del problema N+1.
 
-Cobertura medida: 90 % de líneas y ramas combinadas. El mínimo exigido por el
+Cobertura medida: 88 % de líneas y ramas combinadas. El mínimo exigido por el
 control final es 85 %.
 
 ## Ejecución completa
@@ -42,7 +42,7 @@ El control ejecuta, en orden:
 1. análisis estático;
 2. validación de Django;
 3. detección de migraciones olvidadas;
-4. las 159 pruebas;
+4. las 212 pruebas;
 5. medición de cobertura;
 6. copia temporal y aislada del portable;
 7. apertura de servidor y rutas;

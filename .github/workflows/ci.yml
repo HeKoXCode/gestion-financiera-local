@@ -9,12 +9,6 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 20
 
-    env:
-      GESTION_DATA_DIR: ${{ runner.temp }}/gestion-data
-      GESTION_BACKUP_DIR: ${{ runner.temp }}/gestion-backups
-      GESTION_EXPORT_DIR: ${{ runner.temp }}/gestion-exports
-      GESTION_MEDIA_DIR: ${{ runner.temp }}/gestion-media
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4

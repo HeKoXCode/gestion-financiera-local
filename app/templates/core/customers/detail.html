@@ -21,9 +21,28 @@
             Cliente desde {{ customer.created_at|date:"d/m/Y" }}
         </p>
     </div>
-    <div class="profile-actions">
-        <a class="btn btn-secondary" href="{% url 'core:customer_edit' customer.pk %}">Editar datos</a>
-        {% if customer.is_active %}<a class="btn btn-primary" href="{% url 'core:sale_create' %}?cliente={{ customer.pk }}">Nueva venta</a>{% endif %}
+    <div class="profile-action-stack">
+        <div class="profile-actions">
+            {% if statement_whatsapp_url %}
+                <button
+                    class="btn btn-whatsapp"
+                    type="button"
+                    data-statement-share
+                    data-pdf-url="{% url 'core:customer_statement_pdf' customer.pk %}"
+                    data-whatsapp-url="{{ statement_whatsapp_url }}"
+                    data-filename="{{ statement_filename }}"
+                    data-share-title="Resumen de {{ customer.full_name }}"
+                    data-share-text="Resumen de cuenta actualizado al {{ today|date:'d/m/Y' }}."
+                >Compartir por WhatsApp</button>
+            {% else %}
+                <button class="btn btn-secondary" type="button" disabled title="Agregá un teléfono al cliente para usar WhatsApp">WhatsApp (sin teléfono)</button>
+            {% endif %}
+            <a class="btn btn-secondary" href="{% url 'core:customer_statement_pdf' customer.pk %}" download>Guardar resumen PDF</a>
+            <a class="btn btn-secondary" href="{% url 'core:customer_print' customer.pk %}?imprimir=1" target="_blank" rel="noopener">Imprimir resumen</a>
+            <a class="btn btn-secondary" href="{% url 'core:customer_edit' customer.pk %}">Editar datos</a>
+            {% if customer.is_active %}<a class="btn btn-primary" href="{% url 'core:sale_create' %}?cliente={{ customer.pk }}">Nueva operación</a>{% endif %}
+        </div>
+        <small class="statement-share-status" data-share-status aria-live="polite"></small>
     </div>
 </section>
 
@@ -31,7 +50,7 @@
     <article><span>Total vendido en cuotas</span><strong>{{ total_installments|ars }}</strong><small>{{ product_count }} producto{{ product_count|pluralize }} diferente{{ product_count|pluralize }}</small></article>
     <article class="is-success"><span>Total abonado</span><strong>{{ total_paid|ars }}</strong><small>Pagos no anulados</small></article>
     <article class="{% if total_balance > 0 %}is-warning{% endif %}"><span>Saldo pendiente</span><strong>{{ total_balance|ars }}</strong><small>{{ active_sales }} venta{{ active_sales|pluralize }} activa{{ active_sales|pluralize }}</small></article>
-    <article class="{% if overdue_installments %}is-danger{% endif %}"><span>Cuotas atrasadas</span><strong>{{ overdue_installments }}</strong><small>{{ paid_installments }} cuota{{ paid_installments|pluralize }} pagada{{ paid_installments|pluralize }}</small></article>
+    <article class="{% if overdue_installments %}is-danger{% endif %}"><span>Cuotas atrasadas</span><strong>{{ overdue_installments }}</strong><small>{{ paid_installments }} cuota{{ paid_installments|pluralize }} pagada{{ paid_installments|pluralize }}{% if paid_late_installments %} · {{ paid_late_installments }} con atraso{% endif %}</small></article>
 </section>
 
 <nav class="section-nav" aria-label="Secciones del historial">
@@ -75,18 +94,18 @@
 
 <section class="panel" id="ventas">
     <div class="panel-header">
-        <div><p class="eyebrow">Historial comercial</p><h2>Productos y ventas</h2></div>
-        {% if customer.is_active %}<a class="btn btn-primary btn-compact" href="{% url 'core:sale_create' %}?cliente={{ customer.pk }}">＋ Nueva venta</a>{% endif %}
+        <div><p class="eyebrow">Historial comercial</p><h2>Ventas y préstamos</h2></div>
+        {% if customer.is_active %}<a class="btn btn-primary btn-compact" href="{% url 'core:sale_create' %}?cliente={{ customer.pk }}">＋ Nueva operación</a>{% endif %}
     </div>
     {% if sale_rows %}
     <div class="table-wrap">
         <table class="data-table responsive-table">
-            <thead><tr><th>Fecha de entrega</th><th>Producto</th><th>Plan</th><th>Estado</th><th class="align-right">Total en cuotas</th><th class="align-right">Pendiente hasta hoy</th><th></th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Operación</th><th>Plan</th><th>Estado</th><th class="align-right">Total acordado</th><th class="align-right">Pendiente hasta hoy</th><th></th></tr></thead>
             <tbody>
                 {% for row in sale_rows %}
                 <tr>
                     <td data-label="Fecha de entrega">{{ row.sale.delivery_date|date:"d/m/Y" }}</td>
-                    <td data-label="Producto"><a class="table-primary" href="{% url 'core:sale_detail' row.sale.pk %}">{{ row.sale.product_description }}</a></td>
+                    <td data-label="Operación"><a class="table-primary" href="{% url 'core:sale_detail' row.sale.pk %}">{{ row.sale.product_description }}</a><small>{{ row.sale.operation_name }}</small></td>
                     <td data-label="Plan">{{ row.sale.installment_count }} cuotas<small>{{ row.sale.get_frequency_display }}</small></td>
                     <td data-label="Estado"><span class="badge badge-{{ row.sale.status }}">{{ row.sale.get_status_display }}</span></td>
                     <td data-label="Total en cuotas" class="money-cell">{{ row.sale.financed_amount|ars }}</td>
@@ -113,16 +132,16 @@
     {% if installment_rows %}
     <div class="table-wrap history-table-wrap">
         <table class="data-table responsive-table">
-            <thead><tr><th>Producto</th><th>Cuota</th><th>Vencimiento</th><th>Estado</th><th class="align-right">Importe de cuota</th><th class="align-right">Recargos</th><th class="align-right">Saldo</th></tr></thead>
+            <thead><tr><th>Operación</th><th>Cuota</th><th>Vencimiento</th><th>Estado</th><th class="align-right">Importe de cuota</th><th class="align-right">Recargos</th><th class="align-right">Saldo</th></tr></thead>
             <tbody>
                 {% for row in installment_rows %}
                 <tr>
-                    <td data-label="Producto"><a class="table-primary" href="{% url 'core:sale_detail' row.sale.pk %}">{{ row.sale.product_description }}</a></td>
+                    <td data-label="Operación"><a class="table-primary" href="{% url 'core:sale_detail' row.sale.pk %}">{{ row.sale.product_description }}</a></td>
                     <td data-label="Cuota">{{ row.installment.number }}/{{ row.sale.installment_count }}</td>
                     <td data-label="Vencimiento">{{ row.installment.due_date|date:"d/m/Y" }}</td>
                     <td data-label="Estado"><span class="badge badge-history-{{ row.status }}">{{ row.status_label }}</span></td>
                     <td data-label="Importe de cuota" class="money-cell">{{ row.installment.original_amount|ars }}</td>
-                    <td data-label="Recargos" class="money-cell">{{ row.balance.late_fees_due|ars }}</td>
+                    <td data-label="Recargos" class="money-cell">{{ row.balance.late_fees_generated|ars }}</td>
                     <td data-label="Saldo" class="money-cell">{{ row.balance.total_due|ars }}</td>
                 </tr>
                 {% endfor %}
@@ -142,13 +161,13 @@
     {% if payments %}
     <div class="table-wrap">
         <table class="data-table responsive-table">
-            <thead><tr><th>Fecha</th><th>Tipo</th><th>Producto</th><th>Medio de pago</th><th>Estado</th><th>Observaciones</th><th class="align-right">Importe</th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Tipo</th><th>Operación</th><th>Medio de pago</th><th>Estado</th><th>Observaciones</th><th class="align-right">Importe</th></tr></thead>
             <tbody>
                 {% for payment in payments %}
                 <tr>
                     <td data-label="Fecha">{{ payment.payment_date|date:"d/m/Y" }}</td>
                     <td data-label="Tipo">{{ payment.get_kind_display }}</td>
-                    <td data-label="Producto"><a class="table-primary" href="{% url 'core:sale_detail' payment.sale_id %}">{{ payment.sale.product_description }}</a></td>
+                    <td data-label="Operación"><a class="table-primary" href="{% url 'core:sale_detail' payment.sale_id %}">{{ payment.sale.product_description }}</a></td>
                     <td data-label="Medio de pago">{{ payment.payment_method }}</td>
                     <td data-label="Estado">
                         {% if payment.status == "registered" %}<span class="badge badge-success">Registrado</span>{% else %}<span class="badge badge-danger">Anulado</span><small>{{ payment.void_reason }}</small>{% endif %}
@@ -187,4 +206,8 @@
     <div class="empty-state compact"><span class="empty-icon" aria-hidden="true">⌁</span><h3>Sin actividad</h3><p>Ventas, pagos y visitas formarán esta línea de tiempo.</p></div>
     {% endif %}
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% versioned_static 'js/customer-statement-share.js' %}" defer></script>
 {% endblock %}

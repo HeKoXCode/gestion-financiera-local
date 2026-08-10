@@ -10,7 +10,7 @@
     <div>
         <p class="eyebrow">Registrar pago</p>
         <h1>{{ sale.customer.full_name }}</h1>
-        <p>{{ sale.product_description }} · Venta #{{ sale.pk }}</p>
+        <p>{{ sale.product_description }} · {{ sale.operation_name }} #{{ sale.pk }}</p>
     </div>
     <div class="payment-due">
         <span>Pendiente hasta hoy</span>

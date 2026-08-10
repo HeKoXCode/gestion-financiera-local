@@ -1,3 +1,4 @@
+import hmac
 import logging
 from datetime import date, timedelta
 from pathlib import Path
@@ -8,10 +9,12 @@ from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import connection, transaction
 from django.db.models import Count, Q
-from django.http import FileResponse, Http404, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from launcher.backup import (
@@ -31,6 +34,7 @@ from modules.core.forms import (
     SaleCancellationForm,
     SaleForm,
 )
+from modules.core.middleware import MOBILE_SESSION_KEY, mobile_token_digest
 from modules.core.models import (
     BusinessSettings,
     CollectionAttempt,
@@ -43,11 +47,16 @@ from modules.core.services.agenda import build_weekly_agenda
 from modules.core.services.balances import (
     get_due_sale_balance,
     get_installment_balance,
+    get_installment_payment_timing,
     get_sale_balance,
     installment_balance_prefetches,
 )
 from modules.core.services.collection import build_collection_rows
 from modules.core.services.customer_history import build_customer_history
+from modules.core.services.customer_statement_pdf import (
+    build_customer_statement_pdf,
+    customer_statement_filename,
+)
 from modules.core.services.dashboard import build_dashboard
 from modules.core.services.export_data import (
     ExportError,
@@ -59,12 +68,15 @@ from modules.core.services.installments import create_installments
 from modules.core.services.late_fees import generate_missing_late_fees
 from modules.core.services.money import ZERO, as_money, format_ars
 from modules.core.services.payments import (
+    register_delivery_installment_payment,
+    register_historical_installment_payments,
     register_initial_payment,
     register_payment,
     void_payment,
 )
 from modules.core.services.recovery import refresh_recovery_backup
 from modules.core.services.reports import build_reports
+from modules.core.services.whatsapp import build_customer_statement_whatsapp_url
 
 logger = logging.getLogger(__name__)
 PAGE_SIZE = 20
@@ -115,6 +127,56 @@ def _add_validation_error(form, error: ValidationError) -> None:
 
 def _collection_redirect(selected_date):
     return redirect(f"/cobranza/?fecha={selected_date:%Y-%m-%d}")
+
+
+def _customer_statement_context(*, customer, as_of):
+    business_settings = BusinessSettings.get_solo()
+    return {
+        "customer": customer,
+        "today": as_of,
+        "statement_filename": customer_statement_filename(customer, as_of),
+        "statement_whatsapp_url": build_customer_statement_whatsapp_url(
+            customer=customer,
+            as_of=as_of,
+            settings=business_settings,
+        ),
+        **build_customer_history(customer=customer, as_of=as_of),
+    }
+
+
+@require_GET
+def mobile_access(request):
+    expected_token = getattr(
+        django_settings,
+        "GESTION_MOBILE_ACCESS_TOKEN",
+        "",
+    )
+    supplied_token = request.GET.get("clave", "")
+    enabled = getattr(
+        django_settings,
+        "GESTION_MOBILE_ACCESS_ENABLED",
+        False,
+    )
+    if enabled and expected_token and hmac.compare_digest(
+        supplied_token,
+        expected_token,
+    ):
+        request.session[MOBILE_SESSION_KEY] = mobile_token_digest(expected_token)
+        request.session.set_expiry(0)
+        destination = request.GET.get("continuar", "/")
+        if not url_has_allowed_host_and_scheme(
+            destination,
+            allowed_hosts={request.get_host()},
+            require_https=False,
+        ):
+            destination = "/"
+        return redirect(destination)
+
+    return render(
+        request,
+        "core/mobile_access.html",
+        status=403,
+    )
 
 
 @require_GET
@@ -351,11 +413,15 @@ def customer_list(request):
 
 @require_http_methods(["GET", "POST"])
 def customer_create(request):
+    return_to_sale = request.GET.get("volver") == "venta"
     form = CustomerForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         customer = form.save()
         refresh_recovery_backup()
         messages.success(request, f"Cliente {customer.full_name} creado correctamente.")
+        if return_to_sale:
+            destination = reverse("core:sale_create")
+            return redirect(f"{destination}?cliente={customer.pk}&restaurar=1")
         return redirect("core:customer_detail", pk=customer.pk)
 
     return render(
@@ -366,6 +432,7 @@ def customer_create(request):
             "title": "Nuevo cliente",
             "subtitle": "Guardá los datos necesarios para encontrar y cobrar al cliente.",
             "submit_label": "Guardar cliente",
+            "return_to_sale": return_to_sale,
         },
     )
 
@@ -375,16 +442,45 @@ def customer_detail(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
     today = timezone.localdate()
     generate_missing_late_fees(as_of=today)
-    history = build_customer_history(customer=customer, as_of=today)
     return render(
         request,
         "core/customers/detail.html",
-        {
-            "customer": customer,
-            "today": today,
-            **history,
-        },
+        _customer_statement_context(customer=customer, as_of=today),
     )
+
+
+@require_GET
+def customer_print(request, pk):
+    customer = get_object_or_404(Customer, pk=pk)
+    today = timezone.localdate()
+    generate_missing_late_fees(as_of=today)
+    context = _customer_statement_context(customer=customer, as_of=today)
+    context["auto_print"] = request.GET.get("imprimir") == "1"
+    return render(
+        request,
+        "core/print/customer_summary.html",
+        context,
+    )
+
+
+@require_GET
+def customer_statement_pdf(request, pk):
+    customer = get_object_or_404(Customer, pk=pk)
+    today = timezone.localdate()
+    generate_missing_late_fees(as_of=today)
+    history = build_customer_history(customer=customer, as_of=today)
+    business_settings = BusinessSettings.get_solo()
+    filename = customer_statement_filename(customer, today)
+    pdf = build_customer_statement_pdf(
+        customer=customer,
+        as_of=today,
+        history=history,
+        settings=business_settings,
+    )
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    response["Cache-Control"] = "no-store"
+    return response
 
 
 @require_http_methods(["GET", "POST"])
@@ -451,11 +547,15 @@ def product_list(request):
 
 @require_http_methods(["GET", "POST"])
 def product_create(request):
+    return_to_sale = request.GET.get("volver") == "venta"
     form = ProductForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         product = form.save()
         refresh_recovery_backup()
         messages.success(request, f"Producto {product.name} creado correctamente.")
+        if return_to_sale:
+            destination = reverse("core:sale_create")
+            return redirect(f"{destination}?producto={product.pk}&restaurar=1")
         return redirect("core:product_list")
 
     return render(
@@ -466,6 +566,7 @@ def product_create(request):
             "title": "Nuevo producto",
             "subtitle": "Creá un artículo reutilizable al registrar ventas.",
             "submit_label": "Guardar producto",
+            "return_to_sale": return_to_sale,
         },
     )
 
@@ -545,10 +646,15 @@ def sale_create(request):
     settings = BusinessSettings.get_solo()
     initial = {}
     requested_customer = request.GET.get("cliente")
+    requested_product = request.GET.get("producto")
     if request.method == "GET" and requested_customer:
         customer = Customer.objects.filter(pk=requested_customer, is_active=True).first()
         if customer:
             initial["customer"] = customer
+    if request.method == "GET" and requested_product:
+        product = Product.objects.filter(pk=requested_product, is_active=True).first()
+        if product:
+            initial["product"] = product
     form = SaleForm(request.POST or None, settings=settings, initial=initial)
 
     if request.method == "POST" and form.is_valid():
@@ -565,13 +671,43 @@ def sale_create(request):
                     payment_method=form.cleaned_data.get("down_payment_method", ""),
                     settings=settings,
                 )
+                if (
+                    form.cleaned_data.get("first_installment_delivery_status")
+                    == SaleForm.FIRST_INSTALLMENT_PAID
+                ):
+                    register_delivery_installment_payment(
+                        sale=sale,
+                        payment_method=form.cleaned_data.get(
+                            "first_installment_payment_method",
+                            "",
+                        ),
+                        settings=settings,
+                    )
+                register_historical_installment_payments(
+                    sale=sale,
+                    paid_installment_count=form.cleaned_data.get(
+                        "historical_paid_installments",
+                        0,
+                    ),
+                    payment_method=form.cleaned_data.get(
+                        "historical_payment_method",
+                        "",
+                    ),
+                    late_installments=form.cleaned_data.get(
+                        "historical_late_installments",
+                        {},
+                    ),
+                    settings=settings,
+                )
         except ValidationError as exc:
-            form.add_error(None, exc)
+            _add_validation_error(form, exc)
         else:
             refresh_recovery_backup()
             messages.success(
                 request,
-                f"Venta registrada con {sale.installment_count} cuotas.",
+                f"{sale.operation_name} "
+                f"{'registrado' if sale.is_loan else 'registrada'} "
+                f"con {sale.installment_count} cuotas.",
             )
             return redirect("core:sale_detail", pk=sale.pk)
 
@@ -581,6 +717,7 @@ def sale_create(request):
         {
             "form": form,
             "settings": settings,
+            "today": timezone.localdate(),
         },
     )
 
@@ -601,6 +738,10 @@ def sale_detail(request, pk):
         {
             "installment": installment,
             "balance": get_installment_balance(installment, as_of=today),
+            "payment_timing": get_installment_payment_timing(
+                installment,
+                as_of=today,
+            ),
         }
         for installment in sale.installments.all()
     ]
@@ -636,7 +777,7 @@ def sale_detail(request, pk):
 def sale_cancel(request, pk):
     sale = get_object_or_404(Sale.objects.select_related("customer"), pk=pk)
     if sale.status != Sale.Status.ACTIVE:
-        messages.error(request, "Solo se puede cancelar una venta activa.")
+        messages.error(request, "Solo se puede cancelar una operación activa.")
         return redirect("core:sale_detail", pk=sale.pk)
 
     form = SaleCancellationForm(request.POST or None)
@@ -654,7 +795,7 @@ def sale_cancel(request, pk):
             ]
         )
         refresh_recovery_backup()
-        messages.success(request, "La venta fue cancelada sin eliminar su historial.")
+        messages.success(request, "La operación fue cancelada sin eliminar su historial.")
         return redirect("core:sale_detail", pk=sale.pk)
 
     return render(

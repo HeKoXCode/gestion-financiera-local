@@ -5,7 +5,7 @@
 {% block content %}
 <header class="page-header">
     <div>
-        <a class="back-link" href="{% url 'core:product_list' %}">‹ Volver a productos</a>
+        <a class="back-link" href="{% if return_to_sale %}{% url 'core:sale_create' %}?restaurar=1{% else %}{% url 'core:product_list' %}{% endif %}">‹ {% if return_to_sale %}Volver a la venta{% else %}Volver a productos{% endif %}</a>
         <p class="eyebrow">Catálogo comercial</p>
         <h1>{{ title }}</h1>
         <p class="page-subtitle">{{ subtitle }}</p>
@@ -29,9 +29,8 @@
         </div>
     </section>
     <div class="form-actions">
-        <a class="btn btn-ghost" href="{% url 'core:product_list' %}">Cancelar</a>
+        <a class="btn btn-ghost" href="{% if return_to_sale %}{% url 'core:sale_create' %}?restaurar=1{% else %}{% url 'core:product_list' %}{% endif %}">Cancelar</a>
         <button class="btn btn-primary" type="submit">{{ submit_label }}</button>
     </div>
 </form>
 {% endblock %}
-

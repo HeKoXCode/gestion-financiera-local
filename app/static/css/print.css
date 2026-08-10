@@ -52,15 +52,39 @@ body {
     font-size: 11px;
 }
 
-.print-toolbar button {
+.print-toolbar .toolbar-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 8px 18px;
-    border: 0;
+    border: 1px solid rgb(255 255 255 / 24%);
     border-radius: 7px;
-    background: #e4ac50;
-    color: #1d2e28;
+    background: rgb(255 255 255 / 10%);
+    color: #fff;
     font: inherit;
     font-weight: 800;
     cursor: pointer;
+    text-decoration: none;
+}
+
+.print-toolbar .toolbar-action:hover:not(:disabled) {
+    background: rgb(255 255 255 / 18%);
+}
+
+.print-toolbar .toolbar-action:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.print-toolbar .toolbar-whatsapp {
+    border-color: #3aca79;
+    background: #168549;
+}
+
+.print-toolbar .toolbar-print {
+    border-color: #e4ac50;
+    background: #e4ac50;
+    color: #1d2e28;
 }
 
 .print-sheet {

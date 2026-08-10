@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex,nofollow">
+    <title>Acceso desde celular · Gestión Financiera</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: "Segoe UI", system-ui, sans-serif;
+            background: #edf4f1;
+            color: #17211d;
+        }
+        * { box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            margin: 0;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background:
+                radial-gradient(circle at top left, rgba(66, 184, 131, .18), transparent 38%),
+                linear-gradient(145deg, #f6f8f6, #e7f1ed);
+        }
+        main {
+            width: min(100%, 430px);
+            padding: 32px;
+            border: 1px solid #d3e1db;
+            border-radius: 22px;
+            background: rgba(255, 255, 255, .96);
+            box-shadow: 0 24px 60px rgba(15, 76, 58, .14);
+        }
+        .mark {
+            width: 52px;
+            height: 52px;
+            display: grid;
+            place-items: center;
+            border-radius: 15px;
+            background: linear-gradient(145deg, #0f4c3a, #178568);
+            color: white;
+            font-weight: 800;
+            letter-spacing: .08em;
+        }
+        p:first-of-type {
+            margin: 24px 0 7px;
+            color: #178568;
+            font-size: .76rem;
+            font-weight: 800;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+        }
+        h1 {
+            margin: 0;
+            font-size: clamp(1.65rem, 8vw, 2.25rem);
+            line-height: 1.05;
+        }
+        .detail {
+            margin: 16px 0 0;
+            color: #607069;
+            line-height: 1.55;
+        }
+        .notice {
+            margin-top: 24px;
+            padding: 15px 17px;
+            border-radius: 14px;
+            background: #f4f7f5;
+            color: #33443d;
+            font-size: .92rem;
+            line-height: 1.45;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="mark">GF</div>
+        <p>Acceso protegido</p>
+        <h1>No se reconoció este celular</h1>
+        <div class="detail">
+            Escaneá nuevamente el código QR que aparece en la computadora.
+            La clave cambia cada vez que se inicia el sistema.
+        </div>
+        <div class="notice">
+            Si el QR no abre, verificá que el celular y la computadora estén
+            conectados a la misma red Wi-Fi.
+        </div>
+    </main>
+</body>
+</html>

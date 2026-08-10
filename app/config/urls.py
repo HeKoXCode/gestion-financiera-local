@@ -4,7 +4,7 @@ from django.views.static import serve
 
 
 def serve_local_media(request, path):
-    """Serve user-owned media because this application is bound to localhost."""
+    """Serve user-owned media through the protected local application."""
     return serve(request, path, document_root=settings.MEDIA_ROOT)
 
 

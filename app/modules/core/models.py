@@ -218,6 +218,10 @@ class Product(TimestampedModel):
 
 
 class Sale(TimestampedModel):
+    class OperationType(models.TextChoices):
+        PRODUCT = "product", "Venta de producto"
+        LOAN = "loan", "Préstamo de dinero"
+
     class Frequency(models.TextChoices):
         WEEKLY = "weekly", "Semanal"
         BIWEEKLY = "biweekly", "Cada 2 semanas"
@@ -238,7 +242,15 @@ class Sale(TimestampedModel):
         Product,
         on_delete=models.PROTECT,
         related_name="sales",
+        blank=True,
+        null=True,
         verbose_name="producto",
+    )
+    operation_type = models.CharField(
+        max_length=16,
+        choices=OperationType.choices,
+        default=OperationType.PRODUCT,
+        verbose_name="tipo de operación",
     )
     product_description = models.CharField(
         max_length=250,
@@ -250,6 +262,18 @@ class Sale(TimestampedModel):
         decimal_places=2,
         validators=[MinValueValidator(MIN_MONEY)],
         verbose_name="precio del producto",
+    )
+    loan_disbursement_method = models.CharField(
+        max_length=40,
+        blank=True,
+        verbose_name="medio de entrega del préstamo",
+    )
+    loan_interest_rate = models.DecimalField(
+        max_digits=7,
+        decimal_places=2,
+        default=ZERO,
+        validators=[MinValueValidator(ZERO)],
+        verbose_name="interés total del préstamo",
     )
     down_payment = models.DecimalField(
         max_digits=14,
@@ -321,6 +345,17 @@ class Sale(TimestampedModel):
                 condition=Q(daily_late_fee__gte=ZERO),
                 name="sale_late_fee_non_negative",
             ),
+            models.CheckConstraint(
+                condition=Q(loan_interest_rate__gte=ZERO),
+                name="sale_loan_interest_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(operation_type="product", product__isnull=False)
+                    | Q(operation_type="loan", product__isnull=True)
+                ),
+                name="sale_product_matches_operation_type",
+            ),
         ]
         indexes = [
             models.Index(fields=["status"], name="sale_status_idx"),
@@ -335,8 +370,24 @@ class Sale(TimestampedModel):
         return self.status == self.Status.ACTIVE
 
     @property
+    def is_loan(self) -> bool:
+        return self.operation_type == self.OperationType.LOAN
+
+    @property
+    def operation_name(self) -> str:
+        return "Préstamo" if self.is_loan else "Venta"
+
+    @property
+    def loan_interest_amount(self) -> Decimal:
+        if not self.is_loan:
+            return ZERO
+        return max(ZERO, self.financed_amount - self.cash_price)
+
+    @property
     def base_financed_amount(self) -> Decimal:
         """Price left after the initial payment, before financing adjustments."""
+        if self.is_loan:
+            return self.cash_price
         return max(ZERO, self.cash_price - self.down_payment)
 
     @property
@@ -351,14 +402,35 @@ class Sale(TimestampedModel):
         super().clean()
         errors: dict[str, str] = {}
 
-        if (
-            self.cash_price is not None
-            and self.down_payment is not None
-            and self.down_payment >= self.cash_price
-        ):
-            errors["down_payment"] = (
-                "El pago inicial debe ser menor al precio del producto; el resto se paga en cuotas."
-            )
+        if self.is_loan:
+            if self.product_id is not None:
+                errors["product"] = "Un préstamo no debe estar vinculado a un producto."
+            if self.down_payment != ZERO:
+                errors["down_payment"] = "Un préstamo no utiliza pago inicial."
+            if not self.loan_disbursement_method.strip():
+                errors["loan_disbursement_method"] = (
+                    "El préstamo debe indicar cómo se entregó el dinero."
+                )
+            if (
+                self.cash_price is not None
+                and self.financed_amount is not None
+                and self.financed_amount < self.cash_price
+            ):
+                errors["financed_amount"] = (
+                    "El total a devolver no puede ser menor al dinero prestado."
+                )
+        else:
+            if self.product_id is None:
+                errors["product"] = "Una venta debe indicar el producto."
+            if (
+                self.cash_price is not None
+                and self.down_payment is not None
+                and self.down_payment >= self.cash_price
+            ):
+                errors["down_payment"] = (
+                    "El pago inicial debe ser menor al precio del producto; "
+                    "el resto se paga en cuotas."
+                )
 
         if self.first_due_date and self.delivery_date and self.first_due_date < self.delivery_date:
             errors["first_due_date"] = "El primer vencimiento no puede ser anterior a la entrega."

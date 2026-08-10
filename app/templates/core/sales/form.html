@@ -1,37 +1,43 @@
 {% extends "base.html" %}
 {% load finance %}
 
-{% block title %}Nueva venta · Gestión Financiera{% endblock %}
+{% block title %}Nueva operación · Gestión Financiera{% endblock %}
 
 {% block content %}
 <header class="page-header">
     <div>
-        <a class="back-link" href="{% url 'core:sale_list' %}">‹ Volver a ventas</a>
-        <p class="eyebrow">Nueva venta financiada</p>
-        <h1>Registrar venta</h1>
-        <p class="page-subtitle">Completá las condiciones y revisá las cuotas antes de confirmar.</p>
+        <a class="back-link" href="{% url 'core:sale_list' %}">‹ Volver a ventas y préstamos</a>
+        <p class="eyebrow">Nueva operación financiada</p>
+        <h1>Registrar venta o préstamo</h1>
+        <p class="page-subtitle">Elegí el tipo de operación, completá las condiciones y revisá las cuotas.</p>
     </div>
     <div class="config-note">
         <span>Recargo diario</span>
         <strong>{{ settings.daily_late_fee|ars }}</strong>
-        <small>Se mantendrá fijo para esta venta</small>
+        <small>Se mantendrá fijo para esta operación</small>
     </div>
 </header>
 
-{% if not form.fields.customer.queryset.exists or not form.fields.product.queryset.exists %}
+{% if not form.fields.customer.queryset.exists %}
 <div class="dependency-alert">
     <div>
-        <strong>Antes de registrar una venta necesitás un cliente y un producto activos.</strong>
-        <p>Podés crearlos ahora y volver a esta pantalla.</p>
+        <strong>Para registrar una venta necesitás un cliente y un producto activos.</strong>
+        <p>Para un préstamo solo necesitás el cliente. Podés crearlo ahora y volver sin perder lo ingresado.</p>
     </div>
     <div>
-        <a class="btn btn-secondary btn-compact" href="{% url 'core:customer_create' %}">Nuevo cliente</a>
-        <a class="btn btn-secondary btn-compact" href="{% url 'core:product_create' %}">Nuevo producto</a>
+        <a class="btn btn-secondary btn-compact" href="{% url 'core:customer_create' %}?volver=venta" data-sale-draft-link>Nuevo cliente</a>
     </div>
 </div>
 {% endif %}
 
-<form method="post" id="sale-form" class="sale-form-layout" novalidate>
+{% if not form.fields.product.queryset.exists %}
+<div class="dependency-alert dependency-alert-soft">
+    <div><strong>No hay productos activos.</strong><p>Podés registrar préstamos normalmente o crear un producto para una venta.</p></div>
+    <a class="btn btn-secondary btn-compact" href="{% url 'core:product_create' %}?volver=venta" data-sale-draft-link>Nuevo producto</a>
+</div>
+{% endif %}
+
+<form method="post" id="sale-form" class="sale-form-layout" data-today="{{ today|date:'Y-m-d' }}" novalidate>
     {% csrf_token %}
     <div class="sale-form-main">
         {% include "core/partials/form_errors.html" %}
@@ -40,25 +46,56 @@
             <div class="form-section-heading">
                 <span>01</span>
                 <div>
-                    <h2>Cliente y producto</h2>
-                    <p>La descripción queda guardada aunque el producto cambie después.</p>
+                    <h2>Cliente y tipo de operación</h2>
+                    <p>Primero indicá si entregaste un producto o dinero.</p>
                 </div>
+            </div>
+            <div class="field span-2 operation-type-field">
+                <label>¿Qué operación querés registrar?</label>
+                <div class="operation-type-choices">{{ form.operation_type }}</div>
+                {% for error in form.operation_type.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
             </div>
             <div class="form-grid two-columns">
                 <div class="field">
                     <label for="{{ form.customer.id_for_label }}">Cliente</label>
+                    <div class="select-search-box">
+                        <span aria-hidden="true">⌕</span>
+                        <input class="form-control" type="search" autocomplete="off"
+                               placeholder="Buscar por nombre, DNI o domicilio"
+                               aria-label="Buscar cliente"
+                               aria-autocomplete="list" aria-expanded="false"
+                               data-select-label="cliente"
+                               data-select-search="#{{ form.customer.id_for_label }}" autofocus>
+                    </div>
                     {{ form.customer }}
+                    <small class="select-search-count" data-select-search-count="#{{ form.customer.id_for_label }}"></small>
                     {% for error in form.customer.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
-                    <a class="field-link" href="{% url 'core:customer_create' %}">＋ Crear cliente</a>
+                    <a class="field-link" href="{% url 'core:customer_create' %}?volver=venta" data-sale-draft-link>＋ Crear cliente</a>
                 </div>
-                <div class="field">
+                <div class="field" data-product-only>
                     <label for="{{ form.product.id_for_label }}">Producto</label>
+                    <div class="select-search-box">
+                        <span aria-hidden="true">⌕</span>
+                        <input class="form-control" type="search" autocomplete="off"
+                               placeholder="Buscar por nombre o descripción"
+                               aria-label="Buscar producto"
+                               aria-autocomplete="list" aria-expanded="false"
+                               data-select-label="producto"
+                               data-select-search="#{{ form.product.id_for_label }}">
+                    </div>
                     {{ form.product }}
+                    <small class="select-search-count" data-select-search-count="#{{ form.product.id_for_label }}"></small>
                     {% for error in form.product.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
-                    <a class="field-link" href="{% url 'core:product_create' %}">＋ Crear producto</a>
+                    <a class="field-link" href="{% url 'core:product_create' %}?volver=venta" data-sale-draft-link>＋ Crear producto</a>
+                </div>
+                <div class="field" data-loan-only hidden>
+                    <label for="{{ form.loan_disbursement_method.id_for_label }}">¿Cómo se entregó el dinero?</label>
+                    {{ form.loan_disbursement_method }}
+                    <p class="field-help">Por ejemplo: efectivo o transferencia.</p>
+                    {% for error in form.loan_disbursement_method.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
                 <div class="field span-2">
-                    <label for="{{ form.product_description.id_for_label }}">Descripción en esta venta</label>
+                    <label id="operation-description-label" for="{{ form.product_description.id_for_label }}">Descripción en esta venta</label>
                     {{ form.product_description }}
                     {% for error in form.product_description.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
@@ -75,37 +112,44 @@
             </div>
             <div class="form-grid two-columns">
                 <div class="field">
-                    <label for="{{ form.cash_price.id_for_label }}">Precio del producto</label>
+                    <label id="cash-price-label" for="{{ form.cash_price.id_for_label }}">Precio del producto</label>
                     <div class="money-input"><span>$</span>{{ form.cash_price }}</div>
-                    <p class="field-help">Valor acordado del producto, antes de dividir el pago.</p>
+                    <p class="field-help">Podés escribirlo o calcularlo más abajo con cantidad de cuotas × monto de cada cuota.</p>
                     {% for error in form.cash_price.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
-                <div class="field">
-                    <label for="{{ form.down_payment.id_for_label }}">Pago inicial</label>
+                <div class="field" data-product-only>
+                    <label for="{{ form.down_payment.id_for_label }}">Pago inicial aparte</label>
                     <div class="money-input"><span>$</span>{{ form.down_payment }}</div>
-                    <p class="field-help">Dinero que el cliente paga al recibir el producto. Usá 0 si todo se pagará en cuotas.</p>
+                    <p class="field-help">Es una entrega o anticipo separado. No escribas aquí el importe de la cuota 1.</p>
                     {% for error in form.down_payment.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
-                <div class="field span-2 financing-mode">
+                <div class="field" data-product-only>
+                    <label for="{{ form.down_payment_method.id_for_label }}">Medio del pago inicial aparte</label>
+                    {{ form.down_payment_method }}
+                    <p class="field-help">Solo es necesario cuando el cliente realiza un pago inicial aparte.</p>
+                    {% for error in form.down_payment_method.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="field" data-loan-only hidden>
+                    <label for="{{ form.loan_interest_rate.id_for_label }}">Interés total</label>
+                    <div class="percent-input">{{ form.loan_interest_rate }}<span>%</span></div>
+                    <p class="field-help">Se aplica una sola vez sobre el dinero prestado; no es interés mensual.</p>
+                    {% for error in form.loan_interest_rate.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="field">
+                    <label id="financed-amount-label" for="{{ form.financed_amount.id_for_label }}">Total en cuotas</label>
+                    <div class="money-input"><span>$</span>{{ form.financed_amount }}</div>
+                    <p class="field-help" id="financing-mode-note">Se calcula automáticamente como precio menos pago inicial aparte.</p>
+                    {% for error in form.financed_amount.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="field span-2 financing-mode financing-mode-optional">
                     <label for="{{ form.custom_installment_total.id_for_label }}">
                         {{ form.custom_installment_total }}
                         <span>
-                            <strong>Modificar el total que se pagará en cuotas</strong>
-                            <small>Activá esta opción si acordaste un costo de financiación o un descuento.</small>
+                            <em>OPCIONAL</em>
+                            <strong id="custom-total-label">Usar otro total en cuotas</strong>
+                            <small id="custom-total-help">Solo activalo si el total acordado será distinto de precio menos pago inicial aparte.</small>
                         </span>
                     </label>
-                </div>
-                <div class="field">
-                    <label for="{{ form.down_payment_method.id_for_label }}">Medio del pago inicial</label>
-                    {{ form.down_payment_method }}
-                    <p class="field-help">Solo es necesario cuando el cliente realiza un pago inicial.</p>
-                    {% for error in form.down_payment_method.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
-                </div>
-                <div class="field">
-                    <label for="{{ form.financed_amount.id_for_label }}">Total en cuotas</label>
-                    <div class="money-input"><span>$</span>{{ form.financed_amount }}</div>
-                    <p class="field-help" id="financing-mode-note">Se calcula automáticamente como precio menos pago inicial.</p>
-                    {% for error in form.financed_amount.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
             </div>
         </section>
@@ -115,19 +159,46 @@
                 <span>03</span>
                 <div>
                     <h2>Entrega y plan de cuotas</h2>
-                    <p>La primera fecha determina los vencimientos siguientes.</p>
+                    <p>El vencimiento de la cuota 1 determina los vencimientos siguientes.</p>
                 </div>
             </div>
             <div class="form-grid two-columns">
                 <div class="field">
-                    <label for="{{ form.delivery_date.id_for_label }}">Fecha de entrega</label>
+                    <label id="delivery-date-label" for="{{ form.delivery_date.id_for_label }}">Fecha de entrega</label>
                     {{ form.delivery_date }}
                     {% for error in form.delivery_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
                 <div class="field">
-                    <label for="{{ form.first_due_date.id_for_label }}">Fecha del primer cobro</label>
+                    <label for="{{ form.first_due_date.id_for_label }}">Vencimiento de la cuota 1</label>
                     {{ form.first_due_date }}
                     {% for error in form.first_due_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="field span-2 same-day-due-option">
+                    <label for="{{ form.same_day_first_due.id_for_label }}">
+                        {{ form.same_day_first_due }}
+                        <span>
+                            <strong id="same-day-due-label">La cuota 1 vence el día de la entrega</strong>
+                            <small>Después indicá si fue pagada en ese momento o quedó pendiente.</small>
+                        </span>
+                    </label>
+                </div>
+                <div class="field span-2 delivery-installment-panel" id="delivery-installment-panel" hidden>
+                    <div class="delivery-installment-heading">
+                        <strong id="delivery-installment-question">¿Qué pasó con la cuota 1 al entregar?</strong>
+                        <small>El pago inicial aparte, si existe, no reemplaza esta cuota.</small>
+                    </div>
+                    <div class="delivery-installment-choices">
+                        {{ form.first_installment_delivery_status }}
+                    </div>
+                    {% for error in form.first_installment_delivery_status.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                    <div class="delivery-installment-method" id="delivery-installment-method" hidden>
+                        <label for="{{ form.first_installment_payment_method.id_for_label }}">Medio de pago de la cuota 1</label>
+                        {{ form.first_installment_payment_method }}
+                        {% for error in form.first_installment_payment_method.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                    </div>
+                    <p class="delivery-installment-summary" id="delivery-installment-summary">
+                        Elegí si la cuota 1 fue pagada o quedó pendiente.
+                    </p>
                 </div>
                 <div class="field">
                     <label for="{{ form.frequency.id_for_label }}">Frecuencia</label>
@@ -140,13 +211,67 @@
                     {% if form.installment_count.help_text %}<p class="field-help">{{ form.installment_count.help_text }}</p>{% endif %}
                     {% for error in form.installment_count.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
+                <div class="field span-2 installment-price-calculator">
+                    <label for="{{ form.installment_amount.id_for_label }}">Monto de cada cuota <span>Opcional</span></label>
+                    <div class="money-input"><span>$</span>{{ form.installment_amount }}</div>
+                    <p class="field-help" id="installment-calculation-note">Si lo completás, cantidad de cuotas × monto de cada cuota calculará el precio automáticamente.</p>
+                    {% for error in form.installment_amount.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
             </div>
+        </section>
+
+        <section class="form-card historical-sale-card" data-historical-section>
+            <div class="form-section-heading">
+                <span>04</span>
+                <div>
+                    <h2>Carga de una operación anterior</h2>
+                    <p>Usalo si el cliente ya venía pagando esta venta o préstamo antes de incorporarlo al sistema.</p>
+                </div>
+            </div>
+            <div class="historical-explanation">
+                <strong>¿Cómo se guarda?</strong>
+                <p>Si indicás 11, las primeras 11 quedarán pagadas. Después podés marcar solamente las que llegaron tarde.</p>
+            </div>
+            <div class="form-grid two-columns">
+                <div class="field">
+                    <label for="{{ form.historical_paid_installments.id_for_label }}">Cantidad total de cuotas ya pagadas</label>
+                    {{ form.historical_paid_installments }}
+                    <p class="field-help">Contalas desde la cuota 1. Si se pagó al entregar, también está incluida en este número. Solo se aceptan cuotas que ya vencieron.</p>
+                    {% for error in form.historical_paid_installments.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="field">
+                    <label for="{{ form.historical_payment_method.id_for_label }}">Medio de esos pagos</label>
+                    {{ form.historical_payment_method }}
+                    <p class="field-help">Se aplicará a cada cuota marcada como pagada.</p>
+                    {% for error in form.historical_payment_method.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
+            </div>
+            {{ form.historical_late_installments }}
+            <div class="historical-late-picker" id="historical-late-picker" hidden>
+                <div class="historical-late-heading">
+                    <div>
+                        <strong>¿Alguna de estas cuotas se pagó tarde?</strong>
+                        <small>Tocá únicamente los números que tuvieron atraso.</small>
+                    </div>
+                    <span id="historical-late-count">Todas en fecha</span>
+                </div>
+                <div class="historical-installment-chips" id="historical-installment-chips"></div>
+                <div class="historical-installment-legend" aria-label="Significado de los colores">
+                    <span><i class="is-on-time" aria-hidden="true"></i>Pagada en fecha</span>
+                    <span><i class="is-late" aria-hidden="true"></i>Con atraso</span>
+                    <span><i class="is-not-due" aria-hidden="true"></i>Aún no venció</span>
+                </div>
+                <p class="historical-late-feedback" id="historical-late-feedback" aria-live="polite" hidden></p>
+                <div class="historical-late-details" id="historical-late-details"></div>
+            </div>
+            {% for error in form.historical_late_installments.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            <p class="historical-summary" id="historical-summary">No se marcarán cuotas anteriores como pagadas.</p>
         </section>
 
         <div class="form-actions">
             <a class="btn btn-ghost" href="{% url 'core:sale_list' %}">Cancelar</a>
             <button class="btn btn-primary" id="sale-submit" type="submit"
-                    {% if not form.fields.customer.queryset.exists or not form.fields.product.queryset.exists %}disabled{% endif %}>
+                    {% if not form.fields.customer.queryset.exists %}disabled{% endif %}>
                 Confirmar y generar cuotas
             </button>
         </div>
@@ -161,16 +286,16 @@
             <span id="preview-frequency" class="badge badge-neutral">Sin datos</span>
         </div>
         <div class="preview-total">
-            <span>Total en cuotas</span>
+            <span id="preview-total-label">Total en cuotas</span>
             <strong id="preview-total">$ 0,00</strong>
-            <small id="preview-caption">Completá monto, cantidad y primera fecha.</small>
+            <small id="preview-caption">Completá el total, la cantidad y el vencimiento de la cuota 1.</small>
         </div>
         <dl class="sale-money-breakdown">
-            <div><dt>Precio del producto</dt><dd id="preview-product-price">$ 0,00</dd></div>
-            <div><dt>Pago inicial</dt><dd id="preview-down-payment">$ 0,00</dd></div>
-            <div><dt>Saldo del producto</dt><dd id="preview-base-balance">$ 0,00</dd></div>
+            <div><dt id="preview-price-label">Precio del producto</dt><dd id="preview-product-price">$ 0,00</dd></div>
+            <div data-product-only><dt>Pago inicial aparte</dt><dd id="preview-down-payment">$ 0,00</dd></div>
+            <div data-product-only><dt>Saldo del producto</dt><dd id="preview-base-balance">$ 0,00</dd></div>
             <div><dt id="preview-adjustment-label">Ajuste por financiación</dt><dd id="preview-adjustment">$ 0,00</dd></div>
-            <div class="breakdown-total"><dt>Total final de la venta</dt><dd id="preview-operation-total">$ 0,00</dd></div>
+            <div class="breakdown-total"><dt id="preview-operation-total-label">Total final de la venta</dt><dd id="preview-operation-total">$ 0,00</dd></div>
         </dl>
         <div id="preview-empty" class="preview-empty">
             <span aria-hidden="true">⌁</span>

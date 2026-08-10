@@ -5,7 +5,7 @@
 {% block content %}
 <header class="page-header">
     <div>
-        <a class="back-link" href="{% if customer %}{% url 'core:customer_detail' customer.pk %}{% else %}{% url 'core:customer_list' %}{% endif %}">‹ Volver a clientes</a>
+        <a class="back-link" href="{% if return_to_sale %}{% url 'core:sale_create' %}?restaurar=1{% elif customer %}{% url 'core:customer_detail' customer.pk %}{% else %}{% url 'core:customer_list' %}{% endif %}">‹ {% if return_to_sale %}Volver a la venta{% else %}Volver a clientes{% endif %}</a>
         <p class="eyebrow">Ficha personal</p>
         <h1>{{ title }}</h1>
         <p class="page-subtitle">{{ subtitle }}</p>
@@ -81,7 +81,7 @@
     </section>
 
     <div class="form-actions">
-        <a class="btn btn-ghost" href="{% if customer %}{% url 'core:customer_detail' customer.pk %}{% else %}{% url 'core:customer_list' %}{% endif %}">Cancelar</a>
+        <a class="btn btn-ghost" href="{% if return_to_sale %}{% url 'core:sale_create' %}?restaurar=1{% elif customer %}{% url 'core:customer_detail' customer.pk %}{% else %}{% url 'core:customer_list' %}{% endif %}">Cancelar</a>
         <button class="btn btn-primary" type="submit">{{ submit_label }}</button>
     </div>
 </form>

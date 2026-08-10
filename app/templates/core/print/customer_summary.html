@@ -1,0 +1,169 @@
+{% load finance %}
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Resumen de {{ customer.full_name }}</title>
+    <link rel="stylesheet" href="{% versioned_static 'css/print.css' %}">
+    <link rel="stylesheet" href="{% versioned_static 'css/customer-print.css' %}">
+</head>
+<body data-auto-print="{% if auto_print %}true{% else %}false{% endif %}">
+    <nav class="print-toolbar">
+        <a href="{% url 'core:customer_detail' customer.pk %}">‹ Volver al cliente</a>
+        <div class="print-toolbar-actions">
+            <span data-share-status aria-live="polite">Resumen preparado para compartir o imprimir</span>
+            {% if statement_whatsapp_url %}
+                <button
+                    class="toolbar-action toolbar-whatsapp"
+                    type="button"
+                    data-statement-share
+                    data-pdf-url="{% url 'core:customer_statement_pdf' customer.pk %}"
+                    data-whatsapp-url="{{ statement_whatsapp_url }}"
+                    data-filename="{{ statement_filename }}"
+                    data-share-title="Resumen de {{ customer.full_name }}"
+                    data-share-text="Resumen de cuenta actualizado al {{ today|date:'d/m/Y' }}."
+                >Compartir por WhatsApp</button>
+            {% else %}
+                <button class="toolbar-action" type="button" disabled title="Agregá un teléfono al cliente para usar WhatsApp">WhatsApp (sin teléfono)</button>
+            {% endif %}
+            <a class="toolbar-action" href="{% url 'core:customer_statement_pdf' customer.pk %}" download>Guardar PDF</a>
+            <button class="toolbar-action toolbar-print" type="button" data-print-statement>Imprimir</button>
+        </div>
+    </nav>
+
+    <main class="print-sheet customer-account-sheet">
+        <header class="print-header">
+            <div class="print-brand">
+                {% if app_settings.logo %}
+                    <img src="{{ app_settings.logo.url }}" alt="Logo de {{ app_settings.business_name }}">
+                {% else %}
+                    <span>GF</span>
+                {% endif %}
+                <div>
+                    <strong>{{ app_settings.business_name }}</strong>
+                    <small>Ventas, préstamos y cobranza</small>
+                </div>
+            </div>
+            <div class="print-title">
+                <p>Estado de cuenta</p>
+                <h1>Resumen del cliente</h1>
+                <time>Al {{ today|date:"d/m/Y" }}</time>
+            </div>
+        </header>
+
+        <section class="customer-print-heading">
+            <div class="customer-print-avatar">
+                {{ customer.first_name|first|upper }}{{ customer.last_name|first|upper }}
+            </div>
+            <div>
+                <small>Cliente</small>
+                <h2>{{ customer.full_name }}</h2>
+                <p>Resumen actualizado al {{ today|date:"d/m/Y" }}</p>
+            </div>
+        </section>
+
+        <section class="customer-print-kpis">
+            <div><span>Total en cuotas</span><strong>{{ total_installments|ars }}</strong></div>
+            <div class="is-paid"><span>Total abonado</span><strong>{{ total_paid|ars }}</strong></div>
+            <div class="is-balance"><span>Saldo total pendiente</span><strong>{{ total_balance|ars }}</strong></div>
+            <div class="is-overdue"><span>Cuotas vencidas</span><strong>{{ overdue_installments }}</strong></div>
+        </section>
+
+        <section class="customer-print-section">
+            <div class="customer-print-section-title">
+                <div><small>Operaciones y planes</small><h2>Ventas y préstamos registrados</h2></div>
+                <strong>{{ sale_rows|length }}</strong>
+            </div>
+            {% if sale_rows %}
+            <table class="customer-account-table">
+                <thead>
+                    <tr><th>Fecha</th><th>Operación</th><th>Plan</th><th>Situación</th><th>Total acordado</th><th>Saldo pendiente</th></tr>
+                </thead>
+                <tbody>
+                    {% for row in sale_rows %}
+                    <tr>
+                        <td>{{ row.sale.delivery_date|date:"d/m/Y" }}</td>
+                        <td><strong>{{ row.sale.product_description }}</strong></td>
+                        <td>{{ row.sale.installment_count }} cuotas · {{ row.sale.get_frequency_display }}</td>
+                        <td>{{ row.sale.get_status_display }}</td>
+                        <td class="amount">{{ row.sale.financed_amount|ars }}</td>
+                        <td class="amount">{{ row.exigible_total|ars }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="customer-print-empty">No hay ventas ni préstamos registrados.</p>
+            {% endif %}
+        </section>
+
+        <section class="customer-print-section">
+            <div class="customer-print-section-title">
+                <div><small>Detalle del plan</small><h2>Estado de todas las cuotas</h2></div>
+                <strong>{{ installment_rows|length }}</strong>
+            </div>
+            {% if installment_rows %}
+            <table class="customer-account-table compact">
+                <thead>
+                    <tr><th>Operación</th><th>Cuota</th><th>Vencimiento</th><th>Situación</th><th>Importe</th><th>Recargos</th><th>Saldo</th></tr>
+                </thead>
+                <tbody>
+                    {% for row in installment_rows %}
+                    <tr>
+                        <td>{{ row.sale.product_description }}</td>
+                        <td>{{ row.installment.number }}/{{ row.sale.installment_count }}</td>
+                        <td>{{ row.installment.due_date|date:"d/m/Y" }}</td>
+                        <td><span class="account-status is-{{ row.status }}">{{ row.status_label }}</span></td>
+                        <td class="amount">{{ row.installment.original_amount|ars }}</td>
+                        <td class="amount">{{ row.balance.late_fees_generated|ars }}</td>
+                        <td class="amount"><strong>{{ row.balance.total_due|ars }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="customer-print-empty">No hay cuotas registradas.</p>
+            {% endif %}
+        </section>
+
+        <section class="customer-print-section">
+            <div class="customer-print-section-title">
+                <div><small>Dinero recibido</small><h2>Historial de pagos</h2></div>
+                <strong>{{ payments|length }}</strong>
+            </div>
+            {% if payments %}
+            <table class="customer-account-table compact">
+                <thead>
+                    <tr><th>Fecha</th><th>Concepto</th><th>Operación</th><th>Situación</th><th>Importe</th></tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                    <tr class="{% if payment.status == 'voided' %}is-voided{% endif %}">
+                        <td>{{ payment.payment_date|date:"d/m/Y" }}</td>
+                        <td>{{ payment.get_kind_display }}</td>
+                        <td>{{ payment.sale.product_description }}</td>
+                        <td>{% if payment.status == "registered" %}Registrado{% else %}Anulado{% endif %}</td>
+                        <td class="amount"><strong>{{ payment.amount|ars }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="customer-print-empty">Todavía no hay pagos registrados.</p>
+            {% endif %}
+        </section>
+
+        <p class="customer-print-disclaimer">
+            Este resumen refleja los movimientos registrados en el sistema hasta la fecha indicada.
+            Ante cualquier diferencia, consultá con el negocio.
+        </p>
+
+        <footer class="print-footer">
+            <span>{{ app_settings.business_name }}</span>
+            <span>{{ customer.full_name }} · actualizado al {{ today|date:"d/m/Y" }}</span>
+        </footer>
+    </main>
+    <script src="{% versioned_static 'js/customer-statement-share.js' %}" defer></script>
+</body>
+</html>

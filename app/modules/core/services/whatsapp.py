@@ -50,3 +50,23 @@ def build_payment_reminder_url(
             "de {monto} con vencimiento {vencimiento}."
         ).format(**values)
     return f"https://wa.me/{number}?text={quote(message)}"
+
+
+def build_customer_statement_whatsapp_url(
+    *,
+    customer: Customer,
+    as_of,
+    settings: BusinessSettings | None = None,
+) -> str:
+    """Build a privacy-conscious message for manually attaching a customer statement."""
+    number = normalize_argentina_whatsapp_number(customer.phone)
+    if not number:
+        return ""
+
+    settings = settings or BusinessSettings.get_solo()
+    message = (
+        f"Hola {customer.first_name}, te comparto tu resumen de cuenta de "
+        f"{settings.business_name}, actualizado al {as_of:%d/%m/%Y}. "
+        "Adjunto el archivo PDF."
+    )
+    return f"https://wa.me/{number}?text={quote(message)}"

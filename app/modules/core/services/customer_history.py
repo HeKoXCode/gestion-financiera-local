@@ -5,6 +5,7 @@ from datetime import date
 from modules.core.models import Customer, Payment, Sale
 from modules.core.services.balances import (
     get_installment_balance,
+    get_installment_payment_timing,
     get_sale_balance,
     installment_balance_prefetches,
 )
@@ -26,6 +27,7 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
     total_balance = ZERO
     overdue_installments = 0
     paid_installments = 0
+    paid_late_installments = 0
 
     for sale in sales:
         balance = get_sale_balance(sale, as_of=as_of)
@@ -44,12 +46,21 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
         )
         for installment in sale.installments.all():
             installment_balance = get_installment_balance(installment, as_of=as_of)
+            payment_timing = get_installment_payment_timing(installment, as_of=as_of)
             if is_cancelled:
                 status = "cancelled"
                 status_label = "Cancelada"
             elif installment_balance.total_due <= ZERO:
-                status = "paid"
-                status_label = "Pagada"
+                if payment_timing.days_late:
+                    status = "paid_late"
+                    day_word = "día" if payment_timing.days_late == 1 else "días"
+                    status_label = (
+                        f"Pagada con {payment_timing.days_late} {day_word} de atraso"
+                    )
+                    paid_late_installments += 1
+                else:
+                    status = "paid"
+                    status_label = "Pagada en fecha"
                 paid_installments += 1
             elif installment.due_date < as_of:
                 status = "overdue"
@@ -68,6 +79,7 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
                     "sale": sale,
                     "installment": installment,
                     "balance": installment_balance,
+                    "payment_timing": payment_timing,
                     "status": status,
                     "status_label": status_label,
                 }
@@ -155,8 +167,13 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
         "total_balance": as_money(total_balance),
         "overdue_installments": overdue_installments,
         "paid_installments": paid_installments,
+        "paid_late_installments": paid_late_installments,
         "active_sales": sum(sale.status == Sale.Status.ACTIVE for sale in sales),
         "product_count": len(
-            {sale.product_id for sale in sales if sale.status != Sale.Status.CANCELLED}
+            {
+                sale.product_id
+                for sale in sales
+                if sale.status != Sale.Status.CANCELLED and sale.product_id is not None
+            }
         ),
     }

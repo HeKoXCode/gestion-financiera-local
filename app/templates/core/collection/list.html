@@ -9,7 +9,7 @@
         <p class="eyebrow">Trabajo del día</p>
         <h1>Cobranza del {{ selected_date|date:"d/m/Y" }}</h1>
         <p class="page-subtitle">
-            Cuotas pendientes hasta la fecha, agrupadas por venta, con recargos y saldo actualizado.
+            Cuotas pendientes hasta la fecha, agrupadas por operación, con recargos y saldo actualizado.
         </p>
     </div>
     <div class="collection-header-actions">
@@ -86,7 +86,7 @@
         </div>
 
         <div class="collection-product">
-            <span>Producto</span>
+            <span>Operación</span>
             <strong>{{ row.sale.product_description }}</strong>
             <small>
                 Desde cuota {{ row.oldest_installment.number }}/{{ row.sale.installment_count }}

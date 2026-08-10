@@ -1,0 +1,255 @@
+.customer-account-sheet {
+    font-size: 10px;
+}
+
+.customer-print-heading {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 11px;
+    align-items: center;
+    margin: 11px 0 8px;
+    padding: 9px 11px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+
+.customer-print-avatar {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.customer-print-heading small,
+.customer-print-contact span,
+.customer-print-kpis span,
+.customer-print-section-title small {
+    color: var(--muted);
+    font-size: 7px;
+    font-weight: 800;
+    letter-spacing: 0.055em;
+    text-transform: uppercase;
+}
+
+.customer-print-heading h2,
+.customer-print-heading p {
+    margin: 0;
+}
+
+.customer-print-heading h2 {
+    font-size: 17px;
+}
+
+.customer-print-heading p {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 8px;
+}
+
+.customer-print-state {
+    padding: 4px 8px;
+    border-radius: 99px;
+    background: #e4f1ec;
+    color: var(--primary);
+    font-size: 8px;
+}
+
+.customer-print-contact {
+    display: grid;
+    grid-template-columns: 0.8fr 1.35fr 0.8fr 1.25fr;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+}
+
+.customer-print-contact > div {
+    min-width: 0;
+    padding: 6px 8px;
+    border-right: 1px solid var(--line);
+}
+
+.customer-print-contact > div:nth-child(4),
+.customer-print-contact > div:last-child {
+    border-right: 0;
+}
+
+.customer-print-contact strong,
+.customer-print-contact span {
+    display: block;
+}
+
+.customer-print-contact strong {
+    margin-top: 1px;
+    font-size: 9px;
+    overflow-wrap: anywhere;
+}
+
+.customer-print-contact .customer-print-wide {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--line);
+}
+
+.customer-print-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    margin: 8px 0;
+}
+
+.customer-print-kpis > div {
+    padding: 7px 8px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--soft);
+}
+
+.customer-print-kpis strong,
+.customer-print-kpis span {
+    display: block;
+}
+
+.customer-print-kpis strong {
+    margin-top: 2px;
+    font-size: 13px;
+}
+
+.customer-print-kpis .is-paid {
+    background: #eaf5f0;
+}
+
+.customer-print-kpis .is-balance,
+.customer-print-kpis .is-overdue {
+    background: #fbf0e7;
+}
+
+.customer-print-section {
+    margin-top: 10px;
+    break-inside: auto;
+}
+
+.customer-print-section-title {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    padding-bottom: 3px;
+    border-bottom: 2px solid var(--ink);
+}
+
+.customer-print-section-title h2,
+.customer-print-section-title small {
+    margin: 0;
+}
+
+.customer-print-section-title h2 {
+    font-size: 13px;
+}
+
+.customer-print-section-title > strong {
+    color: var(--muted);
+    font-size: 9px;
+}
+
+.customer-account-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.customer-account-table th,
+.customer-account-table td {
+    padding: 4px 5px;
+    border: 1px solid #d9dfdc;
+    text-align: left;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+}
+
+.customer-account-table th {
+    background: var(--soft);
+    color: var(--muted);
+    font-size: 7px;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+}
+
+.customer-account-table td {
+    font-size: 8px;
+}
+
+.customer-account-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+.customer-account-table .amount {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.account-status {
+    display: inline-block;
+    padding: 2px 4px;
+    border-radius: 4px;
+    background: #edf0ee;
+    font-size: 7px;
+    font-weight: 700;
+}
+
+.account-status.is-paid,
+.account-status.is-today {
+    background: #e4f1ec;
+    color: var(--primary);
+}
+
+.account-status.is-paid_late {
+    background: #fff0d6;
+    color: #8a5a12;
+}
+
+.account-status.is-overdue {
+    background: #f7e4e2;
+    color: var(--danger);
+}
+
+.customer-account-table .is-voided {
+    color: var(--muted);
+    text-decoration: line-through;
+}
+
+.customer-print-empty {
+    margin: 0;
+    padding: 12px;
+    border: 1px dashed var(--line);
+    color: var(--muted);
+    text-align: center;
+}
+
+.customer-print-disclaimer {
+    margin: 10px auto 0;
+    max-width: 620px;
+    color: var(--muted);
+    font-size: 8px;
+    text-align: center;
+}
+
+@media print {
+    .customer-print-section-title {
+        break-after: avoid;
+        page-break-after: avoid;
+    }
+
+    .customer-account-table thead {
+        display: table-header-group;
+    }
+}
+
+@media screen and (max-width: 760px) {
+    .customer-account-sheet {
+        min-width: 760px;
+    }
+}

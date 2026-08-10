@@ -1,26 +1,26 @@
 {% extends "base.html" %}
 {% load finance %}
 
-{% block title %}Ventas · Gestión Financiera{% endblock %}
+{% block title %}Ventas y préstamos · Gestión Financiera{% endblock %}
 
 {% block content %}
 <header class="page-header">
     <div>
-        <p class="eyebrow">Ventas financiadas</p>
-        <h1>Ventas</h1>
-        <p class="page-subtitle">Consultá las condiciones y el calendario de cuotas de cada venta.</p>
+        <p class="eyebrow">Operaciones financiadas</p>
+        <h1>Ventas y préstamos</h1>
+        <p class="page-subtitle">Consultá las condiciones y el calendario de cuotas de cada operación.</p>
     </div>
     <a class="btn btn-primary" href="{% url 'core:sale_create' %}">
-        <span aria-hidden="true">＋</span> Nueva venta
+        <span aria-hidden="true">＋</span> Nueva operación
     </a>
 </header>
 
 <section class="toolbar-card">
     <form class="search-form" method="get">
-        <label class="sr-only" for="sale-search">Buscar ventas</label>
+        <label class="sr-only" for="sale-search">Buscar ventas y préstamos</label>
         <div class="search-input">
             <span aria-hidden="true">⌕</span>
-            <input id="sale-search" name="q" value="{{ query }}" placeholder="Buscar por cliente, DNI o producto">
+            <input id="sale-search" name="q" value="{{ query }}" placeholder="Buscar por cliente, DNI, producto o préstamo">
         </div>
         <input type="hidden" name="estado" value="{{ state }}">
         <button class="btn btn-secondary" type="submit">Buscar</button>
@@ -37,8 +37,8 @@
 <section class="panel">
     <div class="panel-header compact">
         <div>
-            <h2>Ventas registradas</h2>
-            <p>{{ page.paginator.count }} venta{{ page.paginator.count|pluralize }}</p>
+            <h2>Operaciones registradas</h2>
+            <p>{{ page.paginator.count }} registro{{ page.paginator.count|pluralize }}</p>
         </div>
     </div>
     {% if page.object_list %}
@@ -46,11 +46,11 @@
         <table class="data-table responsive-table sales-table">
             <thead>
                 <tr>
-                    <th>Cliente y producto</th>
-                    <th>Fecha de entrega</th>
+                    <th>Cliente y operación</th>
+                    <th>Fecha</th>
                     <th>Plan</th>
                     <th>Estado</th>
-                    <th class="align-right">Total en cuotas</th>
+                    <th class="align-right">Total acordado</th>
                     <th class="align-right">Cuota estimada</th>
                     <th></th>
                 </tr>
@@ -63,8 +63,9 @@
                             {{ sale.customer.full_name }}
                         </a>
                         <small>{{ sale.product_description }}</small>
+                        <span class="badge badge-neutral">{{ sale.operation_name }}</span>
                     </td>
-                    <td data-label="Fecha de entrega">{{ sale.delivery_date|date:"d/m/Y" }}</td>
+                    <td data-label="Fecha">{{ sale.delivery_date|date:"d/m/Y" }}</td>
                     <td data-label="Plan">
                         {{ sale.installment_count }} cuotas
                         <small>{{ sale.get_frequency_display }}</small>
@@ -72,7 +73,7 @@
                     <td data-label="Estado">
                         <span class="badge badge-{{ sale.status }}">{{ sale.get_status_display }}</span>
                     </td>
-                    <td data-label="Total en cuotas" class="money-cell">{{ sale.financed_amount|ars }}</td>
+                    <td data-label="Total acordado" class="money-cell">{{ sale.financed_amount|ars }}</td>
                     <td data-label="Cuota estimada" class="money-cell">
                         {{ sale.financed_amount|installment_estimate:sale.installment_count|ars }}
                     </td>
@@ -86,9 +87,9 @@
     {% else %}
     <div class="empty-state">
         <span class="empty-icon" aria-hidden="true">▤</span>
-        <h3>{% if query %}No encontramos ventas{% else %}Todavía no hay ventas{% endif %}</h3>
-        <p>{% if query %}Probá con otro cliente o producto.{% else %}Registrá la primera y generaremos sus cuotas automáticamente.{% endif %}</p>
-        {% if not query %}<a class="btn btn-primary" href="{% url 'core:sale_create' %}">Registrar primera venta</a>{% endif %}
+        <h3>{% if query %}No encontramos operaciones{% else %}Todavía no hay ventas ni préstamos{% endif %}</h3>
+        <p>{% if query %}Probá con otro cliente, producto o detalle.{% else %}Registrá la primera operación y generaremos sus cuotas automáticamente.{% endif %}</p>
+        {% if not query %}<a class="btn btn-primary" href="{% url 'core:sale_create' %}">Registrar primera operación</a>{% endif %}
     </div>
     {% endif %}
 </section>

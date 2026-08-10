@@ -6,7 +6,7 @@
 {% block content %}
 <header class="page-header reports-header">
     <div>
-        <p class="eyebrow">Estado de las ventas</p>
+        <p class="eyebrow">Estado de ventas y préstamos</p>
         <h1>Reportes al {{ selected_date|date:"d/m/Y" }}</h1>
         <p class="page-subtitle">
             Cobros, atrasos y saldos calculados a partir de los movimientos registrados.
@@ -47,9 +47,18 @@
     <article class="report-kpi is-dark">
         <span>Total pendiente</span>
         <strong>{{ portfolio_pending|ars }}</strong>
-        <small>Incluye cuotas vencidas y futuras de {{ open_sales }} venta{{ open_sales|pluralize }}</small>
+        <small>Incluye cuotas vencidas y futuras de {{ open_sales }} operación{{ open_sales|pluralize:"es" }}</small>
     </article>
 </section>
+
+{% if loans_count %}
+<section class="portfolio-strip loan-report-strip" aria-label="Resumen de préstamos">
+    <div><span>Préstamos entregados</span><strong>{{ loans_count }}</strong></div>
+    <div><span>Capital prestado</span><strong>{{ loan_principal_total|ars }}</strong></div>
+    <div><span>Total acordado</span><strong>{{ loan_repayment_total|ars }}</strong></div>
+    <div class="is-success"><span>Saldo pendiente</span><strong>{{ loan_pending_total|ars }}</strong></div>
+</section>
+{% endif %}
 
 <section class="portfolio-strip">
     <div>
@@ -151,7 +160,7 @@
                 <span>{{ forloop.counter|stringformat:"02d" }}</span>
                 <div>
                     <a href="{% url 'core:customer_detail' row.customer.pk %}">{{ row.customer.full_name }}</a>
-                    <small>{{ row.open_sales }} venta{{ row.open_sales|pluralize }} con saldo</small>
+                    <small>{{ row.open_sales }} operación{{ row.open_sales|pluralize:"es" }} con saldo</small>
                 </div>
                 <strong>{{ row.total_balance|ars }}</strong>
             </li>

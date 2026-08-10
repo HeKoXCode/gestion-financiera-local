@@ -36,6 +36,12 @@ class SaleBalance:
     total_due: Decimal
 
 
+@dataclass(frozen=True)
+class InstallmentPaymentTiming:
+    paid_on: date | None
+    days_late: int
+
+
 def _sum_amount(queryset) -> Decimal:
     value = queryset.aggregate(total=Sum("amount"))["total"]
     return as_money(value or ZERO)
@@ -87,6 +93,51 @@ def _payment_was_registered(payment: Payment, as_of: date | None) -> bool:
         and payment.status == Payment.Status.VOIDED
         and payment.voided_at
         and timezone.localdate(payment.voided_at) > as_of
+    )
+
+
+def get_installment_payment_timing(
+    installment: Installment,
+    *,
+    as_of: date | None = None,
+) -> InstallmentPaymentTiming:
+    """Return when a fully paid installment was settled and its calendar delay."""
+    cached_allocations = _cached_relation(installment, "payment_allocations")
+    if cached_allocations is None:
+        allocations = list(
+            installment.payment_allocations.select_related("payment").all()
+        )
+    else:
+        allocations = list(cached_allocations)
+
+    registered_allocations = [
+        allocation
+        for allocation in allocations
+        if _payment_was_registered(allocation.payment, as_of)
+        and (as_of is None or allocation.payment.payment_date <= as_of)
+    ]
+    principal_paid = as_money(
+        sum(
+            (
+                allocation.amount
+                for allocation in registered_allocations
+                if allocation.component == PaymentAllocation.Component.PRINCIPAL
+            ),
+            ZERO,
+        )
+    )
+    if principal_paid < as_money(installment.original_amount):
+        return InstallmentPaymentTiming(paid_on=None, days_late=0)
+
+    paid_on = max(
+        (allocation.payment.payment_date for allocation in registered_allocations),
+        default=None,
+    )
+    if paid_on is None:
+        return InstallmentPaymentTiming(paid_on=None, days_late=0)
+    return InstallmentPaymentTiming(
+        paid_on=paid_on,
+        days_late=max(0, (paid_on - installment.due_date).days),
     )
 
 

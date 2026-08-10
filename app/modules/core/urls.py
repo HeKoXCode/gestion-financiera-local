@@ -5,6 +5,7 @@ from . import views
 app_name = "core"
 
 urlpatterns = [
+    path("acceso-celular/", views.mobile_access, name="mobile_access"),
     path("", views.home, name="home"),
     path("agenda/", views.agenda, name="agenda"),
     path("reportes/", views.reports, name="reports"),
@@ -30,6 +31,16 @@ urlpatterns = [
     path("clientes/", views.customer_list, name="customer_list"),
     path("clientes/nuevo/", views.customer_create, name="customer_create"),
     path("clientes/<int:pk>/", views.customer_detail, name="customer_detail"),
+    path(
+        "clientes/<int:pk>/imprimir/",
+        views.customer_print,
+        name="customer_print",
+    ),
+    path(
+        "clientes/<int:pk>/resumen.pdf",
+        views.customer_statement_pdf,
+        name="customer_statement_pdf",
+    ),
     path("clientes/<int:pk>/editar/", views.customer_edit, name="customer_edit"),
     path("clientes/<int:pk>/estado/", views.customer_toggle, name="customer_toggle"),
     path("productos/", views.product_list, name="product_list"),

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from modules.core.models import (
     BusinessSettings,
+    LateFee,
     Payment,
     PaymentAllocation,
     Sale,
@@ -64,6 +65,188 @@ def register_initial_payment(
     payment.full_clean()
     payment.save()
     return payment
+
+
+@transaction.atomic
+def register_delivery_installment_payment(
+    *,
+    sale: Sale,
+    payment_method: str,
+    settings: BusinessSettings | None = None,
+) -> Payment:
+    """Register installment one as paid on the product delivery date."""
+    sale = Sale.objects.select_for_update().select_related("customer").get(pk=sale.pk)
+    settings = settings or BusinessSettings.get_solo()
+    first_installment = sale.installments.order_by("number", "pk").first()
+
+    errors: dict[str, str] = {}
+    if first_installment is None:
+        errors["first_installment_delivery_status"] = (
+            "La venta todavía no tiene cuotas generadas."
+        )
+    elif first_installment.due_date != sale.delivery_date:
+        errors["first_installment_delivery_status"] = (
+            "La cuota 1 solo puede registrarse al entregar cuando ambas fechas coinciden."
+        )
+    if sale.delivery_date > timezone.localdate():
+        errors["delivery_date"] = (
+            "No se puede registrar la cuota 1 como pagada en una fecha futura."
+        )
+    if payment_method not in settings.payment_methods:
+        errors["first_installment_payment_method"] = "El medio de pago no está habilitado."
+    if errors:
+        raise ValidationError(errors)
+
+    registration = register_payment(
+        sale=sale,
+        amount=first_installment.original_amount,
+        payment_date=sale.delivery_date,
+        payment_method=payment_method,
+        notes="Cuota 1 pagada al recibir el producto.",
+        operation_key=uuid.uuid4(),
+        settings=settings,
+    )
+    return registration.payment
+
+
+@transaction.atomic
+def register_historical_installment_payments(
+    *,
+    sale: Sale,
+    paid_installment_count: int,
+    payment_method: str,
+    late_installments: dict[int, int] | None = None,
+    settings: BusinessSettings | None = None,
+) -> list[Payment]:
+    """Import the oldest paid installments with their actual payment timing.
+
+    This is intended only for importing an existing payment plan. Each paid
+    installment remains a separate payment so weekly, biweekly and monthly
+    histories keep their real cadence. ``late_installments`` maps an installment
+    number to its calendar days of delay; installments omitted from that map are
+    recorded on their due date.
+    """
+    if paid_installment_count <= 0:
+        return []
+
+    sale = Sale.objects.select_for_update().select_related("customer").get(pk=sale.pk)
+    settings = settings or BusinessSettings.get_solo()
+    late_installments = late_installments or {}
+    installments = list(sale.installments.order_by("due_date", "number", "pk"))
+    today = timezone.localdate()
+
+    errors: dict[str, str] = {}
+    if paid_installment_count > len(installments):
+        errors["historical_paid_installments"] = (
+            f"La venta tiene solamente {len(installments)} cuotas."
+        )
+    due_installments = [
+        installment for installment in installments if installment.due_date <= today
+    ]
+    if paid_installment_count > len(due_installments):
+        errors["historical_paid_installments"] = (
+            f"Hasta hoy vencieron {len(due_installments)} cuotas; "
+            "no se pueden marcar cuotas futuras como pagadas desde la carga histórica."
+        )
+    for installment_number, late_days in late_installments.items():
+        if installment_number < 1 or installment_number > paid_installment_count:
+            errors["historical_late_installments"] = (
+                f"La cuota {installment_number} no está entre las cuotas pagadas."
+            )
+            break
+        if late_days < 1:
+            errors["historical_late_installments"] = (
+                "La cantidad de días de atraso debe ser mayor que cero."
+            )
+            break
+        installment = installments[installment_number - 1]
+        if installment.due_date + timedelta(days=late_days) > today:
+            errors["historical_late_installments"] = (
+                f"El pago de la cuota {installment_number} quedaría en una fecha futura."
+            )
+            break
+
+    installments_to_pay = [
+        installment
+        for installment in installments[:paid_installment_count]
+        if get_installment_balance(installment, as_of=today).total_due > ZERO
+    ]
+    if installments_to_pay and payment_method not in settings.payment_methods:
+        errors["historical_payment_method"] = "El medio de pago no está habilitado."
+    if errors:
+        raise ValidationError(errors)
+
+    payments = []
+    for installment in installments_to_pay:
+        late_days = late_installments.get(installment.number, 0)
+        payment_date = installment.due_date + timedelta(days=late_days)
+
+        if late_days and sale.daily_late_fee > ZERO:
+            fee_dates = []
+            fee_date = installment.due_date + timedelta(days=1)
+            while fee_date <= payment_date:
+                if settings.charge_sundays or fee_date.weekday() != 6:
+                    fee_dates.append(fee_date)
+                fee_date += timedelta(days=1)
+            LateFee.objects.bulk_create(
+                [
+                    LateFee(
+                        installment=installment,
+                        fee_date=fee_date,
+                        amount=sale.daily_late_fee,
+                    )
+                    for fee_date in fee_dates
+                ],
+                ignore_conflicts=True,
+            )
+
+        balance = get_installment_balance(installment, as_of=payment_date)
+        if balance.total_due <= ZERO:
+            continue
+        timing_note = (
+            f"pagada con {late_days} día{'s' if late_days != 1 else ''} de atraso"
+            if late_days
+            else "pagada en fecha"
+        )
+        payment = Payment(
+            idempotency_key=uuid.uuid4(),
+            customer=sale.customer,
+            sale=sale,
+            payment_date=payment_date,
+            amount=balance.total_due,
+            payment_method=payment_method,
+            kind=Payment.Kind.INSTALLMENT,
+            notes=(
+                "Carga histórica: "
+                f"cuota {installment.number}/{sale.installment_count} {timing_note}."
+            ),
+        )
+        payment.full_clean()
+        payment.save()
+        allocations = []
+        if balance.late_fees_due > ZERO:
+            allocations.append(
+                PaymentAllocation(
+                    payment=payment,
+                    installment=installment,
+                    component=PaymentAllocation.Component.LATE_FEE,
+                    amount=balance.late_fees_due,
+                )
+            )
+        if balance.principal_due > ZERO:
+            allocations.append(
+                PaymentAllocation(
+                    payment=payment,
+                    installment=installment,
+                    component=PaymentAllocation.Component.PRINCIPAL,
+                    amount=balance.principal_due,
+                )
+            )
+        PaymentAllocation.objects.bulk_create(allocations)
+        payments.append(payment)
+
+    _refresh_sale_status(sale)
+    return payments
 
 
 def _eligible_installments(sale: Sale, payment_date: date, *, allow_advance: bool):

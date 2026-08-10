@@ -48,6 +48,10 @@ def build_reports(*, as_of: date) -> dict:
     due_total = ZERO
     overdue_total = ZERO
     open_sales = 0
+    loans_count = 0
+    loan_principal_total = ZERO
+    loan_repayment_total = ZERO
+    loan_pending_total = ZERO
 
     for sale in sales:
         balances = [
@@ -58,18 +62,24 @@ def build_reports(*, as_of: date) -> dict:
             sum((balance.total_due for _, balance in balances), ZERO)
         )
 
-        product_row = product_rows.setdefault(
-            sale.product_id,
-            {
-                "product": sale.product,
-                "units": 0,
-                "financed": ZERO,
-                "pending": ZERO,
-            },
-        )
-        product_row["units"] += 1
-        product_row["financed"] += sale.financed_amount
-        product_row["pending"] += sale_balance
+        if sale.is_loan:
+            loans_count += 1
+            loan_principal_total += sale.cash_price
+            loan_repayment_total += sale.financed_amount
+            loan_pending_total += sale_balance
+        elif sale.product_id is not None:
+            product_row = product_rows.setdefault(
+                sale.product_id,
+                {
+                    "product": sale.product,
+                    "units": 0,
+                    "financed": ZERO,
+                    "pending": ZERO,
+                },
+            )
+            product_row["units"] += 1
+            product_row["financed"] += sale.financed_amount
+            product_row["pending"] += sale_balance
 
         if sale_balance <= ZERO:
             continue
@@ -215,6 +225,10 @@ def build_reports(*, as_of: date) -> dict:
         "products_most_sold": products_most_sold,
         "collection_trend": collection_trend,
         "payment_methods": payment_methods,
+        "loans_count": loans_count,
+        "loan_principal_total": as_money(loan_principal_total),
+        "loan_repayment_total": as_money(loan_repayment_total),
+        "loan_pending_total": as_money(loan_pending_total),
         "week_start": week_start,
         "month_start": month_start,
     }

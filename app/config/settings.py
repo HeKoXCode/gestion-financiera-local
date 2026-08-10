@@ -36,7 +36,19 @@ def _load_or_create_secret_key() -> str:
 
 SECRET_KEY = _load_or_create_secret_key()
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
+GESTION_LAN_IP = os.environ.get("GESTION_LAN_IP", "").strip()
+GESTION_MOBILE_ACCESS_ENABLED = (
+    os.environ.get("GESTION_MOBILE_ACCESS_ENABLED", "0") == "1"
+)
+GESTION_MOBILE_ACCESS_TOKEN = os.environ.get(
+    "GESTION_MOBILE_ACCESS_TOKEN",
+    "",
+)
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+if DEBUG:
+    ALLOWED_HOSTS.append("testserver")
+if GESTION_LAN_IP:
+    ALLOWED_HOSTS.append(GESTION_LAN_IP)
 
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
@@ -49,6 +61,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "modules.core.middleware.MobileAccessMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",

@@ -26,11 +26,15 @@ def make_product(**overrides) -> Product:
 
 def make_sale(**overrides) -> Sale:
     customer = overrides.pop("customer", None) or make_customer()
-    product = overrides.pop("product", None) or make_product()
+    operation_type = overrides.get("operation_type", Sale.OperationType.PRODUCT)
+    product = overrides.pop("product", None)
+    if product is None and operation_type == Sale.OperationType.PRODUCT:
+        product = make_product()
     values = {
         "customer": customer,
         "product": product,
-        "product_description": product.name,
+        "operation_type": operation_type,
+        "product_description": product.name if product else "Préstamo de dinero",
         "delivery_date": date(2026, 8, 15),
         "cash_price": Decimal("400000.00"),
         "financed_amount": Decimal("480000.00"),
@@ -41,4 +45,3 @@ def make_sale(**overrides) -> Sale:
     }
     values.update(overrides)
     return Sale.objects.create(**values)
-

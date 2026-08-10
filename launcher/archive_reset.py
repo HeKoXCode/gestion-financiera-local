@@ -26,7 +26,10 @@ from launcher.backup import (
 )
 
 HOST = "127.0.0.1"
-PORT = 8765
+try:
+    PORT = int(os.environ.get("GESTION_PORT", "8765"))
+except ValueError:
+    PORT = 8765
 MAX_ARCHIVE_LABEL_LENGTH = 60
 
 
@@ -38,6 +41,8 @@ def normalize_archive_label(value: str) -> str:
 
 
 def local_application_is_running() -> bool:
+    if PORT <= 0:
+        return False
     try:
         with socket.create_connection((HOST, PORT), timeout=0.25):
             return True

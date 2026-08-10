@@ -36,8 +36,12 @@ if (-not (Test-Path -LiteralPath $packageDirectory -PathType Container)) {
 foreach ($requiredFile in @(
     "GestionFinanciera.exe",
     "Restaurador.exe",
+    "ArchivarYReiniciar.exe",
     "INICIAR.bat",
     "RESTAURAR_DATOS.bat",
+    "ARCHIVAR_Y_REINICIAR.bat",
+    "HABILITAR_ACCESO_CELULAR.bat",
+    "DESHABILITAR_ACCESO_CELULAR.bat",
     "LEEME_PRIMERO.txt"
 )) {
     if (-not (Test-Path -LiteralPath (Join-Path $packageDirectory $requiredFile) -PathType Leaf)) {
@@ -131,6 +135,27 @@ try {
         throw "El restaurador no creo el backup preventivo."
     }
 
+    $archiveProcess = Start-Process `
+        -FilePath (Join-Path $smokeDirectory "ArchivarYReiniciar.exe") `
+        -ArgumentList @("--name", "portable-smoke", "--yes") `
+        -WorkingDirectory $smokeDirectory `
+        -WindowStyle Hidden `
+        -Wait `
+        -PassThru
+    if ($archiveProcess.ExitCode -ne 0) {
+        throw "ArchivarYReiniciar.exe termino con codigo $($archiveProcess.ExitCode)."
+    }
+
+    $archivePath = Get-ChildItem `
+        -LiteralPath (Join-Path $smokeDirectory "storage") `
+        -Filter "gestion_portable-smoke_*.sqlite3.zip" `
+        -File |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1 -ExpandProperty FullName
+    if (-not $archivePath) {
+        throw "El archivador no creo la copia historica en storage."
+    }
+
     & $pythonExecutable -c @"
 import sqlite3
 from pathlib import Path
@@ -140,13 +165,30 @@ validate_application_backup(
     Path(r'$recoveryPath'),
     working_directory=Path(r'$databasePath').parent,
 )
+validate_application_backup(
+    Path(r'$archivePath'),
+    working_directory=Path(r'$databasePath').parent,
+)
 with sqlite3.connect(r'$databasePath') as connection:
     monthly_migration = connection.execute(
         'SELECT 1 FROM django_migrations WHERE app = ? AND name = ?',
         ('core', '0004_add_monthly_frequency'),
     ).fetchone()
+    business_rows = sum(
+        connection.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0]
+        for table in (
+            'core_customer',
+            'core_product',
+            'core_sale',
+            'core_installment',
+            'core_payment',
+            'core_collectionattempt',
+        )
+    )
 if monthly_migration is None:
     raise RuntimeError('El portable no aplico la migracion de frecuencia mensual.')
+if business_rows:
+    raise RuntimeError('El archivador portable no dejo vacios los datos comerciales.')
 print('Base portable: integridad y estructura correctas')
 "@
     if ($LASTEXITCODE -ne 0) {
@@ -166,7 +208,7 @@ finally {
 if ($succeeded) {
     $safeSmokeDirectory = Assert-TemporaryChildPath -Path $smokeDirectory
     Remove-Item -LiteralPath $safeSmokeDirectory -Recurse -Force
-    Write-Host "Prueba portable aprobada: ejecutables, servidor, recursos, backup y restore."
+    Write-Host "Prueba portable aprobada: ejecutables, servidor, recursos, backup, restore y archivo/reinicio."
 }
 else {
     Write-Warning "La copia de diagnostico quedo en: $smokeDirectory"

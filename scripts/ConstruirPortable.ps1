@@ -73,7 +73,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "PyInstaller no pudo construir el paquete."
 }
 
-foreach ($directoryName in @("data", "backups", "exports", "media")) {
+foreach ($directoryName in @("data", "backups", "exports", "media", "storage")) {
     New-Item `
         -ItemType Directory `
         -Path (Join-Path $packageDirectory $directoryName) `
@@ -120,6 +120,8 @@ if (-not $OmitirZip) {
         foreach ($requiredEntry in @(
             "GestionFinanciera/GestionFinanciera.exe",
             "GestionFinanciera/Restaurador.exe",
+            "GestionFinanciera/ArchivarYReiniciar.exe",
+            "GestionFinanciera/ARCHIVAR_Y_REINICIAR.bat",
             "GestionFinanciera/LEEME_PRIMERO.txt",
             "GestionFinanciera/MANIFEST_SHA256.txt"
         )) {

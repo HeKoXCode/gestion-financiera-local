@@ -28,11 +28,15 @@ for package in (
 application_hidden_imports = sorted(
     set(
         collect_submodules("config")
+        + collect_submodules("qrcode")
+        + collect_submodules("reportlab")
         + core_modules
         + django_app_modules
         + [
+            "django.core.management.commands.flush",
             "django.core.management.commands.migrate",
             "launcher.backup",
+            "launcher.mobile_access",
         ]
     )
 )
@@ -111,6 +115,45 @@ restorer_exe = EXE(
     entitlements_file=None,
 )
 
+archive_analysis = Analysis(
+    [str(PROJECT_ROOT / "launcher" / "archive_reset.py")],
+    pathex=[str(APP_ROOT), str(PROJECT_ROOT)],
+    binaries=[],
+    datas=[],
+    hiddenimports=application_hidden_imports,
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=[
+        "django.contrib.admin",
+        "django.contrib.auth",
+        "django.contrib.gis",
+        "django.contrib.postgres",
+        "django.test",
+        "pytest",
+    ],
+    noarchive=False,
+    optimize=1,
+)
+archive_pyz = PYZ(archive_analysis.pure)
+archive_exe = EXE(
+    archive_pyz,
+    archive_analysis.scripts,
+    [],
+    exclude_binaries=True,
+    name="ArchivarYReiniciar",
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=False,
+    console=True,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+)
+
 portable_package = COLLECT(
     application_exe,
     application_analysis.binaries,
@@ -118,6 +161,9 @@ portable_package = COLLECT(
     restorer_exe,
     restorer_analysis.binaries,
     restorer_analysis.datas,
+    archive_exe,
+    archive_analysis.binaries,
+    archive_analysis.datas,
     strip=False,
     upx=False,
     upx_exclude=[],

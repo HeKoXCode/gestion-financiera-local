@@ -6,9 +6,10 @@ import sys
 import threading
 import traceback
 import webbrowser
+from contextlib import suppress
 from pathlib import Path
 from socketserver import ThreadingMixIn
-from tkinter import Button, Frame, Label, StringVar, Tk, messagebox
+from tkinter import Button, Frame, Label, StringVar, Tk, Toplevel, messagebox
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 from wsgiref.simple_server import WSGIServer, make_server
@@ -25,22 +26,30 @@ from launcher.backup import (
     create_daily_backup,
     validate_application_database,
 )
+from launcher.mobile_access import (
+    LOOPBACK_HOST,
+    MOBILE_BIND_HOST,
+    build_mobile_access_url,
+    build_qr_image,
+    create_mobile_token,
+    detect_lan_ip,
+)
 
-HOST = "127.0.0.1"
+HOST = LOOPBACK_HOST
 DEFAULT_PORT = 8765
 CLOSE_BACKUP_RETENTION_DAYS = 90
 WINDOW_WIDTH = 620
 WINDOW_HEIGHT = 450
 
-COLOR_BACKGROUND = "#F3F6F4"
+COLOR_BACKGROUND = "#EEF4F6"
 COLOR_SURFACE = "#FFFFFF"
-COLOR_PRIMARY = "#0F4C3A"
-COLOR_PRIMARY_HOVER = "#0B3D2E"
-COLOR_ACCENT = "#42B883"
-COLOR_TEXT = "#17211D"
-COLOR_MUTED = "#607069"
-COLOR_BORDER = "#D9E2DE"
-COLOR_SECONDARY_HOVER = "#E9EFEC"
+COLOR_PRIMARY = "#123F4B"
+COLOR_PRIMARY_HOVER = "#0B303B"
+COLOR_ACCENT = "#43BFB7"
+COLOR_TEXT = "#14282E"
+COLOR_MUTED = "#61787E"
+COLOR_BORDER = "#D3E0E3"
+COLOR_SECONDARY_HOVER = "#E5EFF1"
 
 
 class ThreadingServer(ThreadingMixIn, WSGIServer):
@@ -80,9 +89,16 @@ class LocalApplication:
 
         self.server = None
         self.server_thread = None
+        self.bind_host = HOST
         self.window = None
         self.status = None
         self.open_button = None
+        self.mobile_button = None
+        self.mobile_window = None
+        self.mobile_qr_image = None
+        self.mobile_access_enabled = False
+        self.mobile_ip = None
+        self.mobile_token = None
         self.business_name = "Gestión Financiera"
         self.business_logo_path = None
         self.logo_image = None
@@ -104,6 +120,7 @@ class LocalApplication:
         os.environ["GESTION_EXPORT_DIR"] = str(self.export_path)
         os.environ["GESTION_MEDIA_DIR"] = str(self.media_path)
         os.environ.setdefault("DJANGO_DEBUG", "0")
+        self.apply_mobile_settings()
 
         compress_legacy_backups(self.backup_path)
 
@@ -135,6 +152,36 @@ class LocalApplication:
             fixed_name="gestion_recovery.sqlite3.zip",
         )
 
+    def apply_mobile_settings(self) -> None:
+        enabled = bool(
+            self.mobile_access_enabled
+            and self.mobile_ip
+            and self.mobile_token
+        )
+        os.environ["GESTION_MOBILE_ACCESS_ENABLED"] = "1" if enabled else "0"
+        os.environ["GESTION_MOBILE_ACCESS_TOKEN"] = (
+            self.mobile_token if enabled else ""
+        )
+        os.environ["GESTION_LAN_IP"] = self.mobile_ip if enabled else ""
+
+        try:
+            from django.conf import settings as django_settings
+
+            if django_settings.configured:
+                django_settings.GESTION_MOBILE_ACCESS_ENABLED = enabled
+                django_settings.GESTION_MOBILE_ACCESS_TOKEN = (
+                    self.mobile_token if enabled else ""
+                )
+                django_settings.GESTION_LAN_IP = self.mobile_ip if enabled else ""
+                allowed_hosts = [HOST, "localhost"]
+                if "testserver" in django_settings.ALLOWED_HOSTS:
+                    allowed_hosts.append("testserver")
+                if enabled:
+                    allowed_hosts.append(self.mobile_ip)
+                django_settings.ALLOWED_HOSTS = allowed_hosts
+        except ImportError:
+            pass
+
     def load_branding(self) -> None:
         from modules.core.models import BusinessSettings
 
@@ -165,7 +212,7 @@ class LocalApplication:
 
     def start_server(self) -> None:
         self.server = make_server(
-            HOST,
+            self.bind_host,
             self.port,
             build_local_wsgi_application(),
             server_class=ThreadingServer,
@@ -252,6 +299,313 @@ class LocalApplication:
             ),
         )
 
+    def restart_server(self) -> None:
+        self.stop_server()
+        self.apply_mobile_settings()
+        self.start_server()
+        if not self.wait_until_ready():
+            raise RuntimeError("El servidor local no respondió después del cambio")
+
+    def activate_mobile_access(self) -> None:
+        if self.mobile_access_enabled:
+            self.show_mobile_access()
+            return
+
+        lan_ip = detect_lan_ip()
+        if lan_ip is None:
+            messagebox.showwarning(
+                "Acceso desde celular",
+                (
+                    "No se encontró una red local disponible.\n\n"
+                    "Conectá la computadora a la misma red Wi-Fi que usará "
+                    "el celular e intentá nuevamente."
+                ),
+            )
+            return
+
+        self.mobile_access_enabled = True
+        self.mobile_ip = lan_ip
+        self.mobile_token = create_mobile_token()
+        self.bind_host = MOBILE_BIND_HOST
+        try:
+            self.restart_server()
+        except Exception as exc:
+            self.mobile_access_enabled = False
+            self.mobile_ip = None
+            self.mobile_token = None
+            self.bind_host = HOST
+            with suppress(Exception):
+                self.restart_server()
+            messagebox.showerror(
+                "No se pudo activar",
+                f"No se pudo habilitar el acceso desde el celular:\n\n{exc}",
+            )
+            return
+
+        self.mobile_button.configure(text="Ver acceso celular")
+        self.status.set(
+            f"Acceso celular activo en {self.mobile_ip}. "
+            "Se cerrará junto con el sistema."
+        )
+        self.show_mobile_access()
+
+    def deactivate_mobile_access(self) -> None:
+        if not self.mobile_access_enabled:
+            return
+
+        self.mobile_access_enabled = False
+        self.mobile_ip = None
+        self.mobile_token = None
+        self.bind_host = HOST
+        try:
+            self.restart_server()
+        except Exception as exc:
+            messagebox.showerror(
+                "No se pudo desactivar",
+                (
+                    "El acceso desde el celular se cerró, pero el servidor "
+                    f"local no pudo reiniciarse:\n\n{exc}"
+                ),
+            )
+            return
+
+        if self.mobile_window is not None and self.mobile_window.winfo_exists():
+            self.mobile_window.destroy()
+        self.mobile_window = None
+        self.mobile_qr_image = None
+        self.mobile_button.configure(text="Usar desde celular")
+        self.status.set("Acceso celular desactivado. El sistema sigue abierto en esta PC.")
+
+    def mobile_access_url(self) -> str:
+        if not self.mobile_ip or not self.mobile_token:
+            raise RuntimeError("El acceso desde celular no está activo")
+        return build_mobile_access_url(
+            self.mobile_ip,
+            self.port,
+            self.mobile_token,
+        )
+
+    def copy_mobile_link(self) -> None:
+        self.window.clipboard_clear()
+        self.window.clipboard_append(self.mobile_access_url())
+        self.status.set("Enlace protegido copiado.")
+
+    def firewall_script_path(self) -> Path | None:
+        candidates = (
+            self.root_path / "HABILITAR_ACCESO_CELULAR.bat",
+            self.root_path / "scripts" / "HabilitarAccesoCelular.bat",
+        )
+        return next((path for path in candidates if path.is_file()), None)
+
+    def open_firewall_setup(self) -> None:
+        script = self.firewall_script_path()
+        if script is None:
+            messagebox.showwarning(
+                "Configurar acceso",
+                "No se encontró el asistente del Firewall en esta copia.",
+            )
+            return
+        try:
+            os.startfile(script)  # type: ignore[attr-defined]
+        except OSError as exc:
+            messagebox.showerror(
+                "Configurar acceso",
+                f"No se pudo abrir el asistente del Firewall:\n\n{exc}",
+            )
+            return
+        messagebox.showinfo(
+            "Configurar acceso",
+            (
+                "Windows solicitará permiso de administrador. Aceptalo y, "
+                "cuando termine, volvé a escanear el QR."
+            ),
+        )
+
+    def close_mobile_window(self) -> None:
+        if self.mobile_window is not None and self.mobile_window.winfo_exists():
+            self.mobile_window.destroy()
+        self.mobile_window = None
+        self.mobile_qr_image = None
+
+    def show_mobile_access(self) -> None:
+        if self.mobile_window is not None and self.mobile_window.winfo_exists():
+            self.mobile_window.lift()
+            self.mobile_window.focus_force()
+            return
+
+        access_url = self.mobile_access_url()
+        dialog = Toplevel(self.window)
+        self.mobile_window = dialog
+        dialog.title("Acceso desde celular · Gestión Financiera")
+        dialog.configure(background=COLOR_BACKGROUND)
+        dialog.resizable(False, False)
+        dialog.transient(self.window)
+        dialog.protocol("WM_DELETE_WINDOW", self.close_mobile_window)
+
+        dialog.update_idletasks()
+        width = 540
+        height = 600
+        dpi_scale = max(float(dialog.winfo_fpixels("1i")) / 96.0, 1.0)
+        screen_width = int(dialog.winfo_screenwidth() / dpi_scale)
+        screen_height = int(dialog.winfo_screenheight() / dpi_scale)
+        desired_x = self.window.winfo_rootx() + (WINDOW_WIDTH - width) // 2
+        desired_y = self.window.winfo_rooty() - 80
+        position_x = min(
+            max(desired_x, 0),
+            max(screen_width - width - 20, 0),
+        )
+        position_y = min(
+            max(desired_y, 0),
+            max(screen_height - height - 35, 0),
+        )
+        dialog.geometry(f"{width}x{height}+{position_x}+{position_y}")
+
+        header = Frame(dialog, background=COLOR_PRIMARY, padx=28, pady=18)
+        header.pack(fill="x")
+        Label(
+            header,
+            text="ACCESO TEMPORAL PROTEGIDO",
+            font=("Segoe UI Semibold", 9),
+            foreground="#A9E2E7",
+            background=COLOR_PRIMARY,
+        ).pack(anchor="w")
+        Label(
+            header,
+            text="Usar desde el celular",
+            font=("Segoe UI Semibold", 20),
+            foreground="#FFFFFF",
+            background=COLOR_PRIMARY,
+        ).pack(anchor="w", pady=(3, 0))
+        Label(
+            header,
+            text="El acceso se cerrará automáticamente al cerrar el sistema.",
+            font=("Segoe UI", 9),
+            foreground="#D2E8EB",
+            background=COLOR_PRIMARY,
+        ).pack(anchor="w", pady=(5, 0))
+
+        content = Frame(
+            dialog,
+            background=COLOR_BACKGROUND,
+            padx=28,
+            pady=16,
+        )
+        content.pack(fill="both", expand=True)
+
+        Label(
+            content,
+            text=(
+                "1. Conectá el celular a la misma red Wi-Fi.\n"
+                "2. Escaneá este código con la cámara."
+            ),
+            font=("Segoe UI", 10),
+            foreground=COLOR_TEXT,
+            background=COLOR_BACKGROUND,
+            justify="left",
+        ).pack(anchor="w")
+
+        qr_card = Frame(
+            content,
+            background=COLOR_SURFACE,
+            highlightbackground=COLOR_BORDER,
+            highlightthickness=1,
+            padx=14,
+            pady=12,
+        )
+        qr_card.pack(pady=(11, 8))
+        self.mobile_qr_image = ImageTk.PhotoImage(
+            build_qr_image(access_url, target_size=180)
+        )
+        Label(
+            qr_card,
+            image=self.mobile_qr_image,
+            background=COLOR_SURFACE,
+            borderwidth=0,
+        ).pack()
+
+        Label(
+            content,
+            text=f"Dirección de esta PC: http://{self.mobile_ip}:{self.port}",
+            font=("Segoe UI Semibold", 10),
+            foreground=COLOR_TEXT,
+            background=COLOR_BACKGROUND,
+        ).pack()
+        Label(
+            content,
+            text=(
+                "La clave segura está incluida en el QR y cambia cada vez. "
+                "La dirección sola no permite entrar."
+            ),
+            font=("Segoe UI", 8),
+            foreground=COLOR_MUTED,
+            background=COLOR_BACKGROUND,
+            justify="center",
+            wraplength=455,
+        ).pack(pady=(5, 0))
+
+        actions = Frame(content, background=COLOR_BACKGROUND)
+        actions.pack(pady=(12, 0))
+        copy_button = Button(
+            actions,
+            text="Copiar enlace",
+            command=self.copy_mobile_link,
+            font=("Segoe UI Semibold", 9),
+            foreground=COLOR_TEXT,
+            background=COLOR_SURFACE,
+            activebackground=COLOR_SECONDARY_HOVER,
+            relief="solid",
+            borderwidth=1,
+            cursor="hand2",
+            padx=15,
+            pady=9,
+        )
+        copy_button.pack(side="left")
+        firewall_button = Button(
+            actions,
+            text="Configurar Firewall",
+            command=self.open_firewall_setup,
+            font=("Segoe UI Semibold", 9),
+            foreground="#FFFFFF",
+            background=COLOR_PRIMARY,
+            activeforeground="#FFFFFF",
+            activebackground=COLOR_PRIMARY_HOVER,
+            relief="flat",
+            borderwidth=0,
+            cursor="hand2",
+            padx=15,
+            pady=10,
+        )
+        firewall_button.pack(side="left", padx=(10, 0))
+        disable_button = Button(
+            actions,
+            text="Desactivar",
+            command=self.deactivate_mobile_access,
+            font=("Segoe UI Semibold", 9),
+            foreground="#A33C38",
+            background=COLOR_BACKGROUND,
+            activeforeground="#8D302D",
+            activebackground="#F7EAE8",
+            relief="flat",
+            borderwidth=0,
+            cursor="hand2",
+            padx=12,
+            pady=9,
+        )
+        disable_button.pack(side="left", padx=(8, 0))
+
+        Label(
+            content,
+            text=(
+                "Si el QR no abre en una PC nueva, usá “Configurar Firewall” "
+                "una sola vez y aceptá el permiso de Windows."
+            ),
+            font=("Segoe UI", 8),
+            foreground=COLOR_MUTED,
+            background=COLOR_BACKGROUND,
+            justify="center",
+            wraplength=460,
+        ).pack(pady=(10, 0))
+
     def close_and_backup(self) -> None:
         if self.closing:
             return
@@ -327,8 +681,8 @@ class LocalApplication:
                 brand_row,
                 text="GF",
                 font=("Segoe UI Semibold", 15),
-                foreground="#18332B",
-                background="#E7AA45",
+                foreground="#083642",
+                background="#52C7C1",
                 width=4,
                 height=2,
             )
@@ -340,7 +694,7 @@ class LocalApplication:
             brand_copy,
             text="GESTIÓN FINANCIERA · SISTEMA LOCAL",
             font=("Segoe UI Semibold", 9),
-            foreground="#A9E7CD",
+            foreground="#A9E2E7",
             background=COLOR_PRIMARY,
         ).pack(anchor="w")
         Label(
@@ -359,7 +713,7 @@ class LocalApplication:
             brand_copy,
             text="Ventas financiadas y cobranza diaria",
             font=("Segoe UI", 10),
-            foreground="#D3E9E0",
+            foreground="#D2E8EB",
             background=COLOR_PRIMARY,
         ).pack(anchor="w")
 
@@ -425,7 +779,7 @@ class LocalApplication:
             relief="flat",
             borderwidth=0,
             cursor="hand2",
-            padx=22,
+            padx=18,
             pady=11,
         )
         self.open_button.pack(side="left")
@@ -435,11 +789,11 @@ class LocalApplication:
             hover=COLOR_PRIMARY_HOVER,
         )
 
-        close_button = Button(
+        self.mobile_button = Button(
             actions,
-            text="Cerrar y respaldar",
-            command=self.close_and_backup,
-            font=("Segoe UI Semibold", 10),
+            text="Usar desde celular",
+            command=self.activate_mobile_access,
+            font=("Segoe UI Semibold", 9),
             foreground=COLOR_TEXT,
             background=COLOR_BACKGROUND,
             activeforeground=COLOR_TEXT,
@@ -447,10 +801,32 @@ class LocalApplication:
             relief="solid",
             borderwidth=1,
             cursor="hand2",
-            padx=18,
-            pady=10,
+            padx=14,
+            pady=11,
         )
-        close_button.pack(side="left", padx=(12, 0))
+        self.mobile_button.pack(side="left", padx=(10, 0))
+        self._add_hover(
+            self.mobile_button,
+            normal=COLOR_BACKGROUND,
+            hover=COLOR_SECONDARY_HOVER,
+        )
+
+        close_button = Button(
+            actions,
+            text="Cerrar y respaldar",
+            command=self.close_and_backup,
+            font=("Segoe UI Semibold", 9),
+            foreground=COLOR_TEXT,
+            background=COLOR_BACKGROUND,
+            activeforeground=COLOR_TEXT,
+            activebackground=COLOR_SECONDARY_HOVER,
+            relief="flat",
+            borderwidth=0,
+            cursor="hand2",
+            padx=10,
+            pady=11,
+        )
+        close_button.pack(side="left", padx=(6, 0))
         self._add_hover(
             close_button,
             normal=COLOR_BACKGROUND,

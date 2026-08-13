@@ -1,13 +1,31 @@
+[CmdletBinding()]
+param(
+    [string]$PythonPath = ""
+)
+
 $ErrorActionPreference = "Stop"
 
 $projectDirectory = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $projectDirectory
 
-if (-not (Test-Path -LiteralPath ".venv\Scripts\python.exe")) {
-    throw "Falta .venv. Ejecuta scripts\InstalarDesarrollo.ps1 primero."
+if ([string]::IsNullOrWhiteSpace($PythonPath)) {
+    $localPython = Join-Path $projectDirectory ".venv\Scripts\python.exe"
+    if (Test-Path -LiteralPath $localPython -PathType Leaf) {
+        $PythonPath = $localPython
+    }
+    else {
+        $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
+        if (-not $pythonCommand) {
+            throw "No se encontro Python. Instala el entorno o indica -PythonPath."
+        }
+        $PythonPath = $pythonCommand.Source
+    }
+}
+if (-not (Test-Path -LiteralPath $PythonPath -PathType Leaf)) {
+    throw "No existe el ejecutable Python indicado: $PythonPath"
 }
 
-$pythonExecutable = ".venv\Scripts\python.exe"
+$pythonExecutable = [IO.Path]::GetFullPath($PythonPath)
 
 function Invoke-RequiredStep {
     param(

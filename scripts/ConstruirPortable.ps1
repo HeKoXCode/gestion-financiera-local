@@ -2,13 +2,13 @@
 param(
     [switch]$OmitirPruebas,
     [switch]$OmitirZip,
-    [string]$Version = ""
+    [string]$Version = "",
+    [string]$PythonPath = ""
 )
 
 $ErrorActionPreference = "Stop"
 
 $projectDirectory = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
-$pythonExecutable = Join-Path $projectDirectory ".venv\Scripts\python.exe"
 $buildDirectory = Join-Path $projectDirectory "build"
 $portableDirectory = Join-Path $projectDirectory "portable"
 $packageDirectory = Join-Path $portableDirectory "GestionFinanciera"
@@ -32,6 +32,21 @@ if ($Version -notmatch '^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$') {
 $archiveName = "GestionFinanciera-v$Version-windows-x64.zip"
 $archivePath = Join-Path $portableDirectory $archiveName
 $checksumsPath = Join-Path $portableDirectory "SHA256SUMS.txt"
+
+if ([string]::IsNullOrWhiteSpace($PythonPath)) {
+    $localPython = Join-Path $projectDirectory ".venv\Scripts\python.exe"
+    if (Test-Path -LiteralPath $localPython -PathType Leaf) {
+        $PythonPath = $localPython
+    }
+    else {
+        $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
+        if (-not $pythonCommand) {
+            throw "No se encontro Python. Instala el entorno o indica -PythonPath."
+        }
+        $PythonPath = $pythonCommand.Source
+    }
+}
+$pythonExecutable = [IO.Path]::GetFullPath($PythonPath)
 
 function Assert-ProjectChildPath {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -69,7 +84,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if (-not $OmitirPruebas) {
-    & (Join-Path $PSScriptRoot "Probar.ps1")
+    & (Join-Path $PSScriptRoot "Probar.ps1") -PythonPath $pythonExecutable
     if ($LASTEXITCODE -ne 0) {
         throw "Las pruebas fallaron; el paquete no sera construido."
     }
@@ -116,7 +131,9 @@ Copy-Item `
     [Text.UTF8Encoding]::new($false)
 )
 
-& (Join-Path $PSScriptRoot "ProbarPortable.ps1") -Paquete $packageDirectory
+& (Join-Path $PSScriptRoot "ProbarPortable.ps1") `
+    -Paquete $packageDirectory `
+    -PythonPath $pythonExecutable
 if ($LASTEXITCODE -ne 0) {
     throw "El paquete se construyo, pero no supero la prueba portable."
 }

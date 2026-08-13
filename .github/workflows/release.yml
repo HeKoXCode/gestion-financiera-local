@@ -40,11 +40,11 @@ jobs:
 
       - name: Quality gate
         shell: powershell
-        run: .\scripts\Probar.ps1
+        run: .\scripts\Probar.ps1 -PythonPath (Get-Command python).Source
 
       - name: Build portable package
         shell: powershell
-        run: .\scripts\ConstruirPortable.ps1 -OmitirPruebas
+        run: .\scripts\ConstruirPortable.ps1 -OmitirPruebas -PythonPath (Get-Command python).Source
 
       - name: Audit extracted release
         shell: powershell
@@ -57,6 +57,7 @@ jobs:
             -ArchivoZip $archive.FullName `
             -ChecksumPath .\portable\SHA256SUMS.txt `
             -ReportPath .\portable\release-audit.json `
+            -PythonPath (Get-Command python).Source `
             -OmitirDefender
 
       - name: Upload release proof

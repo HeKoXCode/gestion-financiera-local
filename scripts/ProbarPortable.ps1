@@ -1,13 +1,27 @@
 [CmdletBinding()]
 param(
-    [string]$Paquete
+    [string]$Paquete,
+    [string]$PythonPath = ""
 )
 
 $ErrorActionPreference = "Stop"
 
 $projectDirectory = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $temporaryParent = Join-Path $projectDirectory "tmp"
-$pythonExecutable = Join-Path $projectDirectory ".venv\Scripts\python.exe"
+if ([string]::IsNullOrWhiteSpace($PythonPath)) {
+    $localPython = Join-Path $projectDirectory ".venv\Scripts\python.exe"
+    if (Test-Path -LiteralPath $localPython -PathType Leaf) {
+        $PythonPath = $localPython
+    }
+    else {
+        $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
+        if (-not $pythonCommand) {
+            throw "No se encontro Python para validar externamente la base portable."
+        }
+        $PythonPath = $pythonCommand.Source
+    }
+}
+$pythonExecutable = [IO.Path]::GetFullPath($PythonPath)
 if ([string]::IsNullOrWhiteSpace($Paquete)) {
     $Paquete = Join-Path $projectDirectory "portable\GestionFinanciera"
 }

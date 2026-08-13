@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [switch]$OmitirPruebas,
-    [switch]$OmitirZip
+    [switch]$OmitirZip,
+    [string]$Version = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -11,8 +12,26 @@ $pythonExecutable = Join-Path $projectDirectory ".venv\Scripts\python.exe"
 $buildDirectory = Join-Path $projectDirectory "build"
 $portableDirectory = Join-Path $projectDirectory "portable"
 $packageDirectory = Join-Path $portableDirectory "GestionFinanciera"
-$archivePath = Join-Path $portableDirectory "GestionFinanciera-portable.zip"
 $specPath = Join-Path $projectDirectory "GestionFinanciera.spec"
+$pyprojectPath = Join-Path $projectDirectory "pyproject.toml"
+
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $versionLine = Select-String `
+        -LiteralPath $pyprojectPath `
+        -Pattern '^version\s*=\s*"([^"]+)"\s*$' |
+        Select-Object -First 1
+    if (-not $versionLine) {
+        throw "No se pudo leer la version desde pyproject.toml."
+    }
+    $Version = $versionLine.Matches[0].Groups[1].Value
+}
+if ($Version -notmatch '^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$') {
+    throw "La version no respeta SemVer: $Version"
+}
+
+$archiveName = "GestionFinanciera-v$Version-windows-x64.zip"
+$archivePath = Join-Path $portableDirectory $archiveName
+$checksumsPath = Join-Path $portableDirectory "SHA256SUMS.txt"
 
 function Assert-ProjectChildPath {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -61,6 +80,9 @@ Remove-GeneratedDirectory -Path $packageDirectory
 if (Test-Path -LiteralPath $archivePath -PathType Leaf) {
     Remove-Item -LiteralPath (Assert-ProjectChildPath -Path $archivePath) -Force
 }
+if (Test-Path -LiteralPath $checksumsPath -PathType Leaf) {
+    Remove-Item -LiteralPath (Assert-ProjectChildPath -Path $checksumsPath) -Force
+}
 New-Item -ItemType Directory -Path $portableDirectory -Force | Out-Null
 
 & $pythonExecutable -m PyInstaller `
@@ -88,6 +110,11 @@ Copy-Item `
     -LiteralPath (Join-Path $projectDirectory "docs\MANUAL_USO_PORTABLE.txt") `
     -Destination (Join-Path $packageDirectory "LEEME_PRIMERO.txt") `
     -Force
+[IO.File]::WriteAllText(
+    (Join-Path $packageDirectory "VERSION.txt"),
+    "$Version`n",
+    [Text.UTF8Encoding]::new($false)
+)
 
 & (Join-Path $PSScriptRoot "ProbarPortable.ps1") -Paquete $packageDirectory
 if ($LASTEXITCODE -ne 0) {
@@ -123,7 +150,8 @@ if (-not $OmitirZip) {
             "GestionFinanciera/ArchivarYReiniciar.exe",
             "GestionFinanciera/ARCHIVAR_Y_REINICIAR.bat",
             "GestionFinanciera/LEEME_PRIMERO.txt",
-            "GestionFinanciera/MANIFEST_SHA256.txt"
+            "GestionFinanciera/MANIFEST_SHA256.txt",
+            "GestionFinanciera/VERSION.txt"
         )) {
             if ($requiredEntry -notin $archiveNames) {
                 throw "El ZIP quedo incompleto; falta $requiredEntry."
@@ -147,6 +175,13 @@ if (-not $OmitirZip) {
     finally {
         $archive.Dispose()
     }
+
+    $archiveHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash
+    [IO.File]::WriteAllText(
+        $checksumsPath,
+        "$archiveHash  $archiveName`n",
+        [Text.UTF8Encoding]::new($false)
+    )
 }
 
 $packageSize = (
@@ -160,4 +195,6 @@ Write-Host "  $packageDirectory"
 Write-Host ("  Tamano: {0:N1} MB" -f ($packageSize / 1MB))
 if (-not $OmitirZip) {
     Write-Host "  ZIP: $archivePath"
+    Write-Host "  SHA-256: $archiveHash"
+    Write-Host "  Checksums: $checksumsPath"
 }

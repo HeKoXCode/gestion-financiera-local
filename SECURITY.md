@@ -26,3 +26,17 @@ Nunca deben incluirse en Git:
 - paquetes portables generados con datos reales.
 
 Antes de publicar un release se debe probar el ZIP en una carpeta aislada, verificar que inicia sin datos reales y publicar su hash SHA-256.
+
+## Firma y validación de releases
+
+La versión `v1.0.0` se distribuye sin firma Authenticode porque el proyecto no dispone de un certificado de firma de código confiable. No se utiliza un certificado autofirmado. Windows puede mostrar “Editor desconocido”; esto no debe resolverse desactivando SmartScreen o Microsoft Defender.
+
+Cada release pública debe incluir:
+
+- ZIP descargado únicamente desde el repositorio oficial;
+- `SHA256SUMS.txt` para verificar integridad;
+- auditoría de rutas y contenido sensible;
+- smoke test desde una extracción aislada;
+- resultado de Microsoft Defender con cero detecciones.
+
+El procedimiento y la decisión completa están documentados en [docs/I1_I4_RELEASE.md](docs/I1_I4_RELEASE.md).

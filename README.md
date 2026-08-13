@@ -26,6 +26,10 @@ Gestión Financiera concentra el ciclo operativo de un negocio que vende o prest
 
 Todas las capturas utilizan la base demo incluida; nombres, documentos, domicilios, teléfonos e importes son ficticios.
 
+![Recorrido animado: operación, cuotas, cobranza y reportes](docs/assets/workflow-demo.gif)
+
+La animación resume el recorrido operación → cuotas/pagos → cobranza → reportes. Se genera de forma reproducible desde las capturas ficticias con `scripts/build_demo_gif.py`.
+
 | Historial del cliente | Reportes operativos |
 |---|---|
 | ![Ficha de cliente ficticio](docs/assets/customer-detail-demo.png) | ![Reportes con datos ficticios](docs/assets/reports-demo.png) |
@@ -106,7 +110,7 @@ $env:GESTION_MEDIA_DIR="$PWD\tmp\demo\media"
 
 ## ✅ Calidad verificada
 
-Validación local del 10/08/2026:
+Validación local del 13/08/2026:
 
 - **212 pruebas aprobadas**;
 - **88% de cobertura** de líneas y ramas combinadas;
@@ -124,13 +128,23 @@ El workflow de CI ejecuta análisis estático, chequeos de Django, control de mi
 
 ## 📦 Entrega portable
 
-La aplicación puede construirse como carpeta y ZIP portable:
+La aplicación puede construirse como carpeta y ZIP portable versionado:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\ConstruirPortable.ps1
 ```
 
-El proceso ejecuta pruebas, genera los ejecutables, valida una copia aislada y crea un manifiesto de integridad. Los binarios, ZIP y carpetas generadas **no se versionan en Git**. Al publicar una versión deben adjuntarse a GitHub Releases junto con su hash SHA-256 y las notas del [changelog](CHANGELOG.md).
+El proceso ejecuta pruebas, genera los ejecutables, valida una copia aislada y crea un manifiesto de integridad. Para `v1.0.0`, los resultados locales son `portable/GestionFinanciera-v1.0.0-windows-x64.zip` y `portable/SHA256SUMS.txt`.
+
+Antes de publicar, el gate de seguridad vuelve a extraer el ZIP, rechaza datos o secretos, repite el smoke test y ejecuta Microsoft Defender:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\AuditarPaqueteRelease.ps1 `
+  -ArchivoZip .\portable\GestionFinanciera-v1.0.0-windows-x64.zip `
+  -ReportPath .\portable\release-audit.json
+```
+
+Los binarios, ZIP y carpetas generadas **no se versionan en Git**: se adjuntan a [GitHub Releases](https://github.com/HeKoXCode/gestion-financiera-local/releases) junto con `SHA256SUMS.txt`, el reporte de auditoría y las notas del [changelog](CHANGELOG.md). La versión `v1.0.0` no tiene firma Authenticode; la decisión, el posible aviso de SmartScreen y la evidencia completa están documentados en [GF-I1 a GF-I4](docs/I1_I4_RELEASE.md).
 
 ## 💾 Datos, respaldo y recuperación
 
@@ -182,6 +196,7 @@ Documentos principales:
 - [Manual de uso portable](docs/MANUAL_USO_PORTABLE.txt)
 - [Guía de entrega](docs/GUIA_DE_ENTREGA_AL_CLIENTE.md)
 - [Préstamos integrados](docs/PRESTAMOS_2026-08-06.md)
+- [Release portable y evidencia GF-I1 a GF-I4](docs/I1_I4_RELEASE.md)
 - [Política de seguridad](SECURITY.md)
 
 ## ⚖️ Licencia

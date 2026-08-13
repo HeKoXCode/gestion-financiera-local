@@ -3,6 +3,7 @@ param(
     [Parameter(Mandatory = $true)][string]$ArchivoZip,
     [string]$ChecksumPath = "",
     [string]$ReportPath = "",
+    [string]$PythonPath = "",
     [switch]$OmitirDefender
 )
 
@@ -142,7 +143,9 @@ try {
         throw "El ZIP no contiene la carpeta raiz GestionFinanciera."
     }
 
-    & (Join-Path $PSScriptRoot "ProbarPortable.ps1") -Paquete $packageDirectory
+    & (Join-Path $PSScriptRoot "ProbarPortable.ps1") `
+        -Paquete $packageDirectory `
+        -PythonPath $PythonPath
     if ($LASTEXITCODE -ne 0) {
         throw "La copia extraida no supero la prueba portable aislada."
     }

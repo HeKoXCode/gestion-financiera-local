@@ -11,10 +11,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -36,3 +36,8 @@ jobs:
         run: |
           python -m coverage run -m pytest -q
           python -m coverage report --fail-under=85
+
+      - name: Verify reproducible demo GIF
+        run: |
+          python scripts/build_demo_gif.py
+          git diff --exit-code -- docs/assets/workflow-demo.gif

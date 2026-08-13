@@ -14,7 +14,7 @@ portable\GestionFinanciera\
 y como archivo para trasladar o entregar:
 
 ```text
-portable\GestionFinanciera-portable.zip
+portable\GestionFinanciera-v1.0.0-windows-x64.zip
 ```
 
 La carpeta contiene:
@@ -160,7 +160,7 @@ Tamaño de la compilación validada:
 
 ```text
 Carpeta: aproximadamente 75,6 MB
-ZIP: aproximadamente 38,44 MB
+ZIP: tamaño variable según la versión de PyInstaller y sus dependencias
 ```
 
 El tamaño puede variar ligeramente entre construcciones.
@@ -180,7 +180,7 @@ desactivar Windows Defender. Antes de aceptar la ejecución:
 cambiado. El ZIP completo puede verificarse en PowerShell con:
 
 ```powershell
-Get-FileHash .\GestionFinanciera-portable.zip -Algorithm SHA256
+Get-FileHash .\GestionFinanciera-v1.0.0-windows-x64.zip -Algorithm SHA256
 ```
 
 ## 8. Definición de terminado

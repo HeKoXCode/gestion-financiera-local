@@ -1,0 +1,70 @@
+name: Portable release proof
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build-portable:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.lock
+
+      - name: Install locked dependencies
+        run: python -m pip install --require-hashes -r requirements-dev.lock
+
+      - name: Verify tag matches project version
+        if: github.ref_type == 'tag'
+        shell: powershell
+        run: |
+          $versionLine = Select-String -LiteralPath pyproject.toml -Pattern '^version\s*=\s*"([^"]+)"\s*$'
+          $expectedTag = "v$($versionLine.Matches[0].Groups[1].Value)"
+          if ($env:GITHUB_REF_NAME -ne $expectedTag) {
+            throw "Tag $env:GITHUB_REF_NAME does not match project version $expectedTag."
+          }
+
+      - name: Quality gate
+        shell: powershell
+        run: .\scripts\Probar.ps1
+
+      - name: Build portable package
+        shell: powershell
+        run: .\scripts\ConstruirPortable.ps1 -OmitirPruebas
+
+      - name: Audit extracted release
+        shell: powershell
+        run: |
+          $archive = Get-ChildItem -LiteralPath portable -Filter "GestionFinanciera-v*-windows-x64.zip" -File
+          if ($archive.Count -ne 1) {
+            throw "Expected exactly one versioned release ZIP; found $($archive.Count)."
+          }
+          .\scripts\AuditarPaqueteRelease.ps1 `
+            -ArchivoZip $archive.FullName `
+            -ChecksumPath .\portable\SHA256SUMS.txt `
+            -ReportPath .\portable\release-audit.json `
+            -OmitirDefender
+
+      - name: Upload release proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: gestion-financiera-portable
+          path: |
+            portable/GestionFinanciera-v*-windows-x64.zip
+            portable/SHA256SUMS.txt
+            portable/release-audit.json
+          if-no-files-found: error

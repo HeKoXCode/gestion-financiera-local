@@ -9,7 +9,7 @@ para la persona que usará el sistema está incluida dentro del paquete como
 No entregar toda la carpeta de desarrollo. La entrega correcta es:
 
 ```text
-portable\GestionFinanciera-portable.zip
+portable\GestionFinanciera-v1.0.0-windows-x64.zip
 ```
 
 También puede copiarse directamente esta carpeta, siempre completa:
@@ -39,26 +39,24 @@ La construcción validada:
 - superó el inicio, las pantallas principales, los archivos visuales, la copia
   de cierre y una restauración.
 
-Archivo ZIP comprobado el 31/07/2026:
+La release `v1.0.0` se publica junto con `SHA256SUMS.txt`. Para obtener el valor comprobado del archivo descargado:
 
-```text
-Tamaño: 38,44 MB
-SHA-256: 8785355DC44D40AC035BAD839A60FF8ECCC59785E76FD115B178F80853AF5E27
+```powershell
+Get-FileHash .\GestionFinanciera-v1.0.0-windows-x64.zip -Algorithm SHA256
 ```
 
-Si el paquete se vuelve a construir, su tamaño y SHA-256 cambiarán. En ese caso
-hay que registrar el nuevo valor después de ejecutar las pruebas.
+El resultado debe coincidir exactamente con la línea publicada en `SHA256SUMS.txt`. Si el paquete se vuelve a construir, su tamaño y SHA-256 cambiarán y debe publicarse como una nueva release.
 
 ## 3. Preparar el medio de entrega
 
-1. Copiar `GestionFinanciera-portable.zip` a un pendrive o medio confiable.
+1. Copiar `GestionFinanciera-v1.0.0-windows-x64.zip` a un pendrive o medio confiable.
 2. Conservar una copia idéntica como respaldo de la versión entregada.
 3. No añadir bases de prueba al ZIP.
 4. Analizar el ZIP con Microsoft Defender antes de copiarlo.
 5. Si se desea comprobar su integridad, ejecutar:
 
    ```powershell
-   Get-FileHash .\GestionFinanciera-portable.zip -Algorithm SHA256
+   Get-FileHash .\GestionFinanciera-v1.0.0-windows-x64.zip -Algorithm SHA256
    ```
 
 ## 4. Instalación en la PC del cliente

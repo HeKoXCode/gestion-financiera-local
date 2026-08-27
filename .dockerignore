@@ -1,0 +1,14 @@
+.git
+.github
+.venv
+build
+data
+backups
+exports
+media
+portable
+staticfiles
+tmp
+*.sqlite3
+*.pyc
+__pycache__

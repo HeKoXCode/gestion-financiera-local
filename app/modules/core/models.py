@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -724,3 +725,49 @@ class CollectionAttempt(TimestampedModel):
             raise ValidationError(
                 {"customer": "El cliente del intento no coincide con el de la venta."}
             )
+
+
+class AuditEvent(models.Model):
+    """Append-only trace of successful state-changing web operations."""
+
+    request_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="gestion_audit_events",
+        blank=True,
+        null=True,
+        verbose_name="usuario",
+    )
+    action = models.CharField(max_length=120, verbose_name="acción")
+    path = models.CharField(max_length=500, verbose_name="ruta")
+    method = models.CharField(max_length=10, verbose_name="método")
+    status_code = models.PositiveSmallIntegerField(verbose_name="estado HTTP")
+    remote_address = models.GenericIPAddressField(
+        blank=True,
+        null=True,
+        verbose_name="dirección remota",
+    )
+    metadata = models.JSONField(default=dict, blank=True, verbose_name="metadatos")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="fecha")
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        verbose_name = "evento de auditoría"
+        verbose_name_plural = "eventos de auditoría"
+        indexes = [
+            models.Index(fields=["-created_at"], name="audit_created_idx"),
+            models.Index(fields=["actor", "-created_at"], name="audit_actor_created_idx"),
+            models.Index(fields=["action", "-created_at"], name="audit_action_created_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.created_at:%d/%m/%Y %H:%M} — {self.action}"
+
+    def save(self, *args, **kwargs) -> None:
+        if self.pk:
+            raise ValidationError("Los eventos de auditoría no pueden modificarse.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Los eventos de auditoría no pueden eliminarse.")

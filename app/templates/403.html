@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Acceso restringido · Gestión Financiera{% endblock %}
+
+{% block content %}
+<section class="empty-state panel">
+    <span class="eyebrow">Permiso requerido</span>
+    <h1>Tu rol no permite realizar esta operación</h1>
+    <p>Pedile acceso a una persona administradora si necesitás completar esta tarea.</p>
+    <a class="btn btn-primary" href="{% url 'core:home' %}">Volver al resumen</a>
+</section>
+{% endblock %}

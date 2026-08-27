@@ -5,10 +5,10 @@
 {% block content %}
 <header class="page-header data-header">
     <div>
-        <p class="eyebrow">Protección local</p>
+        <p class="eyebrow">Protección de datos · {{ database_engine }}</p>
         <h1>Datos y respaldo</h1>
         <p class="page-subtitle">
-            Copias completas para restaurar el sistema y archivos CSV para consultar en Excel.
+            Copias verificadas para recuperar el sistema y archivos CSV para consultar en Excel.
         </p>
     </div>
 </header>
@@ -17,12 +17,12 @@
     <article>
         <span>Datos actuales</span>
         <strong>{% if database_exists %}Disponible{% else %}No encontrada{% endif %}</strong>
-        <small>{{ database_size|filesizeformat }}</small>
+        <small>{% if database_size is not None %}{{ database_size|filesizeformat }} · {% endif %}{{ database_engine }}</small>
     </article>
-    <article class="{% if recovery_backup %}is-success{% endif %}">
-        <span>Copia de recuperación</span>
-        <strong>{% if recovery_backup %}Actualizada{% else %}Pendiente{% endif %}</strong>
-        <small>{% if recovery_backup %}{{ recovery_backup.backup.created_at|date:"d/m/Y H:i" }}{% else %}Se crea al guardar cambios{% endif %}</small>
+    <article class="{% if recovery_backup or latest_backup and not database_is_sqlite %}is-success{% endif %}">
+        <span>{% if database_is_sqlite %}Copia de recuperación{% else %}Último backup verificado{% endif %}</span>
+        <strong>{% if database_is_sqlite %}{% if recovery_backup %}Actualizada{% else %}Pendiente{% endif %}{% else %}{% if latest_backup %}Disponible{% else %}Pendiente{% endif %}{% endif %}</strong>
+        <small>{% if database_is_sqlite %}{% if recovery_backup %}{{ recovery_backup.backup.created_at|date:"d/m/Y H:i" }}{% else %}Se crea al guardar cambios{% endif %}{% else %}{% if latest_backup %}{{ latest_backup.backup.created_at|date:"d/m/Y H:i" }}{% else %}Crealo manualmente o con la tarea programada{% endif %}{% endif %}</small>
     </article>
     <article>
         <span>Copias disponibles</span>
@@ -42,11 +42,15 @@
         <div>
             <p class="eyebrow">Copia completa</p>
             <h2>Crear copia de seguridad</h2>
+            {% if database_is_sqlite %}
             <p>Conserva clientes, productos, ventas, cuotas, pagos y configuración en un único ZIP restaurable.</p>
+            {% else %}
+            <p>Ejecuta <code>pg_dump</code>, verifica el resultado con <code>pg_restore</code> y conserva un archivo <code>.dump</code> externo.</p>
+            {% endif %}
         </div>
         <form method="post" action="{% url 'core:backup_create' %}">
             {% csrf_token %}
-            <button class="btn btn-primary" type="submit">Crear copia ZIP</button>
+            <button class="btn btn-primary" type="submit">{% if database_is_sqlite %}Crear copia ZIP{% else %}Crear backup .dump{% endif %}</button>
         </form>
     </section>
 
@@ -68,10 +72,15 @@
         <div>
             <p class="eyebrow">Recuperación segura</p>
             <h2>Restaurar una copia</h2>
+            {% if database_is_sqlite %}
             <p>Cerrá el sistema y abrí el restaurador. Elegirá la copia más reciente, recuperará los datos y volverá a abrir el sistema.</p>
             <code>RESTAURAR_DATOS.bat · scripts\Restaurar.bat</code>
+            {% else %}
+            <p>Restaurá el archivo validado en una base vacía durante una ventana de mantenimiento. El procedimiento evita sobrescribir una base activa desde la interfaz web.</p>
+            <code>pg_restore --clean --if-exists --no-owner --dbname="$PGDATABASE" archivo.dump</code>
+            {% endif %}
         </div>
-        <span class="restore-note">También acepta copias antiguas <strong>.sqlite3</strong>. Los ZIP con archivos CSV no sirven para restaurar.</span>
+        <span class="restore-note">{% if database_is_sqlite %}También acepta copias antiguas <strong>.sqlite3</strong>. {% else %}La restauración PostgreSQL queda a cargo de un administrador de infraestructura. {% endif %}Los ZIP con archivos CSV no sirven para restaurar.</span>
     </section>
 </div>
 
@@ -151,7 +160,12 @@
 
 <aside class="data-safety-note">
     <strong>Qué archivo usar en cada caso</strong>
+    {% if database_is_sqlite %}
     <p><b>Copia de seguridad (.sqlite3.zip)</b> recupera todos los datos del sistema. <b>Exportación ZIP con CSV</b> sirve para Excel, pero no puede restaurarse.</p>
     <p>Al cerrar se conserva una copia por día. Si cerrás varias veces el mismo día, esa copia se actualiza. Las copias diarias se guardan durante 90 días.</p>
+    {% else %}
+    <p><b>Backup PostgreSQL (.dump)</b> recupera la base compartida. <b>Exportación ZIP con CSV</b> sirve para Excel o análisis, pero no puede restaurarse.</p>
+    <p>Programá <code>backup_database</code> fuera del contenedor, controlá la retención y probá periódicamente una restauración en una base aislada.</p>
+    {% endif %}
 </aside>
 {% endblock %}

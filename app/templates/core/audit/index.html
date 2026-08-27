@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Auditoría · Gestión Financiera{% endblock %}
+
+{% block content %}
+<section class="reports-header">
+    <div><span class="eyebrow">GF-C1 · trazabilidad</span><h1>Auditoría de operaciones</h1><p>Registro inmutable de cambios realizados desde la aplicación.</p></div>
+</section>
+<section class="panel">
+    <div class="report-scroll">
+        <table class="report-table">
+            <thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Método</th><th>Estado</th><th>Origen</th></tr></thead>
+            <tbody>
+            {% for event in events %}
+                <tr><td>{{ event.created_at|date:"d/m/Y H:i:s" }}</td><td>{{ event.actor.username|default:"modo local" }}</td><td><code>{{ event.action }}</code></td><td>{{ event.method }}</td><td>{{ event.status_code }}</td><td>{{ event.remote_address|default:"—" }}</td></tr>
+            {% empty %}<tr><td colspan="6">Todavía no hay operaciones registradas.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include "core/partials/pagination.html" with page=events %}
+</section>
+{% endblock %}

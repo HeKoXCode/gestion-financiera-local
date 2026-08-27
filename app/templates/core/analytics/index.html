@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load finance %}
+
+{% block title %}Analítica · Gestión Financiera{% endblock %}
+
+{% block content %}
+<section class="reports-header analytics-header">
+    <div>
+        <span class="eyebrow">GF-C2 · cartera y comportamiento</span>
+        <h1>Analítica financiera</h1>
+        <p>Aging, recuperación y cohortes reconciliadas al {{ selected_date|date:"d/m/Y" }}.</p>
+    </div>
+    <div class="reports-header-actions">
+        <form method="get" class="date-filter">
+            <label for="analytics-date">Fecha de corte</label>
+            <input id="analytics-date" type="date" name="fecha" value="{{ selected_date|date:'Y-m-d' }}">
+            <button class="btn btn-secondary" type="submit">Actualizar</button>
+        </form>
+        {% if current_role == 'admin' or not auth_required %}
+        <form method="post" action="{% url 'core:reporting_export_create' %}?fecha={{ selected_date|date:'Y-m-d' }}">
+            {% csrf_token %}
+            <button class="btn btn-primary" type="submit">Exportar para Power BI</button>
+        </form>
+        {% endif %}
+    </div>
+</section>
+
+<section class="report-kpi-grid analytics-kpis">
+    <article class="report-kpi"><span>Cartera total</span><strong>{{ portfolio_total|ars }}</strong><small>Capital y recargos</small></article>
+    <article class="report-kpi is-dark"><span>Cartera vencida</span><strong>{{ overdue_total|ars }}</strong><small>{{ overdue_rate }}% de la cartera</small></article>
+    <article class="report-kpi is-success"><span>Recuperación</span><strong>{{ recovery_rate }}%</strong><small>{{ principal_collected|ars }} cobrados</small></article>
+    <article class="report-kpi"><span>Pago en fecha</span><strong>{{ on_time_rate }}%</strong><small>{{ on_time_installments }} de {{ paid_installments }} cuotas pagadas</small></article>
+</section>
+
+<section class="analytics-grid">
+    <article class="panel analytics-panel">
+        <div class="report-section-heading">
+            <div><span class="eyebrow">Riesgo actual</span><h2>Aging de deuda</h2></div>
+            <span class="status-badge {% if reconciliation.passed %}is-success{% else %}is-danger{% endif %}">
+                {% if reconciliation.passed %}Conciliado{% else %}Revisar{% endif %}
+            </span>
+        </div>
+        <div class="aging-chart" role="img" aria-label="Distribución de cartera por días de atraso">
+            {% for row in aging_rows %}
+            <div class="aging-row">
+                <div class="aging-label"><strong>{{ row.label }}</strong><small>{{ row.customers }} clientes · {{ row.installments }} cuotas</small></div>
+                <div class="aging-track"><span style="width: {{ row.bar_width }}%"></span></div>
+                <div class="aging-value"><strong>{{ row.total_due|ars }}</strong><small>{{ row.share }}%</small></div>
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="panel analytics-panel behavior-panel">
+        <span class="eyebrow">Comportamiento</span>
+        <h2>Estado de cuotas</h2>
+        <dl class="metric-list">
+            <div><dt>Cuotas analizadas</dt><dd>{{ installment_count }}</dd></div>
+            <div><dt>Pagadas en fecha</dt><dd>{{ on_time_installments }}</dd></div>
+            <div><dt>Pagadas con atraso</dt><dd>{{ late_paid_installments }}</dd></div>
+            <div><dt>Vencidas pendientes</dt><dd>{{ overdue_installments }}</dd></div>
+            <div><dt>Clientes activos</dt><dd>{{ active_customers }}</dd></div>
+        </dl>
+    </article>
+</section>
+
+<section class="panel analytics-panel cohort-panel">
+    <div class="report-section-heading">
+        <div><span class="eyebrow">Originación</span><h2>Cohortes mensuales</h2></div>
+        <small>Capital cobrado y vencido sobre el capital originado</small>
+    </div>
+    <div class="report-scroll">
+        <table class="data-table report-table cohort-table">
+            <thead><tr><th>Cohorte</th><th>Volumen</th><th class="align-right">Originado</th><th class="align-right">Cobrado</th><th class="align-right">Pendiente</th><th class="align-right">Recuperación</th><th class="align-right">Mora</th></tr></thead>
+            <tbody>
+            {% for row in cohort_rows %}
+                <tr>
+                    <td><strong>{{ row.cohort_month|date:"m/Y" }}</strong></td>
+                    <td><strong>{{ row.customers }} clientes</strong><small>{{ row.sales }} operaciones</small></td>
+                    <td class="money-cell">{{ row.principal_originated|ars }}</td><td class="money-cell">{{ row.principal_collected|ars }}</td><td class="money-cell">{{ row.principal_outstanding|ars }}</td>
+                    <td class="money-cell">{{ row.recovery_rate }}%</td><td class="money-cell">{{ row.overdue_rate }}%</td>
+                </tr>
+            {% empty %}<tr><td colspan="7">Todavía no hay operaciones para analizar.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="reconciliation-strip {% if reconciliation.passed %}is-success{% else %}is-danger{% endif %}">
+    <strong>Control de reconciliación</strong>
+    <span>Aging: {{ reconciliation.aging_vs_portfolio|ars }}</span>
+    <span>Cohortes: {{ reconciliation.cohorts_vs_principal|ars }}</span>
+    <span>Pagos: {{ reconciliation.payments_vs_allocations|ars }}</span>
+</section>
+{% endblock %}

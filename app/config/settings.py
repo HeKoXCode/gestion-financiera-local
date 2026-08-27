@@ -14,6 +14,17 @@ def _external_directory(variable: str, default_name: str) -> Path:
     return directory
 
 
+def _environment_list(variable: str, default: str = "") -> list[str]:
+    return [item.strip() for item in os.environ.get(variable, default).split(",") if item.strip()]
+
+
+def _environment_flag(variable: str, default: bool = False) -> bool:
+    value = os.environ.get(variable)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 DATA_DIR = _external_directory("GESTION_DATA_DIR", "data")
 BACKUP_DIR = _external_directory("GESTION_BACKUP_DIR", "backups")
 EXPORT_DIR = _external_directory("GESTION_EXPORT_DIR", "exports")
@@ -35,7 +46,14 @@ def _load_or_create_secret_key() -> str:
 
 
 SECRET_KEY = _load_or_create_secret_key()
-DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
+DEBUG = _environment_flag("DJANGO_DEBUG", True)
+GESTION_DEPLOYMENT_MODE = os.environ.get("GESTION_DEPLOYMENT_MODE", "local").strip().lower()
+if GESTION_DEPLOYMENT_MODE not in {"local", "multiuser"}:
+    raise ValueError("GESTION_DEPLOYMENT_MODE debe ser 'local' o 'multiuser'.")
+GESTION_AUTH_REQUIRED = _environment_flag(
+    "GESTION_AUTH_REQUIRED",
+    GESTION_DEPLOYMENT_MODE == "multiuser",
+)
 GESTION_LAN_IP = os.environ.get("GESTION_LAN_IP", "").strip()
 GESTION_MOBILE_ACCESS_ENABLED = (
     os.environ.get("GESTION_MOBILE_ACCESS_ENABLED", "0") == "1"
@@ -44,13 +62,16 @@ GESTION_MOBILE_ACCESS_TOKEN = os.environ.get(
     "GESTION_MOBILE_ACCESS_TOKEN",
     "",
 )
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+ALLOWED_HOSTS = _environment_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
 if DEBUG:
     ALLOWED_HOSTS.append("testserver")
 if GESTION_LAN_IP:
     ALLOWED_HOSTS.append(GESTION_LAN_IP)
+ALLOWED_HOSTS = list(dict.fromkeys(ALLOWED_HOSTS))
+CSRF_TRUSTED_ORIGINS = _environment_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 
 INSTALLED_APPS = [
+    "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
@@ -62,6 +83,9 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "modules.core.middleware.MobileAccessMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "modules.core.middleware.RoleAccessMiddleware",
+    "modules.core.middleware.AuditTrailMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -89,15 +113,45 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": DATA_DIR / "gestion_financiera.sqlite3",
-        "OPTIONS": {
-            "timeout": 20,
-        },
+DATABASE_ENGINE = os.environ.get("GESTION_DATABASE_ENGINE", "sqlite").strip().lower()
+if DATABASE_ENGINE == "postgresql":
+    required_database_variables = {
+        "PGDATABASE": os.environ.get("PGDATABASE", "").strip(),
+        "PGUSER": os.environ.get("PGUSER", "").strip(),
+        "PGPASSWORD": os.environ.get("PGPASSWORD", ""),
+        "PGHOST": os.environ.get("PGHOST", "").strip(),
     }
-}
+    missing_database_variables = [
+        name for name, value in required_database_variables.items() if not value
+    ]
+    if missing_database_variables:
+        raise ValueError(
+            "Faltan variables PostgreSQL: " + ", ".join(missing_database_variables)
+        )
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": required_database_variables["PGDATABASE"],
+            "USER": required_database_variables["PGUSER"],
+            "PASSWORD": required_database_variables["PGPASSWORD"],
+            "HOST": required_database_variables["PGHOST"],
+            "PORT": os.environ.get("PGPORT", "5432"),
+            "CONN_MAX_AGE": int(os.environ.get("GESTION_DB_CONN_MAX_AGE", "60")),
+            "CONN_HEALTH_CHECKS": True,
+            "ATOMIC_REQUESTS": True,
+            "OPTIONS": {"sslmode": os.environ.get("PGSSLMODE", "prefer")},
+        }
+    }
+elif DATABASE_ENGINE == "sqlite":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": DATA_DIR / "gestion_financiera.sqlite3",
+            "OPTIONS": {"timeout": 20},
+        }
+    }
+else:
+    raise ValueError("GESTION_DATABASE_ENGINE debe ser 'sqlite' o 'postgresql'.")
 
 LANGUAGE_CODE = "es-ar"
 TIME_ZONE = "America/Argentina/Buenos_Aires"
@@ -113,10 +167,25 @@ MEDIA_URL = "media/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 MESSAGE_STORAGE = "django.contrib.messages.storage.cookie.CookieStorage"
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "core:home"
+LOGOUT_REDIRECT_URL = "login"
 
 CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_HTTPONLY = True
 X_FRAME_OPTIONS = "DENY"
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+
+BEHIND_HTTPS_PROXY = _environment_flag("GESTION_BEHIND_HTTPS_PROXY")
+if BEHIND_HTTPS_PROXY:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = int(os.environ.get("GESTION_HSTS_SECONDS", "31536000"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = _environment_flag("GESTION_HSTS_PRELOAD")
 
 LOG_LEVEL = os.environ.get("GESTION_LOG_LEVEL", "INFO")
 LOGGING = {

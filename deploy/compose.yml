@@ -1,0 +1,71 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PGDATABASE}
+      POSTGRES_USER: ${PGUSER}
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER} -d ${PGDATABASE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: ..
+    restart: unless-stopped
+    env_file: ${GESTION_ENV_FILE:-.env}
+    environment:
+      GESTION_DEPLOYMENT_MODE: multiuser
+      GESTION_AUTH_REQUIRED: "1"
+      GESTION_DATABASE_ENGINE: postgresql
+      GESTION_BEHIND_HTTPS_PROXY: "1"
+      PGHOST: db
+      GESTION_DATA_DIR: /data
+      GESTION_BACKUP_DIR: /backups
+      GESTION_EXPORT_DIR: /exports
+      GESTION_MEDIA_DIR: /media
+    volumes:
+      - app_data:/data
+      - ${GESTION_BACKUP_HOST_PATH:-./backups}:/backups
+      - app_exports:/exports
+      - app_media:/media
+      - app_static:/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os, urllib.request; request = urllib.request.Request('http://127.0.0.1:8000/health/', headers={'Host': os.environ['GESTION_DOMAIN'], 'X-Forwarded-Proto': 'https'}); urllib.request.urlopen(request, timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    environment:
+      GESTION_DOMAIN: ${GESTION_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - app_static:/srv/static:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  app_data:
+  app_exports:
+  app_media:
+  app_static:
+  caddy_data:
+  caddy_config:

@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from io import StringIO
 
@@ -193,7 +193,7 @@ def test_voided_payment_does_not_reduce_balance():
         principal_amount=Decimal("20000.00"),
     )
     payment.status = Payment.Status.VOIDED
-    payment.voided_at = payment.created_at
+    payment.voided_at = timezone.make_aware(datetime(2026, 8, 18, 12, 0))
     payment.void_reason = "Pago cargado por error"
     payment.save()
 

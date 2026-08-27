@@ -17,13 +17,6 @@ from django.utils.dateparse import parse_date
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from launcher.backup import (
-    BackupError,
-    create_backup,
-    list_backups,
-    resolve_backup_path,
-    validate_application_backup,
-)
 from modules.core.forms import (
     BusinessSettingsForm,
     CollectionAttemptForm,
@@ -36,6 +29,7 @@ from modules.core.forms import (
 )
 from modules.core.middleware import MOBILE_SESSION_KEY, mobile_token_digest
 from modules.core.models import (
+    AuditEvent,
     BusinessSettings,
     CollectionAttempt,
     Customer,
@@ -44,6 +38,7 @@ from modules.core.models import (
     Sale,
 )
 from modules.core.services.agenda import build_weekly_agenda
+from modules.core.services.analytics import build_analytics
 from modules.core.services.balances import (
     get_due_sale_balance,
     get_installment_balance,
@@ -58,6 +53,12 @@ from modules.core.services.customer_statement_pdf import (
     customer_statement_filename,
 )
 from modules.core.services.dashboard import build_dashboard
+from modules.core.services.database_backup import (
+    DatabaseBackupError,
+    create_deployment_backup,
+    list_deployment_backups,
+    resolve_deployment_backup,
+)
 from modules.core.services.export_data import (
     ExportError,
     create_data_export,
@@ -75,6 +76,10 @@ from modules.core.services.payments import (
     void_payment,
 )
 from modules.core.services.recovery import refresh_recovery_backup
+from modules.core.services.reporting_export import (
+    ReportingExportError,
+    create_reporting_export,
+)
 from modules.core.services.reports import build_reports
 from modules.core.services.whatsapp import build_customer_statement_whatsapp_url
 
@@ -238,6 +243,49 @@ def reports(request):
 
 
 @require_GET
+def analytics(request):
+    selected_date = _selected_date(request)
+    today = timezone.localdate()
+    generate_missing_late_fees(as_of=min(selected_date, today))
+    return render(
+        request,
+        "core/analytics/index.html",
+        {
+            "selected_date": selected_date,
+            "today": today,
+            **build_analytics(as_of=selected_date),
+        },
+    )
+
+
+@require_POST
+def reporting_export_create(request):
+    selected_date = _selected_date(request)
+    try:
+        export = create_reporting_export(as_of=selected_date)
+    except ReportingExportError:
+        logger.exception("No se pudo crear la exportación analítica.")
+        messages.error(request, "No se pudo crear la exportación analítica.")
+        return redirect(f"{reverse('core:analytics')}?fecha={selected_date:%Y-%m-%d}")
+    return FileResponse(
+        export.open("rb"),
+        as_attachment=True,
+        filename=export.name,
+        content_type="application/zip",
+    )
+
+
+@require_GET
+def audit_events(request):
+    events = AuditEvent.objects.select_related("actor").all()
+    return render(
+        request,
+        "core/audit/index.html",
+        {"events": _paginate(request, events)},
+    )
+
+
+@require_GET
 def collection_print(request):
     selected_date = _selected_date(request)
     today = timezone.localdate()
@@ -283,13 +331,18 @@ def configuration(request):
 def data_management(request):
     backup_directory = Path(django_settings.BACKUP_DIR)
     export_directory = Path(django_settings.EXPORT_DIR)
-    database_path = Path(django_settings.DATABASES["default"]["NAME"])
+    database_is_sqlite = connection.vendor == "sqlite"
+    database_path = (
+        Path(django_settings.DATABASES["default"]["NAME"])
+        if database_is_sqlite
+        else None
+    )
     all_backups = [
         {
             "backup": backup,
             "label": BACKUP_LABELS.get(backup.label, backup.label.replace("_", " ").title()),
         }
-        for backup in list_backups(backup_directory)
+        for backup in list_deployment_backups(backup_directory)
     ]
     all_exports = list_exports(export_directory)
     recovery = next(
@@ -305,8 +358,17 @@ def data_management(request):
             "exports": all_exports[:20],
             "export_count": len(all_exports),
             "recovery_backup": recovery,
-            "database_size": database_path.stat().st_size if database_path.is_file() else 0,
-            "database_exists": database_path.is_file(),
+            "latest_backup": all_backups[0] if all_backups else None,
+            "database_engine": "SQLite" if database_is_sqlite else "PostgreSQL",
+            "database_is_sqlite": database_is_sqlite,
+            "database_size": (
+                database_path.stat().st_size
+                if database_path is not None and database_path.is_file()
+                else None
+            ),
+            "database_exists": (
+                database_path.is_file() if database_path is not None else True
+            ),
         },
     )
 
@@ -314,35 +376,35 @@ def data_management(request):
 @require_POST
 def backup_create(request):
     try:
-        backup = create_backup(
-            Path(django_settings.DATABASES["default"]["NAME"]),
-            Path(django_settings.BACKUP_DIR),
+        backup = create_deployment_backup(
+            output_directory=Path(django_settings.BACKUP_DIR),
             label="manual",
             retention=30,
         )
-    except BackupError as exc:
+    except DatabaseBackupError as exc:
         messages.error(request, str(exc))
     else:
-        if backup:
-            messages.success(request, f"Copia de seguridad creada: {backup.name}")
-        else:
-            messages.error(request, "Todavía no existe una base para respaldar.")
+        messages.success(request, f"Copia de seguridad creada y verificada: {backup.name}")
     return redirect("core:data_management")
 
 
 @require_GET
 def backup_download(request, name):
     try:
-        backup = resolve_backup_path(Path(django_settings.BACKUP_DIR), name)
-        validate_application_backup(backup)
-    except BackupError as exc:
+        backup = resolve_deployment_backup(
+            name,
+            output_directory=Path(django_settings.BACKUP_DIR),
+        )
+    except DatabaseBackupError as exc:
         raise Http404(str(exc)) from exc
     return FileResponse(
         backup.open("rb"),
         as_attachment=True,
         filename=backup.name,
         content_type=(
-            "application/zip" if backup.name.endswith(".zip") else "application/vnd.sqlite3"
+            "application/zip"
+            if backup.name.endswith(".zip")
+            else "application/octet-stream"
         ),
     )
 

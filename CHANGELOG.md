@@ -6,6 +6,32 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-27
+
+### Added
+
+- Perfil multiusuario optativo con autenticación y roles Administrador/Cobrador.
+- PostgreSQL configurable, transacciones por request y despliegue Docker Compose.
+- Proxy HTTPS con Caddy, Gunicorn y chequeos de seguridad de producción.
+- Registro append-only de operaciones y comando seguro para crear usuarios iniciales.
+- Backups PostgreSQL externos, atómicos y verificados con `pg_restore`.
+- Dashboard analítico con aging, recuperación, pago en fecha y cohortes.
+- Data mart para Power BI con dimensiones, hechos, diccionario y manifiesto.
+- Reconciliación automática entre aging, cohortes, pagos y reglas operativas.
+
+### Changed
+
+- El modo portable SQLite se conserva como perfil predeterminado y compatible.
+- CI incorpora validación Linux del lock de nube y de Docker Compose.
+- Generación de locks actualizada a `pip-tools 7.6.1` para compatibilidad con pip 26.
+
+### Security
+
+- HTTPS, cookies seguras, HSTS y hosts/orígenes confiables se activan en el perfil compartido.
+- La exportación analítica seudonimiza clientes y excluye nombres, DNI, teléfono, domicilio, notas y credenciales.
+- Las contraseñas iniciales se leen desde variables de entorno, nunca desde argumentos visibles.
+- El emparejamiento móvil queda aislado al modo local y no interfiere con autenticación detrás del proxy.
+
 ## [1.0.0] - 2026-08-13
 
 ### Added
@@ -34,5 +60,6 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 - El ZIP final se rechaza si contiene bases, claves, backups, exportaciones o rutas inseguras.
 - La decisión de distribuir `v1.0.0` sin firma Authenticode queda explícita junto con la verificación por SHA-256 y Microsoft Defender.
 
-[Unreleased]: https://github.com/HeKoXCode/gestion-financiera-local/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/HeKoXCode/gestion-financiera-local/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/HeKoXCode/gestion-financiera-local/releases/tag/v1.1.0
 [1.0.0]: https://github.com/HeKoXCode/gestion-financiera-local/releases/tag/v1.0.0

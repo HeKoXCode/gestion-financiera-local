@@ -1,10 +1,11 @@
-# 💳 Gestión Financiera Local
+# 💳 Gestión Financiera
 
-Aplicación gratuita, local y monousuario para administrar **clientes, ventas financiadas, préstamos, cuotas, recargos y cobranzas** sin depender de servicios en la nube.
+Aplicación gratuita para administrar **clientes, ventas financiadas, préstamos, cuotas, recargos y cobranzas**. El modo portable funciona localmente sin nube; el perfil multiusuario optativo agrega PostgreSQL, autenticación, HTTPS y auditoría.
 
 > 🧭 **Posicionamiento:** proyecto de ingeniería de producto aplicada al dominio financiero.<br>
 > 🔒 **Privacidad:** la base, los respaldos y las exportaciones permanecen en el equipo del usuario.<br>
 > 🪟 **Entrega prevista:** aplicación portable para Windows, sin requerir Python en la PC de destino.
+> 👥 **Escalado optativo:** despliegue multiusuario reproducible sin alterar el modo local.
 
 ![Panel principal con datos ficticios](docs/assets/dashboard-demo.png)
 
@@ -21,6 +22,8 @@ Gestión Financiera concentra el ciclo operativo de un negocio que vende o prest
 - produce reportes, planillas y estados de cuenta en PDF;
 - crea, valida y restaura copias de seguridad;
 - permite acceso temporal desde un celular dentro de la red local.
+- analiza aging, recuperación, comportamiento de pago y cohortes mensuales;
+- exporta un data mart reconciliado y listo para Power BI.
 
 ## 🖼️ Recorrido visual
 
@@ -46,11 +49,14 @@ El préstamo se modela como una operación financiera y no como un producto fict
 flowchart LR
   A[Interfaz Django] --> B[Servicios de dominio]
   B --> C[Modelos y reglas financieras]
-  C --> D[(SQLite local)]
-  B --> E[PDF y CSV]
-  D --> F[Backups y restauración]
+  C --> D{Perfil de ejecución}
+  D --> E[(SQLite local)]
+  D --> F[(PostgreSQL multiusuario)]
+  B --> K[PDF, CSV y data mart BI]
+  E --> H[Backups locales]
+  F --> I[Backups externos verificados]
   G[Lanzador Windows] --> A
-  G --> H[Acceso móvil temporal]
+  J[HTTPS + autenticación + roles] --> A
 ```
 
 | Capa | Responsabilidad |
@@ -60,12 +66,14 @@ flowchart LR
 | `app/templates/` + `app/static/` | Interfaz responsive y vistas imprimibles. |
 | `launcher/` | Inicio local, backups, restauración y acceso móvil temporal. |
 | `scripts/` | Instalación, pruebas y construcción del portable. |
+| `deploy/` | PostgreSQL, Gunicorn y proxy HTTPS para el perfil multiusuario. |
 
 ## 🧰 Stack
 
 - Python 3.12
 - Django 5.2
 - SQLite
+- PostgreSQL 17, Docker Compose y Caddy en el perfil multiusuario
 - Pytest + Coverage
 - Ruff
 - PyInstaller para la distribución portable
@@ -108,11 +116,43 @@ $env:GESTION_MEDIA_DIR="$PWD\tmp\demo\media"
 
 > ⚠️ `seed_demo_data --confirm-reset` elimina los datos comerciales de la base seleccionada. Por eso el ejemplo dirige todas las carpetas a `tmp/demo/`.
 
+## 👥 Perfil multiusuario y HTTPS
+
+El modo local continúa siendo el predeterminado. Para una instalación compartida utilizo un perfil separado con:
+
+- inicio de sesión y roles `Administradores` / `Cobradores`;
+- PostgreSQL con transacciones por request, bloqueo de filas e idempotencia de pagos;
+- Caddy como terminación HTTPS y Gunicorn como servidor de aplicación;
+- auditoría inmutable de operaciones web exitosas;
+- backups PostgreSQL mediante `pg_dump`, verificados con `pg_restore --list` y guardados fuera del contenedor.
+
+La guía reproducible, la matriz de permisos y el procedimiento de recuperación están en [GF-C1 y GF-C2](docs/C1_C2_MULTIUSUARIO_ANALITICA.md). El despliegue comienza copiando `deploy/.env.example` a `deploy/.env`; nunca se versiona el archivo real.
+
+```bash
+docker compose -f deploy/compose.yml up -d --build
+docker compose -f deploy/compose.yml exec app \
+  python app/manage.py setup_multiuser --collector-username cobrador
+```
+
+## 📊 Analítica y Power BI
+
+La vista **Analítica** utiliza las mismas reglas de cuotas, pagos, anulaciones y recargos que la operación diaria. Presenta:
+
+- aging en cinco tramos;
+- cartera total y vencida;
+- recuperación del monto financiado y pago en fecha;
+- cohortes por mes de originación;
+- residuos de reconciliación visibles.
+
+![Analítica GF-C2 con aging, cohortes y controles conciliados](docs/assets/analytics-gf-c2.png)
+
+La exportación genera dimensiones, hechos, marts, diccionario y manifiesto en CSV UTF-8. Omite nombres, DNI, teléfonos, domicilios, observaciones y credenciales. Se puede reproducir desde la interfaz o con el servicio documentado.
+
 ## ✅ Calidad verificada
 
-Validación local del 13/08/2026:
+Validación base del 13/08/2026 y ampliación C1–C2 del 27/08/2026:
 
-- **212 pruebas aprobadas**;
+- **225 pruebas aprobadas**;
 - **88% de cobertura** de líneas y ramas combinadas;
 - análisis de Ruff sin observaciones;
 - `manage.py check` sin errores;
@@ -124,7 +164,7 @@ Para repetir los controles:
 powershell -ExecutionPolicy Bypass -File .\scripts\Probar.ps1
 ```
 
-El workflow de CI ejecuta análisis estático, chequeos de Django, control de migraciones, pruebas y cobertura mínima del 85% en cada push y pull request.
+El workflow de CI ejecuta análisis estático, chequeos de Django, control de migraciones, pruebas y cobertura mínima del 85%. Un job Linux adicional instala el lock de nube, ejecuta los controles de seguridad de Django y valida la topología Docker Compose.
 
 ## 📦 Entrega portable
 
@@ -134,13 +174,13 @@ La aplicación puede construirse como carpeta y ZIP portable versionado:
 powershell -ExecutionPolicy Bypass -File .\scripts\ConstruirPortable.ps1
 ```
 
-El proceso ejecuta pruebas, genera los ejecutables, valida una copia aislada y crea un manifiesto de integridad. Para `v1.0.0`, los resultados locales son `portable/GestionFinanciera-v1.0.0-windows-x64.zip` y `portable/SHA256SUMS.txt`.
+El proceso ejecuta pruebas, genera los ejecutables, valida una copia aislada y crea un manifiesto de integridad. Para `v1.1.0`, los resultados locales son `portable/GestionFinanciera-v1.1.0-windows-x64.zip` y `portable/SHA256SUMS.txt`.
 
 Antes de publicar, el gate de seguridad vuelve a extraer el ZIP, rechaza datos o secretos, repite el smoke test y ejecuta Microsoft Defender:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\AuditarPaqueteRelease.ps1 `
-  -ArchivoZip .\portable\GestionFinanciera-v1.0.0-windows-x64.zip `
+  -ArchivoZip .\portable\GestionFinanciera-v1.1.0-windows-x64.zip `
   -ReportPath .\portable\release-audit.json
 ```
 
@@ -177,9 +217,10 @@ No se abre ningún puerto del router ni se habilita acceso desde Internet. La co
 
 ## ⚠️ Alcance y limitaciones
 
-- Diseñada para una sola persona y una instalación local.
-- No incluye cuentas multiusuario, sincronización cloud ni acceso público por Internet.
-- SQLite es adecuado para este alcance local; no se presenta como arquitectura empresarial distribuida.
+- El portable sigue diseñado para una persona y una instalación local.
+- El perfil multiusuario requiere dominio, HTTPS, PostgreSQL, backups externos y operación de infraestructura; no convierte el portable en un servicio cloud automático.
+- No incluye sincronización entre instalaciones ni aplicación móvil nativa.
+- SQLite se limita al perfil local; PostgreSQL es obligatorio para el despliegue compartido recomendado.
 - No reemplaza un sistema contable, fiscal, bancario ni asesoramiento profesional.
 - Los cálculos dependen de las reglas configuradas y deben verificarse antes de utilizarlos para decisiones reales.
 - El usuario es responsable de conservar respaldos externos y proteger el equipo.
@@ -197,6 +238,7 @@ Documentos principales:
 - [Guía de entrega](docs/GUIA_DE_ENTREGA_AL_CLIENTE.md)
 - [Préstamos integrados](docs/PRESTAMOS_2026-08-06.md)
 - [Release portable y evidencia GF-I1 a GF-I4](docs/I1_I4_RELEASE.md)
+- [Multiusuario, despliegue y analítica GF-C1 a GF-C2](docs/C1_C2_MULTIUSUARIO_ANALITICA.md)
 - [Política de seguridad](SECURITY.md)
 
 ## ⚖️ Licencia

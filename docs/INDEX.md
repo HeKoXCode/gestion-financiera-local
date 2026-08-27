@@ -15,6 +15,7 @@ Este índice separa la documentación vigente, las guías operativas, la evidenc
 - [ACCESO_DESDE_CELULAR.md](ACCESO_DESDE_CELULAR.md): activación temporal en red local.
 - [ENTORNO_Y_PORTABILIDAD.md](ENTORNO_Y_PORTABILIDAD.md): entorno objetivo y decisiones de portabilidad.
 - [I1_I4_RELEASE.md](I1_I4_RELEASE.md): release versionada, seguridad de distribución, demo y evidencia de cierre intermedio.
+- [C1_C2_MULTIUSUARIO_ANALITICA.md](C1_C2_MULTIUSUARIO_ANALITICA.md): perfil multiusuario, despliegue HTTPS, backups, data mart y evidencia analítica.
 
 ## Calidad y trazabilidad
 

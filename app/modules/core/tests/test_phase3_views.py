@@ -38,7 +38,11 @@ def test_daily_screen_is_available_without_records(client):
 
 
 def test_daily_screen_shows_due_and_overdue_installments(client):
-    sale = make_sale(installment_count=2, financed_amount=Decimal("40000.00"))
+    sale = make_sale(
+        installment_count=2,
+        financed_amount=Decimal("40000.00"),
+        daily_late_fee=Decimal("0.00"),
+    )
     create_installments(sale)
 
     response = client.get(reverse("core:home"), {"fecha": "2026-08-25"})

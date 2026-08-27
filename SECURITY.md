@@ -2,7 +2,7 @@
 
 ## Alcance soportado
 
-Las correcciones de seguridad se aplican sobre la versión más reciente de la rama principal. La aplicación está diseñada para ejecución local y no debe exponerse directamente a Internet.
+Las correcciones de seguridad se aplican sobre la versión más reciente de la rama principal. El portable local no debe exponerse a Internet. El perfil multiusuario sólo se admite detrás del proxy HTTPS documentado, con autenticación obligatoria y PostgreSQL.
 
 ## Reportar una vulnerabilidad
 
@@ -24,6 +24,22 @@ Nunca deben incluirse en Git:
 - `backups/`, `exports/`, `storage/` y `media/`;
 - variables de entorno o tokens de acceso móvil;
 - paquetes portables generados con datos reales.
+- `deploy/.env`, contraseñas PostgreSQL y contraseñas de usuarios.
+
+## Perfil multiusuario
+
+La publicación compartida debe cumplir todos estos controles:
+
+- `DJANGO_DEBUG=0`;
+- `GESTION_AUTH_REQUIRED=1`;
+- dominio explícito en `DJANGO_ALLOWED_HOSTS` y origen HTTPS confiable;
+- Caddy u otro reverse proxy que establezca `X-Forwarded-Proto` de forma controlada;
+- PostgreSQL, no SQLite compartido;
+- contraseñas de al menos 12 caracteres y secretos fuera de Git;
+- backup externo verificado y prueba periódica de restauración;
+- revisión del registro de auditoría.
+
+`python app/manage.py check --deploy --fail-level ERROR` rechaza una configuración multiusuario insegura.
 
 Antes de publicar un release se debe probar el ZIP en una carpeta aislada, verificar que inicia sin datos reales y publicar su hash SHA-256.
 

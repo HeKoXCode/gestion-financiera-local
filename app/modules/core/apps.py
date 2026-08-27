@@ -6,5 +6,7 @@ class CoreConfig(AppConfig):
     name = "modules.core"
 
     def ready(self) -> None:
-        from . import signals  # noqa: F401
-
+        from . import (
+            checks,  # noqa: F401
+            signals,  # noqa: F401
+        )

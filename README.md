@@ -184,7 +184,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\AuditarPaqueteRelease.ps1 `
   -ReportPath .\portable\release-audit.json
 ```
 
-Los binarios, ZIP y carpetas generadas **no se versionan en Git**: se adjuntan a [GitHub Releases](https://github.com/HeKoXCode/gestion-financiera-local/releases) junto con `SHA256SUMS.txt`, el reporte de auditoría y las notas del [changelog](CHANGELOG.md). La versión `v1.0.0` no tiene firma Authenticode; la decisión, el posible aviso de SmartScreen y la evidencia completa están documentados en [GF-I1 a GF-I4](docs/I1_I4_RELEASE.md).
+Los binarios, ZIP y carpetas generadas **no se versionan en Git**: se adjuntan a [GitHub Releases](https://github.com/HeKoXCode/gestion-financiera-local/releases) junto con `SHA256SUMS.txt`, el reporte de auditoría y las notas del [changelog](CHANGELOG.md). La versión vigente `v1.1.0` no tiene firma Authenticode; la decisión, el posible aviso de SmartScreen y la evidencia completa están documentados en [GF-I1 a GF-I4](docs/I1_I4_RELEASE.md).
 
 ## 💾 Datos, respaldo y recuperación
 

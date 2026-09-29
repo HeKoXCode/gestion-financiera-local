@@ -94,8 +94,8 @@ FASE 4 - QA AUTOMÁTICO
 [OK] 27. Validar exportación BI y conciliaciones en cero.
 [OK] 28. Validar backup/restauración SQLite en copia aislada.
 [OK] 28.1. Validar settings endurecidos y sintaxis de Docker Compose.
-[PENDIENTE] 28.2. Confirmar la construcción de la imagen Docker mediante CI;
-                  el motor local de Docker Desktop no estuvo disponible.
+[OK] 28.2. Confirmar la construcción de la imagen Docker mediante CI. El motor
+           local no estuvo disponible y GitHub Actions completó esa evidencia.
 
 FASE 5 - QA DE DISTRIBUCIÓN
 
@@ -113,13 +113,13 @@ FASE 5 - QA DE DISTRIBUCIÓN
 FASE 6 - PUBLICACIÓN
 
 [OK] 36. Revisar git diff y confirmar que no contiene datos del usuario.
-[PENDIENTE] 37. Crear un commit legible de release 1.8.0.
-[PENDIENTE] 38. Crear y verificar la etiqueta anotada v1.8.0.
-[PENDIENTE] 39. Subir main y v1.8.0 a GitHub.
-[PENDIENTE] 40. Crear la release de GitHub y adjuntar ZIP completo, ZIP de
-                 actualización, SHA256SUMS.txt y reportes de auditoría.
-[PENDIENTE] 41. Verificar desde GitHub que README, imágenes, tag y artefactos se
-                 muestran y descargan correctamente.
+[OK] 37. Crear un commit legible de release 1.8.0.
+[OK] 38. Crear y verificar la etiqueta anotada v1.8.0.
+[OK] 39. Subir main y v1.8.0 a GitHub.
+[OK] 40. Crear la release de GitHub y adjuntar ZIP completo, ZIP de
+         actualización, SHA256SUMS.txt y reportes de auditoría.
+[OK] 41. Verificar desde GitHub que README, imágenes, tag y artefactos se
+         muestran y descargan correctamente.
 
 CRITERIOS DE ACEPTACIÓN
 -----------------------
@@ -148,10 +148,11 @@ RESULTADO DE CIERRE
 
 Este bloque se completa únicamente después del QA y de verificar GitHub:
 
-- Commit: PENDIENTE
-- Tag: PENDIENTE
+- Commit de integración: cd0629c
+- Tag: v1.8.0
 - Pruebas: 336 aprobadas en la integración, incluidas ambas rutas de migración
 - Cobertura: 88% (umbral obligatorio: 85%)
 - ZIP completo SHA-256: 428B0A10CC86CDFE8B32612FE29A80EB0365734D18D2B62E76AC209E0E537538
 - ZIP actualización SHA-256: B1D523374382DC0BF948ECCF9BE65F2AB729FEDBA9F09EEB0064043CA6360002
-- Publicación GitHub: PENDIENTE
+- CI: https://github.com/HeKoXCode/gestion-financiera-local/actions/runs/36528052820
+- Publicación GitHub: https://github.com/HeKoXCode/gestion-financiera-local/releases/tag/v1.8.0

@@ -6,6 +6,17 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ## [Unreleased]
 
+### Corregido
+
+- Se restauraron los estilos del acceso multiusuario y de Analítica que se
+  habían perdido durante la unificación 1.8.0; los KPI, el aging, las cohortes
+  y la conciliación vuelven a conservar su grilla y jerarquía visual.
+
+### Documentación
+
+- Se renovaron las cinco capturas de producto y el recorrido animado con una
+  base demo ficticia y aislada de la versión integrada.
+
 ## [1.8.0] - 2026-09-29
 
 ### Agregado

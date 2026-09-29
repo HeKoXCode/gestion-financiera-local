@@ -146,3 +146,23 @@ def test_sale_preview_has_a_caption_for_every_frequency_without_stale_variables(
     assert 'biweekly: `${count} cuotas · cada 2 semanas`' in script
     assert 'monthly: `${count} cuotas · una por mes`' in script
     assert "captionOutput.textContent = isMonthly" not in script
+
+
+def test_multiuser_and_analytics_styles_survive_release_merges():
+    css = (PROJECT_ROOT / "app/static/css/app.css").read_text(encoding="utf-8")
+
+    for selector in (
+        ".auth-page",
+        ".auth-layout",
+        ".analytics-kpis",
+        ".analytics-grid",
+        ".aging-row",
+        ".aging-track span",
+        ".metric-list",
+        ".cohort-table",
+        ".reconciliation-strip.is-success",
+    ):
+        assert selector in css
+
+    assert "grid-template-columns: repeat(4, minmax(0, 1fr));" in css
+    assert "grid-template-columns: minmax(150px, 1fr) minmax(120px, 2fr)" in css

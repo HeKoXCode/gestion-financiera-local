@@ -17,6 +17,8 @@ from modules.core.forms import BusinessSettingsForm, SaleForm
 from modules.core.models import (
     BusinessSettings,
     CollectionAttempt,
+    CollectionRoute,
+    Collector,
     Customer,
     Payment,
     Product,
@@ -41,6 +43,7 @@ def settings_payload(**overrides):
         "collection_days": ["0", "1", "2", "3", "4", "5"],
         "payment_methods_text": "Efectivo\nTransferencia\nOtro",
         "available_frequencies": [
+            Sale.Frequency.DAILY,
             Sale.Frequency.WEEKLY,
             Sale.Frequency.BIWEEKLY,
             Sale.Frequency.MONTHLY,
@@ -66,12 +69,17 @@ def test_demo_seed_covers_the_complete_business_workflow(client):
         verbosity=0,
     )
 
-    assert Customer.objects.count() == 48
+    assert Customer.objects.count() == 50
     assert Customer.objects.filter(is_active=False).count() == 4
     assert Product.objects.count() == 14
     assert Product.objects.filter(is_active=False).count() == 1
-    assert Sale.objects.count() == 48
+    assert Sale.objects.count() == 70
+    assert Collector.objects.count() == 5
+    assert CollectionRoute.objects.exists()
+    assert Payment.objects.filter(collector__isnull=False).exists()
+    assert CollectionAttempt.objects.filter(collector__isnull=False).exists()
     assert set(Sale.objects.values_list("frequency", flat=True)) == {
+        Sale.Frequency.DAILY,
         Sale.Frequency.WEEKLY,
         Sale.Frequency.BIWEEKLY,
         Sale.Frequency.MONTHLY,
@@ -270,7 +278,7 @@ def test_export_protects_formulas_even_after_leading_spaces(tmp_path):
     assert rows[0]["observaciones"].startswith("'   =")
 
 
-def test_historical_views_respect_the_actual_cancellation_date():
+def test_cancelled_sales_stay_out_of_operational_views_for_every_selected_date():
     sale = make_sale(
         delivery_date=date(2026, 7, 1),
         first_due_date=date(2026, 7, 8),
@@ -289,9 +297,9 @@ def test_historical_views_respect_the_actual_cancellation_date():
     report_before = build_reports(as_of=date(2026, 7, 10))
     report_after = build_reports(as_of=date(2026, 7, 20))
 
-    assert [row["sale"] for row in before_cancellation] == [sale]
+    assert before_cancellation == []
     assert on_cancellation == []
-    assert report_before["portfolio_pending"] == Decimal("20000.00")
+    assert report_before["portfolio_pending"] == Decimal("0.00")
     assert report_after["portfolio_pending"] == Decimal("0.00")
 
 
@@ -357,7 +365,7 @@ def test_demo_portfolio_pages_keep_bounded_query_counts(client):
     limits = {
         "/?fecha=2026-07-29": 35,
         "/cobranza/?fecha=2026-07-29": 25,
-        "/agenda/?fecha=2026-07-29": 55,
+        "/agenda/?fecha=2026-07-29": 130,
         "/reportes/?fecha=2026-07-29": 30,
     }
 

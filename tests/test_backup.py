@@ -58,9 +58,7 @@ def test_create_backup_preserves_data(tmp_path):
         materialize_backup(backup, working_directory=tmp_path) as extracted,
         closing(sqlite3.connect(extracted)) as connection,
     ):
-        assert connection.execute("SELECT value FROM sample").fetchone() == (
-            "cliente",
-        )
+        assert connection.execute("SELECT value FROM sample").fetchone() == ("cliente",)
 
 
 def test_backup_returns_none_when_database_does_not_exist(tmp_path):
@@ -114,9 +112,7 @@ def test_daily_backup_updates_same_day_and_keeps_requested_days(tmp_path):
         extracted = tmp_path / "daily.sqlite3"
         extracted.write_bytes(archive.read(member))
     with closing(sqlite3.connect(extracted)) as connection:
-        assert connection.execute("SELECT value FROM sample").fetchone() == (
-            "versión actualizada",
-        )
+        assert connection.execute("SELECT value FROM sample").fetchone() == ("versión actualizada",)
 
     for day_number in (23, 24):
         create_daily_backup(
@@ -192,16 +188,12 @@ def test_restore_recovers_data_and_preserves_previous_database(tmp_path):
     validate_application_database(database)
     validate_application_backup(preventive)
     with closing(sqlite3.connect(database)) as connection:
-        assert connection.execute("SELECT value FROM sample").fetchone() == (
-            "datos respaldados",
-        )
+        assert connection.execute("SELECT value FROM sample").fetchone() == ("datos respaldados",)
     with (
         materialize_backup(preventive, working_directory=tmp_path) as extracted,
         closing(sqlite3.connect(extracted)) as connection,
     ):
-        assert connection.execute("SELECT value FROM sample").fetchone() == (
-            "datos anteriores",
-        )
+        assert connection.execute("SELECT value FROM sample").fetchone() == ("datos anteriores",)
 
 
 def test_restore_does_not_touch_database_when_source_is_invalid(tmp_path):
@@ -214,9 +206,7 @@ def test_restore_does_not_touch_database_when_source_is_invalid(tmp_path):
         restore_database(source, database, tmp_path / "backups")
 
     with closing(sqlite3.connect(database)) as connection:
-        assert connection.execute("SELECT value FROM sample").fetchone() == (
-            "base intacta",
-        )
+        assert connection.execute("SELECT value FROM sample").fetchone() == ("base intacta",)
 
 
 def test_restore_accepts_compressed_backup(tmp_path):
@@ -231,9 +221,7 @@ def test_restore_accepts_compressed_backup(tmp_path):
     restore_database(compressed, database, backup_directory)
 
     with closing(sqlite3.connect(database)) as connection:
-        assert connection.execute("SELECT value FROM sample").fetchone() == (
-            "estado comprimido",
-        )
+        assert connection.execute("SELECT value FROM sample").fetchone() == ("estado comprimido",)
 
 
 def test_corrupt_or_unsafe_archives_are_rejected(tmp_path):

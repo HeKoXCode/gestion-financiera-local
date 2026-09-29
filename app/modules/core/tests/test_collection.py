@@ -17,7 +17,7 @@ from modules.core.tests.factories import make_sale
 pytestmark = pytest.mark.django_db
 
 
-def test_collection_groups_due_installments_by_sale():
+def test_collection_sums_all_installments_that_have_already_expired():
     today = timezone.localdate()
     sale = make_sale(
         delivery_date=today - timedelta(days=30),
@@ -76,4 +76,3 @@ def test_collection_attempt_is_unique_per_sale_date_and_result():
 
     with pytest.raises(IntegrityError), transaction.atomic():
         CollectionAttempt.objects.create(**values)
-

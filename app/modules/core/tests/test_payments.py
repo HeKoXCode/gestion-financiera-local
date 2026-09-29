@@ -82,7 +82,7 @@ def test_payment_applies_late_fees_before_principal():
     assert balance.late_fees_due == Decimal("0.00")
 
 
-def test_payment_continues_with_next_oldest_installment():
+def test_payment_can_cover_more_than_one_overdue_installment():
     sale = make_due_sale(
         amount=Decimal("40000.00"),
         installment_count=2,

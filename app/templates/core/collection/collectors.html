@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load finance %}
+
+{% block title %}Cobradores · Gestión Financiera{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <div>
+        <p class="eyebrow">Trabajo de cobradores</p>
+        <h1>Cobradores</h1>
+        <p class="page-subtitle">Consultá qué días trabajó cada cobrador, a qué clientes visitó y cuánto cobró.</p>
+    </div>
+    <div class="route-header-actions">
+        <a class="btn btn-secondary" href="{% url 'core:secure_archive' %}?tipo=collectors">Cobradores borrados</a>
+        <a class="btn btn-primary" href="{% url 'core:collection_routes' %}">Preparar planillas</a>
+    </div>
+</header>
+
+<section class="panel collector-history-panel">
+    {% if collector_rows %}
+    <div class="table-wrap">
+        <table class="data-table responsive-table collector-table">
+            <thead>
+                <tr>
+                    <th>Cobrador</th>
+                    <th>Días trabajados</th>
+                    <th>Visitas asignadas</th>
+                    <th>Clientes distintos</th>
+                    <th>Clientes habituales</th>
+                    <th>Total cobrado</th>
+                    <th>Última planilla</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in collector_rows %}
+                <tr>
+                    <td data-label="Cobrador">
+                        <strong>{{ row.collector.name }}</strong>
+                    </td>
+                    <td data-label="Días trabajados">{{ row.days_worked }}</td>
+                    <td data-label="Visitas asignadas">{{ row.assignment_count }}</td>
+                    <td data-label="Clientes distintos">{{ row.unique_clients }}</td>
+                    <td data-label="Clientes habituales">{{ row.habitual_client_count }}</td>
+                    <td data-label="Total cobrado"><strong>{{ row.total_collected|ars }}</strong></td>
+                    <td data-label="Última planilla">{% if row.last_route_date %}{{ row.last_route_date|date:"d/m/Y" }}{% else %}Sin planillas{% endif %}</td>
+                    <td data-label="Acción"><a class="mini-action primary" href="{% url 'core:collector_detail' row.collector.pk %}">Ver historial</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="collector-history-note">“Días trabajados” cuenta las fechas en las que se guardó al menos una planilla para ese cobrador. Abrí “Ver historial” para consultar cada día, cliente y cobro.</p>
+    {% else %}
+    <div class="empty-state">
+        <h3>Todavía no hay cobradores</h3>
+        <p>Podés crear el primero al preparar una planilla de cobranza.</p>
+        <a class="btn btn-primary" href="{% url 'core:collection_routes' %}">Preparar planillas</a>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

@@ -28,6 +28,57 @@ def add_months(anchor: date, months: int) -> date:
     return date(year, month, day)
 
 
+def next_enabled_collection_day(
+    anchor: date,
+    collection_days: list[int],
+    *,
+    include_anchor: bool = True,
+) -> date:
+    enabled_days = {int(day) for day in collection_days}
+    if not enabled_days:
+        raise ValidationError(
+            "Configurá al menos un día habilitado para usar la frecuencia diaria."
+        )
+    candidate = anchor if include_anchor else anchor + timedelta(days=1)
+    for _ in range(8):
+        if candidate.weekday() in enabled_days:
+            return candidate
+        candidate += timedelta(days=1)
+    raise ValidationError("No se pudo calcular el próximo día de cobranza.")
+
+
+def calculate_due_dates(
+    *,
+    first_due_date: date,
+    frequency: str,
+    installment_count: int,
+    collection_days: list[int] | None = None,
+) -> list[date]:
+    if installment_count < 1:
+        raise ValidationError("La cantidad de cuotas debe ser mayor que cero.")
+    if frequency == Sale.Frequency.DAILY:
+        due_dates = []
+        current = next_enabled_collection_day(
+            first_due_date,
+            collection_days or [],
+        )
+        for _ in range(installment_count):
+            due_dates.append(current)
+            current = next_enabled_collection_day(
+                current,
+                collection_days or [],
+                include_anchor=False,
+            )
+        return due_dates
+    if frequency == Sale.Frequency.WEEKLY:
+        return [first_due_date + timedelta(days=offset * 7) for offset in range(installment_count)]
+    if frequency == Sale.Frequency.BIWEEKLY:
+        return [first_due_date + timedelta(days=offset * 14) for offset in range(installment_count)]
+    if frequency == Sale.Frequency.MONTHLY:
+        return [add_months(first_due_date, offset) for offset in range(installment_count)]
+    raise ValidationError({"frequency": "La frecuencia de la operación no es válida."})
+
+
 def calculate_installment_amounts(financed_amount: Decimal, count: int) -> list[Decimal]:
     if count < 1:
         raise ValidationError("La cantidad de cuotas debe ser mayor que cero.")
@@ -46,15 +97,6 @@ def calculate_installment_amounts(financed_amount: Decimal, count: int) -> list[
 
 
 def calculate_installment_schedule(sale: Sale) -> list[PlannedInstallment]:
-    if sale.frequency == Sale.Frequency.WEEKLY:
-        interval_days = 7
-    elif sale.frequency == Sale.Frequency.BIWEEKLY:
-        interval_days = 14
-    elif sale.frequency == Sale.Frequency.MONTHLY:
-        interval_days = None
-    else:
-        raise ValidationError({"frequency": "La frecuencia de la venta no es válida."})
-
     settings = BusinessSettings.get_solo()
     if sale.frequency not in settings.available_frequencies:
         raise ValidationError({"frequency": "La frecuencia no está habilitada."})
@@ -68,27 +110,31 @@ def calculate_installment_schedule(sale: Sale) -> list[PlannedInstallment]:
         )
 
     amounts = calculate_installment_amounts(sale.financed_amount, sale.installment_count)
+    due_dates = calculate_due_dates(
+        first_due_date=sale.first_due_date,
+        frequency=sale.frequency,
+        installment_count=sale.installment_count,
+        collection_days=settings.collection_days,
+    )
     return [
         PlannedInstallment(
             number=index,
-            due_date=(
-                add_months(sale.first_due_date, index - 1)
-                if interval_days is None
-                else sale.first_due_date
-                + timedelta(days=(index - 1) * interval_days)
-            ),
+            due_date=due_date,
             amount=amount,
         )
-        for index, amount in enumerate(amounts, start=1)
+        for index, (amount, due_date) in enumerate(
+            zip(amounts, due_dates, strict=True),
+            start=1,
+        )
     ]
 
 
 @transaction.atomic
 def create_installments(sale: Sale) -> list[Installment]:
     if not sale.pk:
-        raise ValidationError("La venta debe guardarse antes de generar sus cuotas.")
+        raise ValidationError("La operación debe guardarse antes de generar sus cuotas.")
     if sale.installments.exists():
-        raise ValidationError("La venta ya tiene cuotas generadas.")
+        raise ValidationError("La operación ya tiene cuotas generadas.")
 
     schedule = calculate_installment_schedule(sale)
     return Installment.objects.bulk_create(

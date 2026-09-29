@@ -1,11 +1,12 @@
 # GF-C1 y GF-C2 — multiusuario y analítica
 
-Fecha de cierre: **27/08/2026**
-Versión objetivo: **1.1.0**
+Fecha de cierre original: **27/08/2026**<br>
+Integración final: **29/09/2026**<br>
+Versión vigente: **1.8.0**
 
 ## Resultado
 
-La aplicación conserva el portable local sobre SQLite y suma un perfil compartido activable. No describo el portable como “cloud”: el perfil multiusuario es otro modo de despliegue, con PostgreSQL, autenticación, HTTPS, auditoría y operación de infraestructura explícita.
+La aplicación conserva el portable local sobre SQLite y suma un perfil compartido activable. No describo el portable como “cloud”: el perfil multiusuario es otro modo de despliegue, con PostgreSQL, autenticación, HTTPS, auditoría y operación de infraestructura explícita. Desde 1.8.0 este perfil convive con préstamos, cobradores, recorridos, pagos adelantados y Archivo seguro.
 
 GF-C2 reutiliza el motor financiero existente para producir un snapshot analítico. La interfaz y la exportación Power BI consumen el mismo servicio; de este modo no existen dos definiciones distintas de deuda o recuperación.
 
@@ -132,7 +133,7 @@ La generación falla visualmente si cualquiera de estos residuos deja de ser cer
 
 La captura se generó con `seed_demo_data --confirm-reset --as-of 2026-08-27`. Muestra aging, comportamiento, cohortes y los tres residuos de reconciliación en `$ 0,00`; no utiliza datos de una persona real.
 
-El cierre local aprobó 225 pruebas con 88% de cobertura combinada, Ruff, `manage.py check` y control de migraciones sin observaciones.
+El cierre integrado de 1.8.0 amplía esta evidencia a la suite completa del producto; los resultados finales se registran en [el plan de integración y publicación](PLAN_FINAL_GESTION_FINANCIERA_1.8.0.txt).
 
 ## Límites que siguen vigentes
 

@@ -66,3 +66,7 @@ deformarse. Si el archivo no existe o no puede leerse, se muestra el monograma
 - Botones críticos ocupan todo el ancho cuando el espacio es reducido.
 - Indicadores y tarjetas pasan de varias columnas a una sola sin perder orden.
 - Importes grandes usan tipografía adaptable y números tabulares.
+- El menú horizontal lleva automáticamente a la sección activa en celular.
+- Las tarjetas de planillas mantienen sus acciones dentro del contenedor en
+  notebook, escritorio y teléfono.
+- Las tablas de cobradores y pagos pasan a fichas etiquetadas en celular.

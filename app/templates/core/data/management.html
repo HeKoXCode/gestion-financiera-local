@@ -8,7 +8,7 @@
         <p class="eyebrow">Protección de datos · {{ database_engine }}</p>
         <h1>Datos y respaldo</h1>
         <p class="page-subtitle">
-            Copias verificadas para recuperar el sistema y archivos CSV para consultar en Excel.
+            Copias completas para restaurar el sistema y archivos CSV para consultar en Excel.
         </p>
     </div>
 </header>
@@ -43,7 +43,7 @@
             <p class="eyebrow">Copia completa</p>
             <h2>Crear copia de seguridad</h2>
             {% if database_is_sqlite %}
-            <p>Conserva clientes, productos, ventas, cuotas, pagos y configuración en un único ZIP restaurable.</p>
+            <p>Conserva clientes, productos, operaciones, cuotas, pagos, cobradores, recorridos y configuración en un único ZIP restaurable.</p>
             {% else %}
             <p>Ejecuta <code>pg_dump</code>, verifica el resultado con <code>pg_restore</code> y conserva un archivo <code>.dump</code> externo.</p>
             {% endif %}
@@ -59,7 +59,7 @@
         <div>
             <p class="eyebrow">Consulta y análisis</p>
             <h2>Exportar todos los datos</h2>
-            <p>Genera un ZIP con archivos CSV para clientes, ventas, cuotas, recargos, pagos y configuración.</p>
+            <p>Genera un ZIP con archivos CSV para clientes, ventas, cuotas, pagos, cobradores, recorridos y configuración.</p>
         </div>
         <form method="post" action="{% url 'core:data_export_create' %}">
             {% csrf_token %}
@@ -76,11 +76,11 @@
             <p>Cerrá el sistema y abrí el restaurador. Elegirá la copia más reciente, recuperará los datos y volverá a abrir el sistema.</p>
             <code>RESTAURAR_DATOS.bat · scripts\Restaurar.bat</code>
             {% else %}
-            <p>Restaurá el archivo validado en una base vacía durante una ventana de mantenimiento. El procedimiento evita sobrescribir una base activa desde la interfaz web.</p>
+            <p>Restaurá el archivo validado en una base vacía durante una ventana de mantenimiento. La interfaz web no sobrescribe una base activa.</p>
             <code>pg_restore --clean --if-exists --no-owner --dbname="$PGDATABASE" archivo.dump</code>
             {% endif %}
         </div>
-        <span class="restore-note">{% if database_is_sqlite %}También acepta copias antiguas <strong>.sqlite3</strong>. {% else %}La restauración PostgreSQL queda a cargo de un administrador de infraestructura. {% endif %}Los ZIP con archivos CSV no sirven para restaurar.</span>
+        <span class="restore-note">{% if database_is_sqlite %}También acepta copias antiguas <strong>.sqlite3</strong>.{% else %}La restauración PostgreSQL queda a cargo de infraestructura.{% endif %} Los ZIP con archivos CSV no sirven para restaurar.</span>
     </section>
 </div>
 
@@ -101,39 +101,24 @@
             <tbody>
                 {% for row in backups %}
                 <tr>
-                    <td data-label="Tipo">
-                        {% if row.backup.is_recovery %}
-                            <span class="badge badge-success">{{ row.label }}</span>
-                        {% else %}
-                            <span class="badge badge-neutral">{{ row.label }}</span>
-                        {% endif %}
-                    </td>
+                    <td data-label="Tipo">{% if row.backup.is_recovery %}<span class="badge badge-success">{{ row.label }}</span>{% else %}<span class="badge badge-neutral">{{ row.label }}</span>{% endif %}</td>
                     <td data-label="Fecha">{{ row.backup.created_at|date:"d/m/Y H:i:s" }}</td>
                     <td data-label="Archivo"><code>{{ row.backup.name }}</code></td>
                     <td data-label="Tamaño" class="money-cell">{{ row.backup.size|filesizeformat }}</td>
-                    <td class="row-action">
-                        <a class="mini-action" href="{% url 'core:backup_download' row.backup.name %}">Descargar</a>
-                    </td>
+                    <td class="row-action"><a class="mini-action" href="{% url 'core:backup_download' row.backup.name %}">Descargar</a></td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
     {% else %}
-    <div class="empty-state compact">
-        <span class="empty-icon">DB</span>
-        <h3>Todavía no hay copias de seguridad</h3>
-        <p>Creá la primera copia manual desde el botón superior.</p>
-    </div>
+    <div class="empty-state compact"><span class="empty-icon">DB</span><h3>Todavía no hay copias de seguridad</h3><p>Creá la primera copia manual desde el botón superior.</p></div>
     {% endif %}
 </section>
 
 <section class="panel data-history-panel">
     <div class="panel-header">
-        <div>
-            <p class="eyebrow">Archivos para Excel</p>
-            <h2>Exportaciones CSV</h2>
-        </div>
+        <div><p class="eyebrow">Archivos para Excel</p><h2>Exportaciones CSV</h2></div>
         <span class="record-count">{{ export_count }} archivo{{ export_count|pluralize }}</span>
     </div>
     {% if exports %}
@@ -141,20 +126,13 @@
         {% for export in exports %}
         <article>
             <span class="export-file-icon">ZIP</span>
-            <div>
-                <strong>{{ export.name }}</strong>
-                <small>{{ export.created_at|date:"d/m/Y H:i:s" }} · {{ export.size|filesizeformat }}</small>
-            </div>
+            <div><strong>{{ export.name }}</strong><small>{{ export.created_at|date:"d/m/Y H:i:s" }} · {{ export.size|filesizeformat }}</small></div>
             <a class="mini-action" href="{% url 'core:data_export_download' export.name %}">Descargar</a>
         </article>
         {% endfor %}
     </div>
     {% else %}
-    <div class="empty-state compact">
-        <span class="empty-icon">CSV</span>
-        <h3>Sin exportaciones guardadas</h3>
-        <p>La primera exportación aparecerá aquí después de descargarla.</p>
-    </div>
+    <div class="empty-state compact"><span class="empty-icon">CSV</span><h3>Sin exportaciones guardadas</h3><p>La primera exportación aparecerá aquí después de descargarla.</p></div>
     {% endif %}
 </section>
 
@@ -165,7 +143,7 @@
     <p>Al cerrar se conserva una copia por día. Si cerrás varias veces el mismo día, esa copia se actualiza. Las copias diarias se guardan durante 90 días.</p>
     {% else %}
     <p><b>Backup PostgreSQL (.dump)</b> recupera la base compartida. <b>Exportación ZIP con CSV</b> sirve para Excel o análisis, pero no puede restaurarse.</p>
-    <p>Programá <code>backup_database</code> fuera del contenedor, controlá la retención y probá periódicamente una restauración en una base aislada.</p>
+    <p>Programá <code>backup_database</code>, controlá la retención y probá periódicamente una restauración en una base aislada.</p>
     {% endif %}
 </aside>
 {% endblock %}

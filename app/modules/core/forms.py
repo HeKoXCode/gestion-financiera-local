@@ -1,23 +1,28 @@
 import json
 import uuid
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 from string import Formatter
 
 from django import forms
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.utils import timezone
 
 from modules.core.models import (
     ZERO,
     BusinessSettings,
     CollectionAttempt,
+    Collector,
     Customer,
     Product,
     Sale,
 )
-from modules.core.services.installments import add_months
+from modules.core.services.installments import (
+    calculate_due_dates,
+    next_enabled_collection_day,
+)
 
 
 class StyledModelForm(forms.ModelForm):
@@ -74,6 +79,49 @@ class CustomerForm(StyledModelForm):
         return (self.cleaned_data.get("dni") or "").strip() or None
 
 
+class CustomerEditForm(CustomerForm):
+    operation_key = forms.UUIDField(
+        widget=forms.HiddenInput,
+        initial=uuid.uuid4,
+        required=False,
+    )
+    edit_reason = forms.CharField(
+        label="Motivo de la corrección",
+        max_length=500,
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 3,
+                "placeholder": "Ej. se corrigió el domicilio informado",
+            }
+        ),
+    )
+
+    def clean_operation_key(self):
+        return self.cleaned_data.get("operation_key") or uuid.uuid4()
+
+    def clean_edit_reason(self):
+        return (
+            self.cleaned_data.get("edit_reason") or "Corrección de datos del cliente (sin detalle)."
+        ).strip()
+
+
+class CustomerDeletionForm(forms.Form):
+    reason = forms.CharField(
+        label="Motivo del borrado",
+        max_length=500,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 3,
+                "placeholder": "Ej. cliente duplicado o cargado por error",
+                "autofocus": True,
+            }
+        ),
+    )
+
+
 class ProductForm(StyledModelForm):
     class Meta:
         model = Product
@@ -125,6 +173,17 @@ class BusinessSettingsForm(StyledModelForm):
         choices=Sale.Frequency.choices,
         widget=forms.CheckboxSelectMultiple,
     )
+    exceptional_edit_unlock_confirmation = forms.CharField(
+        label="Confirmación de habilitación",
+        required=False,
+        max_length=20,
+        widget=forms.TextInput(
+            attrs={
+                "placeholder": "Escribí HABILITAR",
+                "autocomplete": "off",
+            }
+        ),
+    )
 
     class Meta:
         model = BusinessSettings
@@ -139,6 +198,8 @@ class BusinessSettingsForm(StyledModelForm):
             "charge_sundays",
             "late_fee_after_partial_payment",
             "allow_advance_payments",
+            "allow_exceptional_sale_edits",
+            "exceptional_edit_unlock_confirmation",
             "whatsapp_message",
         ]
         widgets = {
@@ -156,9 +217,31 @@ class BusinessSettingsForm(StyledModelForm):
             self.initial["collection_days"] = self.instance.collection_days
             self.initial["payment_methods_text"] = "\n".join(self.instance.payment_methods)
             self.initial["available_frequencies"] = self.instance.available_frequencies
+        self.fields[
+            "available_frequencies"
+        ].help_text = "Diaria usa únicamente los días de cobranza habilitados arriba."
 
     def clean_business_name(self):
         return self.cleaned_data["business_name"].strip()
+
+    def clean(self):
+        cleaned = super().clean()
+        was_enabled = bool(
+            self.instance
+            and self.instance.pk
+            and BusinessSettings.objects.filter(
+                pk=self.instance.pk,
+                allow_exceptional_sale_edits=True,
+            ).exists()
+        )
+        wants_enabled = cleaned.get("allow_exceptional_sale_edits", False)
+        confirmation = (cleaned.get("exceptional_edit_unlock_confirmation") or "").strip()
+        if wants_enabled and not was_enabled and confirmation != "HABILITAR":
+            self.add_error(
+                "exceptional_edit_unlock_confirmation",
+                "Para habilitar esta función excepcional, escribí exactamente HABILITAR.",
+            )
+        return cleaned
 
     def clean_logo(self):
         logo = self.cleaned_data.get("logo")
@@ -385,9 +468,15 @@ class SaleForm(StyledModelForm):
             "product_description": forms.TextInput(
                 attrs={"placeholder": "Se completa con el producto seleccionado"}
             ),
-            "delivery_date": forms.DateInput(attrs={"type": "date"}),
+            "delivery_date": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"type": "date"},
+            ),
             "installment_count": forms.NumberInput(attrs={"min": 1, "inputmode": "numeric"}),
-            "first_due_date": forms.DateInput(attrs={"type": "date"}),
+            "first_due_date": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"type": "date"},
+            ),
         }
         labels = {
             "product_description": "Descripción en esta venta",
@@ -402,6 +491,7 @@ class SaleForm(StyledModelForm):
     ):
         super().__init__(*args, **kwargs)
         self.settings = settings or BusinessSettings.get_solo()
+        self.fields["operation_type"].choices = Sale.OperationType.choices
         self.fields["customer"].queryset = Customer.objects.filter(is_active=True)
         self.fields["product"].queryset = Product.objects.filter(is_active=True)
         self.fields["product"].required = False
@@ -412,6 +502,9 @@ class SaleForm(StyledModelForm):
             for choice in Sale.Frequency.choices
             if choice[0] in self.settings.available_frequencies
         ]
+        self.fields[
+            "frequency"
+        ].help_text = "Diaria: una cuota por cada día de cobranza habilitado en Configuración."
         self.fields["down_payment_method"].choices = [
             ("", "Seleccionar medio"),
             *((method, method) for method in self.settings.payment_methods),
@@ -511,26 +604,17 @@ class SaleForm(StyledModelForm):
         first_due_date,
         frequency,
         installment_count,
+        collection_days,
         as_of,
     ) -> int:
         if not first_due_date or not frequency or not installment_count:
             return 0
-        if frequency == Sale.Frequency.MONTHLY:
-            due_dates = [
-                add_months(first_due_date, offset) for offset in range(installment_count)
-            ]
-        else:
-            intervals = {
-                Sale.Frequency.WEEKLY: 7,
-                Sale.Frequency.BIWEEKLY: 14,
-            }
-            interval = intervals.get(frequency)
-            if interval is None:
-                return 0
-            due_dates = [
-                first_due_date + timedelta(days=offset * interval)
-                for offset in range(installment_count)
-            ]
+        due_dates = calculate_due_dates(
+            first_due_date=first_due_date,
+            frequency=frequency,
+            installment_count=installment_count,
+            collection_days=collection_days,
+        )
         return sum(due_date <= as_of for due_date in due_dates)
 
     def clean(self):
@@ -555,6 +639,26 @@ class SaleForm(StyledModelForm):
         first_installment_method = cleaned.get("first_installment_payment_method")
         installment_count = cleaned.get("installment_count")
         frequency = cleaned.get("frequency")
+
+        if (
+            frequency == Sale.Frequency.DAILY
+            and first_due_date
+            and first_due_date.weekday() not in set(self.settings.collection_days)
+        ):
+            if same_day_first_due:
+                self.add_error(
+                    "first_due_date",
+                    (
+                        "La entrega no cae en un día habilitado para cobranza diaria. "
+                        "Habilitá ese día o desmarcá que la cuota 1 vence al entregar."
+                    ),
+                )
+            else:
+                first_due_date = next_enabled_collection_day(
+                    first_due_date,
+                    self.settings.collection_days,
+                )
+                cleaned["first_due_date"] = first_due_date
 
         if is_loan:
             cleaned["product"] = None
@@ -600,9 +704,7 @@ class SaleForm(StyledModelForm):
                 )
             elif product_price and financed_amount is not None:
                 cleaned["loan_interest_rate"] = (
-                    (financed_amount - product_price)
-                    * Decimal("100")
-                    / product_price
+                    (financed_amount - product_price) * Decimal("100") / product_price
                 ).quantize(Decimal("0.01"))
         else:
             cleaned["loan_disbursement_method"] = ""
@@ -694,12 +796,9 @@ class SaleForm(StyledModelForm):
             cleaned["first_installment_payment_method"] = ""
         if historical_count:
             already_recorded_at_delivery = (
-                same_day_first_due
-                and first_installment_status == self.FIRST_INSTALLMENT_PAID
+                same_day_first_due and first_installment_status == self.FIRST_INSTALLMENT_PAID
             )
-            historical_payments_needed = historical_count - int(
-                already_recorded_at_delivery
-            )
+            historical_payments_needed = historical_count - int(already_recorded_at_delivery)
             if historical_payments_needed > 0 and not historical_method:
                 self.add_error(
                     "historical_payment_method",
@@ -708,13 +807,14 @@ class SaleForm(StyledModelForm):
             if installment_count and historical_count > installment_count:
                 self.add_error(
                     "historical_paid_installments",
-                    f"La venta tiene solamente {installment_count} cuotas.",
+                    f"La operación tiene solamente {installment_count} cuotas.",
                 )
             else:
                 due_count = self._historical_due_count(
                     first_due_date=first_due_date,
                     frequency=frequency,
                     installment_count=installment_count,
+                    collection_days=self.settings.collection_days,
                     as_of=timezone.localdate(),
                 )
                 if historical_count > due_count:
@@ -727,27 +827,19 @@ class SaleForm(StyledModelForm):
                         ),
                     )
         if historical_late_installments:
+            due_dates = []
+            if first_due_date and frequency and installment_count:
+                due_dates = calculate_due_dates(
+                    first_due_date=first_due_date,
+                    frequency=frequency,
+                    installment_count=installment_count,
+                    collection_days=self.settings.collection_days,
+                )
             if not historical_count:
                 self.add_error(
                     "historical_late_installments",
                     "Primero indicá cuántas cuotas anteriores ya fueron pagadas.",
                 )
-            due_dates = []
-            if first_due_date and frequency and installment_count:
-                if frequency == Sale.Frequency.MONTHLY:
-                    due_dates = [
-                        add_months(first_due_date, offset)
-                        for offset in range(installment_count)
-                    ]
-                else:
-                    interval_days = (
-                        7 if frequency == Sale.Frequency.WEEKLY else 14
-                    )
-                    due_dates = [
-                        first_due_date + timedelta(days=interval_days * offset)
-                        for offset in range(installment_count)
-                    ]
-
             for installment_number, late_days in historical_late_installments.items():
                 if installment_number > historical_count:
                     self.add_error(
@@ -769,16 +861,11 @@ class SaleForm(StyledModelForm):
                     )
                     continue
                 if installment_number <= len(due_dates):
-                    payment_date = due_dates[installment_number - 1] + timedelta(
-                        days=late_days
-                    )
+                    payment_date = due_dates[installment_number - 1] + timedelta(days=late_days)
                     if payment_date > timezone.localdate():
                         maximum_days = max(
                             0,
-                            (
-                                timezone.localdate()
-                                - due_dates[installment_number - 1]
-                            ).days,
+                            (timezone.localdate() - due_dates[installment_number - 1]).days,
                         )
                         self.add_error(
                             "historical_late_installments",
@@ -790,6 +877,113 @@ class SaleForm(StyledModelForm):
         return cleaned
 
 
+class SaleEditForm(SaleForm):
+    operation_key = forms.UUIDField(
+        widget=forms.HiddenInput,
+        initial=uuid.uuid4,
+        required=False,
+    )
+    edit_reason = forms.CharField(
+        label="Dato que se corrige",
+        max_length=500,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 3,
+                "placeholder": "Ej. se cargó mal la cantidad de cuotas",
+            }
+        ),
+    )
+    exceptional_confirmation = forms.CharField(
+        label="Confirmación de recálculo",
+        required=False,
+        max_length=20,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Escribí RECALCULAR",
+                "autocomplete": "off",
+            }
+        ),
+    )
+
+    CREATION_ONLY_FIELDS = (
+        "same_day_first_due",
+        "first_installment_delivery_status",
+        "first_installment_payment_method",
+        "historical_paid_installments",
+        "historical_payment_method",
+        "historical_late_installments",
+    )
+
+    class Meta(SaleForm.Meta):
+        # Django usa esta lista también para copiar los datos validados al
+        # modelo. Debe coincidir con los campos que siguen presentes después
+        # de retirar las opciones exclusivas de una venta nueva.
+        fields = [
+            "operation_type",
+            "customer",
+            "product",
+            "product_description",
+            "delivery_date",
+            "cash_price",
+            "loan_disbursement_method",
+            "loan_interest_rate",
+            "down_payment",
+            "financed_amount",
+            "frequency",
+            "installment_count",
+            "first_due_date",
+        ]
+
+    def __init__(self, *args, exceptional_mode=False, **kwargs):
+        self.exceptional_mode = exceptional_mode
+        super().__init__(*args, **kwargs)
+        for field_name in self.CREATION_ONLY_FIELDS:
+            self.fields.pop(field_name, None)
+
+        # El tipo de operación forma parte del registro contable y no se puede
+        # convertir de venta a préstamo (o viceversa) durante una corrección.
+        self.fields["operation_type"].disabled = True
+        self.fields["operation_type"].widget = forms.HiddenInput()
+
+        current_customer_id = self.instance.customer_id if self.instance.pk else None
+        current_product_id = self.instance.product_id if self.instance.pk else None
+        self.fields["customer"].queryset = Customer.objects.filter(deleted_at__isnull=True).filter(
+            Q(is_active=True) | Q(pk=current_customer_id)
+        )
+        self.fields["product"].queryset = Product.objects.filter(
+            Q(is_active=True) | Q(pk=current_product_id)
+        )
+
+        if self.instance.pk and not self.is_bound:
+            base_total = self.instance.cash_price - self.instance.down_payment
+            self.initial.setdefault(
+                "custom_installment_total",
+                self.instance.financed_amount != base_total,
+            )
+            initial_payment = self.instance.payments.filter(kind="initial").first()
+            if initial_payment:
+                self.initial.setdefault(
+                    "down_payment_method",
+                    initial_payment.payment_method,
+                )
+
+    def clean(self):
+        cleaned = super().clean()
+        if self.exceptional_mode:
+            confirmation = (cleaned.get("exceptional_confirmation") or "").strip()
+            if confirmation != "RECALCULAR":
+                self.add_error(
+                    "exceptional_confirmation",
+                    "Escribí exactamente RECALCULAR para confirmar esta corrección excepcional.",
+                )
+        return cleaned
+
+    def clean_operation_key(self):
+        return self.cleaned_data.get("operation_key") or uuid.uuid4()
+
+
 class SaleCancellationForm(forms.Form):
     reason = forms.CharField(
         label="Motivo de cancelación",
@@ -799,8 +993,66 @@ class SaleCancellationForm(forms.Form):
             attrs={
                 "class": "form-control",
                 "rows": 4,
-                "placeholder": "Explicá brevemente por qué se cancela la venta",
+                "placeholder": "Explicá brevemente por qué se cancela la operación",
                 "autofocus": True,
+            }
+        ),
+    )
+
+
+class CollectorForm(StyledModelForm):
+    class Meta:
+        model = Collector
+        fields = ["name"]
+        labels = {"name": "Nombre del cobrador"}
+        widgets = {
+            "name": forms.TextInput(
+                attrs={
+                    "autocomplete": "name",
+                    "placeholder": "Ej. Martín",
+                }
+            )
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._apply_styles()
+
+    def clean_name(self):
+        name = " ".join(self.cleaned_data["name"].split())
+        duplicate = Collector.objects.filter(name__iexact=name)
+        if self.instance.pk:
+            duplicate = duplicate.exclude(pk=self.instance.pk)
+        if duplicate.exists():
+            raise ValidationError("Ya existe un cobrador con ese nombre.")
+        return name
+
+
+class CollectorArchiveForm(forms.Form):
+    reason = forms.CharField(
+        label="Motivo",
+        min_length=3,
+        max_length=500,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 3,
+                "placeholder": "Ej. Ya no trabaja realizando cobranzas",
+            }
+        ),
+    )
+
+
+class LateFeePauseForm(forms.Form):
+    reason = forms.CharField(
+        label="Motivo de la pausa",
+        min_length=3,
+        max_length=500,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 2,
+                "placeholder": "Ej. Acuerdo temporal con el cliente",
             }
         ),
     )
@@ -826,7 +1078,10 @@ class PaymentForm(forms.Form):
     payment_date = forms.DateField(
         label="Fecha",
         initial=timezone.localdate,
-        widget=forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+        widget=forms.DateInput(
+            format="%Y-%m-%d",
+            attrs={"class": "form-control", "type": "date"},
+        ),
     )
     payment_method = forms.ChoiceField(
         label="Medio de pago",
@@ -850,14 +1105,19 @@ class PaymentForm(forms.Form):
         settings: BusinessSettings,
         sale: Sale,
         due_amount: Decimal,
+        expected_payment_date: date | None = None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.settings = settings
         self.sale = sale
+        self.expected_payment_date = expected_payment_date
         self.fields["payment_method"].choices = [
             (method, method) for method in settings.payment_methods
         ]
+        if expected_payment_date is not None:
+            self.initial["payment_date"] = expected_payment_date
+            self.fields["payment_date"].widget.attrs["readonly"] = True
         if not self.is_bound:
             self.initial["amount"] = due_amount
 
@@ -867,6 +1127,8 @@ class PaymentForm(forms.Form):
             raise ValidationError("La fecha no puede ser anterior a la entrega.")
         if payment_date > timezone.localdate():
             raise ValidationError("No se puede registrar un pago futuro.")
+        if self.expected_payment_date is not None and payment_date != self.expected_payment_date:
+            raise ValidationError("La fecha debe coincidir con el día elegido en Cobranza.")
         return payment_date
 
 

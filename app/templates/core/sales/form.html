@@ -1,28 +1,28 @@
 {% extends "base.html" %}
 {% load finance %}
 
-{% block title %}Nueva operación · Gestión Financiera{% endblock %}
+{% block title %}{% if editing %}Editar {{ sale.operation_name|lower }}{% else %}Nueva operación{% endif %} · Gestión Financiera{% endblock %}
 
 {% block content %}
 <header class="page-header">
     <div>
-        <a class="back-link" href="{% url 'core:sale_list' %}">‹ Volver a ventas y préstamos</a>
-        <p class="eyebrow">Nueva operación financiada</p>
-        <h1>Registrar venta o préstamo</h1>
-        <p class="page-subtitle">Elegí el tipo de operación, completá las condiciones y revisá las cuotas.</p>
+        <a class="back-link" href="{% if editing %}{% url 'core:sale_detail' sale.pk %}{% else %}{% url 'core:sale_list' %}{% endif %}">‹ {% if editing %}Volver al detalle{% else %}Volver a operaciones{% endif %}</a>
+        <p class="eyebrow">{% if editing %}Corrección {{ next_edit_number }} de 2{% else %}Nueva operación financiada{% endif %}</p>
+        <h1>{% if editing %}Editar {{ sale.operation_name|lower }}{% else %}Registrar venta o préstamo{% endif %}</h1>
+        <p class="page-subtitle">{% if editing %}Revisá todos los datos. La versión actual quedará protegida en el Archivo seguro.{% else %}Completá las condiciones y revisá las cuotas antes de confirmar.{% endif %}</p>
     </div>
     <div class="config-note">
-        <span>Recargo diario</span>
+        <span>Recargo diario por atraso</span>
         <strong>{{ settings.daily_late_fee|ars }}</strong>
         <small>Se mantendrá fijo para esta operación</small>
     </div>
 </header>
 
-{% if not form.fields.customer.queryset.exists %}
+{% if not editing and not form.fields.customer.queryset.exists %}
 <div class="dependency-alert">
     <div>
-        <strong>Para registrar una venta necesitás un cliente y un producto activos.</strong>
-        <p>Para un préstamo solo necesitás el cliente. Podés crearlo ahora y volver sin perder lo ingresado.</p>
+        <strong>Antes de registrar una operación necesitás un cliente activo.</strong>
+        <p>Podés crearlo ahora y volver sin perder lo ingresado.</p>
     </div>
     <div>
         <a class="btn btn-secondary btn-compact" href="{% url 'core:customer_create' %}?volver=venta" data-sale-draft-link>Nuevo cliente</a>
@@ -30,15 +30,19 @@
 </div>
 {% endif %}
 
-{% if not form.fields.product.queryset.exists %}
+{% if not editing and not form.fields.product.queryset.exists %}
 <div class="dependency-alert dependency-alert-soft">
-    <div><strong>No hay productos activos.</strong><p>Podés registrar préstamos normalmente o crear un producto para una venta.</p></div>
+    <div>
+        <strong>No hay productos activos.</strong>
+        <p>Podés registrar préstamos normalmente o crear un producto para una venta.</p>
+    </div>
     <a class="btn btn-secondary btn-compact" href="{% url 'core:product_create' %}?volver=venta" data-sale-draft-link>Nuevo producto</a>
 </div>
 {% endif %}
 
-<form method="post" id="sale-form" class="sale-form-layout" data-today="{{ today|date:'Y-m-d' }}" novalidate>
+<form method="post" id="sale-form" class="sale-form-layout" data-today="{{ today|date:'Y-m-d' }}" data-collection-days="{{ settings.collection_days|join:',' }}" novalidate>
     {% csrf_token %}
+    {% if editing %}{{ form.operation_key }}{% endif %}
     <div class="sale-form-main">
         {% include "core/partials/form_errors.html" %}
 
@@ -50,11 +54,15 @@
                     <p>Primero indicá si entregaste un producto o dinero.</p>
                 </div>
             </div>
+            {% if not editing %}
             <div class="field span-2 operation-type-field">
                 <label>¿Qué operación querés registrar?</label>
                 <div class="operation-type-choices">{{ form.operation_type }}</div>
                 {% for error in form.operation_type.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
             </div>
+            {% else %}
+            {{ form.operation_type }}
+            {% endif %}
             <div class="form-grid two-columns">
                 <div class="field">
                     <label for="{{ form.customer.id_for_label }}">Cliente</label>
@@ -65,12 +73,12 @@
                                aria-label="Buscar cliente"
                                aria-autocomplete="list" aria-expanded="false"
                                data-select-label="cliente"
-                               data-select-search="#{{ form.customer.id_for_label }}" autofocus>
+                               data-select-search="#{{ form.customer.id_for_label }}" {% if not editing %}autofocus{% endif %}>
                     </div>
                     {{ form.customer }}
                     <small class="select-search-count" data-select-search-count="#{{ form.customer.id_for_label }}"></small>
                     {% for error in form.customer.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
-                    <a class="field-link" href="{% url 'core:customer_create' %}?volver=venta" data-sale-draft-link>＋ Crear cliente</a>
+                    {% if not editing %}<a class="field-link" href="{% url 'core:customer_create' %}?volver=venta" data-sale-draft-link>＋ Crear cliente</a>{% endif %}
                 </div>
                 <div class="field" data-product-only>
                     <label for="{{ form.product.id_for_label }}">Producto</label>
@@ -86,7 +94,7 @@
                     {{ form.product }}
                     <small class="select-search-count" data-select-search-count="#{{ form.product.id_for_label }}"></small>
                     {% for error in form.product.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
-                    <a class="field-link" href="{% url 'core:product_create' %}?volver=venta" data-sale-draft-link>＋ Crear producto</a>
+                    {% if not editing %}<a class="field-link" href="{% url 'core:product_create' %}?volver=venta" data-sale-draft-link>＋ Crear producto</a>{% endif %}
                 </div>
                 <div class="field" data-loan-only hidden>
                     <label for="{{ form.loan_disbursement_method.id_for_label }}">¿Cómo se entregó el dinero?</label>
@@ -173,7 +181,7 @@
                     {{ form.first_due_date }}
                     {% for error in form.first_due_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
-                <div class="field span-2 same-day-due-option">
+                {% if not editing %}<div class="field span-2 same-day-due-option">
                     <label for="{{ form.same_day_first_due.id_for_label }}">
                         {{ form.same_day_first_due }}
                         <span>
@@ -181,11 +189,11 @@
                             <small>Después indicá si fue pagada en ese momento o quedó pendiente.</small>
                         </span>
                     </label>
-                </div>
-                <div class="field span-2 delivery-installment-panel" id="delivery-installment-panel" hidden>
+                </div>{% endif %}
+                {% if not editing %}<div class="field span-2 delivery-installment-panel" id="delivery-installment-panel" hidden>
                     <div class="delivery-installment-heading">
                         <strong id="delivery-installment-question">¿Qué pasó con la cuota 1 al entregar?</strong>
-                        <small>El pago inicial aparte, si existe, no reemplaza esta cuota.</small>
+                        <small id="delivery-installment-help">El pago inicial aparte, si existe, no reemplaza esta cuota.</small>
                     </div>
                     <div class="delivery-installment-choices">
                         {{ form.first_installment_delivery_status }}
@@ -199,10 +207,11 @@
                     <p class="delivery-installment-summary" id="delivery-installment-summary">
                         Elegí si la cuota 1 fue pagada o quedó pendiente.
                     </p>
-                </div>
+                </div>{% endif %}
                 <div class="field">
                     <label for="{{ form.frequency.id_for_label }}">Frecuencia</label>
                     {{ form.frequency }}
+                    {% if form.frequency.help_text %}<p class="field-help">{{ form.frequency.help_text }}</p>{% endif %}
                     {% for error in form.frequency.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
                 <div class="field">
@@ -220,6 +229,39 @@
             </div>
         </section>
 
+        {% if editing %}
+        <section class="form-card archive-edit-card">
+            <div class="form-section-heading">
+                <span>04</span>
+                <div>
+                    <h2>Motivo y resguardo</h2>
+                    <p>Este texto y la versión anterior no podrán editarse ni borrarse.</p>
+                </div>
+            </div>
+            <div class="archive-edit-warning">
+                <strong>Edición {{ next_edit_number }} de 2</strong>
+                <p>Después de guardar {% if remaining_after_save == 1 %}quedará 1 edición disponible{% else %}no quedarán más ediciones disponibles{% endif %}. Las cuotas se recalcularán con las condiciones corregidas.</p>
+            </div>
+            <div class="field">
+                <label for="{{ form.edit_reason.id_for_label }}">Dato que se corrige</label>
+                {{ form.edit_reason }}
+                <p class="field-help">Ejemplo: “se indicó 12 cuotas y correspondían 10”.</p>
+                {% for error in form.edit_reason.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+            {% if exceptional_mode %}
+            <div class="archive-lock-notice">
+                <strong>Corrección excepcional habilitada</strong>
+                <p>Esta operación ya tiene pagos o visitas. Se conservarán los movimientos originales y se recalculará cómo se aplican a las cuotas nuevas. Si algún movimiento no encaja, no se modificará nada.</p>
+            </div>
+            <div class="field">
+                <label for="{{ form.exceptional_confirmation.id_for_label }}">Confirmación de recálculo</label>
+                {{ form.exceptional_confirmation }}
+                <p class="field-help">Escribí exactamente <strong>RECALCULAR</strong>.</p>
+                {% for error in form.exceptional_confirmation.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+            {% endif %}
+        </section>
+        {% else %}
         <section class="form-card historical-sale-card" data-historical-section>
             <div class="form-section-heading">
                 <span>04</span>
@@ -267,12 +309,13 @@
             {% for error in form.historical_late_installments.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
             <p class="historical-summary" id="historical-summary">No se marcarán cuotas anteriores como pagadas.</p>
         </section>
+        {% endif %}
 
         <div class="form-actions">
-            <a class="btn btn-ghost" href="{% url 'core:sale_list' %}">Cancelar</a>
+            <a class="btn btn-ghost" href="{% if editing %}{% url 'core:sale_detail' sale.pk %}{% else %}{% url 'core:sale_list' %}{% endif %}">Cancelar</a>
             <button class="btn btn-primary" id="sale-submit" type="submit"
                     {% if not form.fields.customer.queryset.exists %}disabled{% endif %}>
-                Confirmar y generar cuotas
+                {% if editing %}Guardar corrección{% else %}Confirmar y generar cuotas{% endif %}
             </button>
         </div>
     </div>

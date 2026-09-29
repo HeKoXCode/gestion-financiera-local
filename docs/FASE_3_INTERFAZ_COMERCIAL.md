@@ -120,7 +120,7 @@ Mientras se completa, una vista previa local muestra:
 Al confirmar:
 
 1. se valida la operación;
-2. se copia el recargo configurado;
+2. se copia el recargo diario configurado;
 3. se congela la descripción del producto;
 4. se guarda la venta;
 5. se registra la entrega inicial como dinero recibido, cuando corresponda;
@@ -137,7 +137,7 @@ El detalle de una venta muestra:
 - total en cuotas;
 - total pendiente y recibido;
 - frecuencia;
-- recargo diario congelado;
+- recargo diario por atraso congelado;
 - capital y recargos pendientes;
 - cronograma completo;
 - estado de cada cuota.

@@ -124,10 +124,10 @@ los comportamientos nuevos en lugar de reutilizar una copia anterior.
 | 3 | Venta quincenal y mensual | Intervalo de 14 días y calendario mensual |
 | 4 | Redondeo de última cuota | Diferencia de centavos |
 | 5 | Pago en término | Motor de pagos |
-| 6 | Uno, dos y tres días de atraso | Motor de recargos |
+| 6 | Una venta con varias cuotas atrasadas | Un recargo por día de la venta, sin duplicarlo por cuota |
 | 7 | Pago parcial | Saldos y cobranza |
-| 8 | Recargo después del pago parcial | Configuración financiera |
-| 9 | Dos cuotas vencidas | Aplicación a deuda más antigua |
+| 8 | Pago parcial | No genera un segundo recargo |
+| 9 | Varias cuotas vencidas | Sólo la más antigua es exigible |
 | 10 | Dos ventas de un cliente | Historial consolidado |
 | 11 | Pago anulado | Reapertura de saldo |
 | 12 | “No pagó” | Intentos de cobranza idempotentes |

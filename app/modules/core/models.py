@@ -7,7 +7,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import Q
+from django.db.models import F, Q
 from django.utils import timezone
 
 ZERO = Decimal("0.00")
@@ -25,6 +25,7 @@ def default_payment_methods() -> list[str]:
 
 def default_frequencies() -> list[str]:
     return [
+        Sale.Frequency.DAILY,
         Sale.Frequency.WEEKLY,
         Sale.Frequency.BIWEEKLY,
         Sale.Frequency.MONTHLY,
@@ -53,7 +54,7 @@ class BusinessSettings(TimestampedModel):
         decimal_places=2,
         default=Decimal("5000.00"),
         validators=[MinValueValidator(ZERO)],
-        verbose_name="recargo diario",
+        verbose_name="recargo diario por atraso",
     )
     collection_days = models.JSONField(
         default=default_collection_days,
@@ -81,8 +82,16 @@ class BusinessSettings(TimestampedModel):
         verbose_name="continuar recargo después de un pago parcial",
     )
     allow_advance_payments = models.BooleanField(
-        default=False,
+        default=True,
         verbose_name="permitir pagos adelantados",
+    )
+    allow_exceptional_sale_edits = models.BooleanField(
+        default=False,
+        verbose_name="habilitar una corrección excepcional de venta",
+        help_text=(
+            "Permite corregir una venta con pagos o visitas. Se desactiva "
+            "automáticamente después de usarla una vez."
+        ),
     )
     whatsapp_message = models.TextField(
         default=(
@@ -140,6 +149,10 @@ class BusinessSettings(TimestampedModel):
             valid_frequencies
         ):
             errors["available_frequencies"] = "Las frecuencias configuradas no son válidas."
+        elif Sale.Frequency.DAILY in self.available_frequencies and not self.collection_days:
+            errors["collection_days"] = (
+                "La frecuencia diaria necesita al menos un día de cobranza habilitado."
+            )
 
         if errors:
             raise ValidationError(errors)
@@ -167,6 +180,15 @@ class Customer(TimestampedModel):
     )
     notes = models.TextField(blank=True, verbose_name="observaciones")
     is_active = models.BooleanField(default=True, verbose_name="activo")
+    deleted_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name="enviado al archivo seguro",
+    )
+    deletion_reason = models.TextField(
+        blank=True,
+        verbose_name="motivo del borrado",
+    )
 
     class Meta:
         ordering = ["last_name", "first_name", "pk"]
@@ -182,6 +204,7 @@ class Customer(TimestampedModel):
         indexes = [
             models.Index(fields=["last_name", "first_name"], name="customer_name_idx"),
             models.Index(fields=["is_active"], name="customer_active_idx"),
+            models.Index(fields=["deleted_at"], name="customer_deleted_idx"),
         ]
 
     def __str__(self) -> str:
@@ -191,11 +214,87 @@ class Customer(TimestampedModel):
     def full_name(self) -> str:
         return f"{self.first_name} {self.last_name}".strip()
 
+    @property
+    def is_deleted(self) -> bool:
+        return self.deleted_at is not None
+
     def save(self, *args, **kwargs) -> None:
+        if self.pk:
+            original = type(self).objects.filter(pk=self.pk).first()
+            if original and original.deleted_at is not None:
+                protected_fields = (
+                    "first_name",
+                    "last_name",
+                    "dni",
+                    "phone",
+                    "address",
+                    "neighborhood",
+                    "address_reference",
+                    "notes",
+                    "is_active",
+                    "deleted_at",
+                    "deletion_reason",
+                )
+                if any(
+                    getattr(self, field) != getattr(original, field) for field in protected_fields
+                ):
+                    raise ValidationError("Un cliente del Archivo seguro no puede modificarse.")
         self.first_name = self.first_name.strip()
         self.last_name = self.last_name.strip()
         self.dni = (self.dni or "").strip() or None
         super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError(
+            "Los clientes no se eliminan físicamente; deben enviarse al Archivo seguro."
+        )
+
+
+class CustomerRevision(models.Model):
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.PROTECT,
+        related_name="revisions",
+        verbose_name="cliente actual",
+    )
+    operation_key = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+        verbose_name="clave de operación",
+    )
+    revision_number = models.PositiveIntegerField(
+        validators=[MinValueValidator(1)],
+        verbose_name="número de edición",
+    )
+    reason = models.TextField(verbose_name="motivo de la edición")
+    snapshot = models.JSONField(verbose_name="copia completa anterior")
+    archived_at = models.DateTimeField(auto_now_add=True, verbose_name="archivada el")
+
+    class Meta:
+        ordering = ["-archived_at", "-pk"]
+        verbose_name = "versión anterior de cliente"
+        verbose_name_plural = "versiones anteriores de clientes"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["customer", "revision_number"],
+                name="customer_revision_unique_number",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["archived_at"], name="customer_revision_archived_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"Cliente #{self.customer_id} — versión anterior {self.revision_number}"
+
+    def save(self, *args, **kwargs) -> None:
+        if self.pk:
+            raise ValidationError("Una versión del Archivo seguro no puede modificarse.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Una versión del Archivo seguro no puede eliminarse.")
 
 
 class Product(TimestampedModel):
@@ -224,6 +323,7 @@ class Sale(TimestampedModel):
         LOAN = "loan", "Préstamo de dinero"
 
     class Frequency(models.TextChoices):
+        DAILY = "daily", "Diaria"
         WEEKLY = "weekly", "Semanal"
         BIWEEKLY = "biweekly", "Cada 2 semanas"
         MONTHLY = "monthly", "Mensual"
@@ -320,6 +420,11 @@ class Sale(TimestampedModel):
         blank=True,
         verbose_name="motivo de cancelación",
     )
+    edit_count = models.PositiveSmallIntegerField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        verbose_name="cantidad de ediciones",
+    )
 
     class Meta:
         ordering = ["-delivery_date", "-pk"]
@@ -349,6 +454,10 @@ class Sale(TimestampedModel):
             models.CheckConstraint(
                 condition=Q(loan_interest_rate__gte=ZERO),
                 name="sale_loan_interest_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=Q(edit_count__gte=0) & Q(edit_count__lte=2),
+                name="sale_edit_count_between_zero_and_two",
             ),
             models.CheckConstraint(
                 condition=(
@@ -447,6 +556,98 @@ class Sale(TimestampedModel):
         if errors:
             raise ValidationError(errors)
 
+    def save(self, *args, **kwargs) -> None:
+        if self.pk:
+            original = type(self).objects.filter(pk=self.pk).first()
+            if original and original.status == self.Status.CANCELLED:
+                protected_fields = (
+                    "customer_id",
+                    "product_id",
+                    "operation_type",
+                    "product_description",
+                    "delivery_date",
+                    "cash_price",
+                    "loan_disbursement_method",
+                    "loan_interest_rate",
+                    "down_payment",
+                    "financed_amount",
+                    "frequency",
+                    "installment_count",
+                    "daily_late_fee",
+                    "first_due_date",
+                    "status",
+                    "cancelled_on",
+                    "cancellation_reason",
+                    "edit_count",
+                )
+                if any(
+                    getattr(self, field) != getattr(original, field) for field in protected_fields
+                ):
+                    raise ValidationError(
+                        "Una venta cancelada del Archivo seguro no puede modificarse."
+                    )
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError(
+            "Las ventas no se eliminan físicamente; permanecen como registro seguro."
+        )
+
+
+class SaleRevision(models.Model):
+    sale = models.ForeignKey(
+        Sale,
+        on_delete=models.PROTECT,
+        related_name="revisions",
+        verbose_name="venta actual",
+    )
+    operation_key = models.UUIDField(
+        blank=True,
+        null=True,
+        unique=True,
+        editable=False,
+        verbose_name="clave de operación",
+    )
+    revision_number = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1)],
+        verbose_name="número de edición",
+    )
+    reason = models.TextField(verbose_name="motivo de la edición")
+    snapshot = models.JSONField(verbose_name="copia completa anterior")
+    archived_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="archivada el",
+    )
+
+    class Meta:
+        ordering = ["-archived_at", "-pk"]
+        verbose_name = "versión anterior de venta"
+        verbose_name_plural = "versiones anteriores de ventas"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sale", "revision_number"],
+                name="sale_revision_unique_number",
+            ),
+            models.CheckConstraint(
+                condition=Q(revision_number__gte=1) & Q(revision_number__lte=2),
+                name="sale_revision_number_between_one_and_two",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["archived_at"], name="sale_revision_archived_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"Venta #{self.sale_id} — versión anterior {self.revision_number}"
+
+    def save(self, *args, **kwargs) -> None:
+        if self.pk:
+            raise ValidationError("Una versión del Archivo seguro no puede modificarse.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Una versión del Archivo seguro no puede eliminarse.")
+
 
 class Installment(TimestampedModel):
     sale = models.ForeignKey(
@@ -508,6 +709,22 @@ class LateFee(TimestampedModel):
         validators=[MinValueValidator(MIN_MONEY)],
         verbose_name="importe",
     )
+    waived_amount = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=ZERO,
+        validators=[MinValueValidator(ZERO)],
+        verbose_name="importe dejado sin efecto",
+    )
+    waived_reason = models.TextField(
+        blank=True,
+        verbose_name="motivo del importe dejado sin efecto",
+    )
+    waived_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name="dejado sin efecto el",
+    )
 
     class Meta:
         ordering = ["fee_date", "pk"]
@@ -522,6 +739,10 @@ class LateFee(TimestampedModel):
                 condition=Q(amount__gt=ZERO),
                 name="late_fee_amount_positive",
             ),
+            models.CheckConstraint(
+                condition=Q(waived_amount__gte=ZERO) & Q(waived_amount__lte=F("amount")),
+                name="late_fee_waived_amount_valid",
+            ),
         ]
         indexes = [
             models.Index(fields=["fee_date"], name="late_fee_date_idx"),
@@ -529,6 +750,276 @@ class LateFee(TimestampedModel):
 
     def __str__(self) -> str:
         return f"{self.installment} — {self.fee_date:%d/%m/%Y}"
+
+    @property
+    def effective_amount(self) -> Decimal:
+        return max(ZERO, self.amount - self.waived_amount)
+
+
+class LateFeePausePeriod(TimestampedModel):
+    sale = models.ForeignKey(
+        Sale,
+        on_delete=models.PROTECT,
+        related_name="late_fee_pause_periods",
+        verbose_name="venta",
+    )
+    paused_from = models.DateField(verbose_name="pausado desde")
+    resumed_at = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name="reanudado el",
+    )
+    reason = models.TextField(verbose_name="motivo de la pausa")
+    resume_reason = models.TextField(
+        blank=True,
+        verbose_name="motivo de la reanudación",
+    )
+
+    class Meta:
+        ordering = ["-paused_from", "-pk"]
+        verbose_name = "pausa de recargo diario"
+        verbose_name_plural = "pausas de recargo diario"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sale"],
+                condition=Q(resumed_at__isnull=True),
+                name="late_fee_pause_one_open_sale",
+            ),
+            models.CheckConstraint(
+                condition=Q(resumed_at__isnull=True) | Q(resumed_at__gte=F("paused_from")),
+                name="late_fee_pause_valid_period",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["sale", "resumed_at"],
+                name="late_fee_pause_sale_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        state = "activa" if self.resumed_at is None else f"hasta {self.resumed_at:%d/%m/%Y}"
+        return f"{self.sale} — pausa {self.paused_from:%d/%m/%Y} ({state})"
+
+    @property
+    def is_active(self) -> bool:
+        return self.resumed_at is None
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        self.reason = self.reason.strip()
+        self.resume_reason = self.resume_reason.strip()
+        if not self.reason:
+            errors["reason"] = "Indicá por qué se pausa el recargo diario."
+        if self.resumed_at and self.resumed_at < self.paused_from:
+            errors["resumed_at"] = "La reanudación no puede ser anterior a la pausa."
+        if errors:
+            raise ValidationError(errors)
+
+
+class Collector(TimestampedModel):
+    name = models.CharField(max_length=120, unique=True, verbose_name="nombre")
+    is_active = models.BooleanField(default=True, verbose_name="activo")
+    archived_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name="enviado al archivo seguro",
+    )
+    archive_reason = models.TextField(
+        blank=True,
+        verbose_name="motivo del archivado",
+    )
+
+    class Meta:
+        ordering = ["name", "pk"]
+        verbose_name = "cobrador"
+        verbose_name_plural = "cobradores"
+        indexes = [
+            models.Index(fields=["archived_at"], name="collector_archived_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+    @property
+    def is_archived(self) -> bool:
+        return self.archived_at is not None
+
+    def clean(self) -> None:
+        super().clean()
+        self.name = " ".join(self.name.split())
+        if not self.name:
+            raise ValidationError({"name": "Ingresá el nombre del cobrador."})
+        duplicate = Collector.objects.filter(name__iexact=self.name)
+        if self.pk:
+            duplicate = duplicate.exclude(pk=self.pk)
+        if duplicate.exists():
+            raise ValidationError({"name": "Ya existe un cobrador con ese nombre."})
+
+    def save(self, *args, **kwargs) -> None:
+        self.name = " ".join(self.name.split())
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError(
+            "Los cobradores no se eliminan físicamente; deben enviarse al Archivo seguro."
+        )
+
+
+class CollectionRoute(TimestampedModel):
+    collection_date = models.DateField(verbose_name="fecha del recorrido")
+    collector = models.ForeignKey(
+        Collector,
+        on_delete=models.PROTECT,
+        related_name="routes",
+        verbose_name="cobrador",
+    )
+
+    class Meta:
+        ordering = ["-collection_date", "collector__name", "pk"]
+        verbose_name = "recorrido de cobranza"
+        verbose_name_plural = "recorridos de cobranza"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["collection_date", "collector"],
+                name="route_unique_date_collector",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["collection_date"], name="collection_route_date_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.collector} — {self.collection_date:%d/%m/%Y}"
+
+
+class CollectionAssignment(TimestampedModel):
+    route = models.ForeignKey(
+        CollectionRoute,
+        on_delete=models.PROTECT,
+        related_name="assignments",
+        verbose_name="recorrido",
+    )
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.PROTECT,
+        related_name="collection_assignments",
+        verbose_name="cliente",
+    )
+    assigned_date = models.DateField(verbose_name="fecha asignada")
+    expected_amount = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        validators=[MinValueValidator(ZERO)],
+        verbose_name="importe esperado al asignar",
+    )
+    snapshot = models.JSONField(default=dict, verbose_name="detalle al asignar")
+
+    class Meta:
+        ordering = ["assigned_date", "customer__last_name", "customer__first_name", "pk"]
+        verbose_name = "cliente asignado a cobranza"
+        verbose_name_plural = "clientes asignados a cobranza"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["route", "customer"],
+                name="assignment_unique_route_customer",
+            ),
+            models.UniqueConstraint(
+                fields=["assigned_date", "customer"],
+                name="assignment_unique_date_customer",
+            ),
+            models.CheckConstraint(
+                condition=Q(expected_amount__gte=ZERO),
+                name="assignment_expected_non_negative",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["assigned_date", "customer"],
+                name="assignment_date_customer_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.customer} → {self.route}"
+
+    def clean(self) -> None:
+        super().clean()
+        if self.route_id and self.assigned_date != self.route.collection_date:
+            raise ValidationError(
+                {"assigned_date": "La fecha asignada debe coincidir con el recorrido."}
+            )
+
+
+class CustomerCollectorLink(TimestampedModel):
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.PROTECT,
+        related_name="collector_links",
+        verbose_name="cliente",
+    )
+    collector = models.ForeignKey(
+        Collector,
+        on_delete=models.PROTECT,
+        related_name="customer_links",
+        verbose_name="cobrador",
+    )
+    started_at = models.DateField(verbose_name="asignado desde")
+    ended_at = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name="asignación finalizada el",
+    )
+    source_route = models.ForeignKey(
+        CollectionRoute,
+        on_delete=models.SET_NULL,
+        related_name="habitual_links_created",
+        blank=True,
+        null=True,
+        verbose_name="recorrido de origen",
+    )
+    reason = models.CharField(
+        max_length=250,
+        default="Asignación guardada desde Preparar planillas",
+        verbose_name="motivo",
+    )
+
+    class Meta:
+        ordering = ["-started_at", "-pk"]
+        verbose_name = "cobrador habitual del cliente"
+        verbose_name_plural = "historial de cobradores habituales"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["customer"],
+                condition=Q(ended_at__isnull=True),
+                name="customer_collector_one_active",
+            ),
+            models.CheckConstraint(
+                condition=Q(ended_at__isnull=True) | Q(ended_at__gte=F("started_at")),
+                name="customer_collector_valid_period",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["collector", "ended_at"],
+                name="customer_collector_active_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.customer} → {self.collector}"
+
+    @property
+    def is_active(self) -> bool:
+        return self.ended_at is None
+
+    def clean(self) -> None:
+        super().clean()
+        if self.ended_at and self.ended_at < self.started_at:
+            raise ValidationError(
+                {"ended_at": "El fin no puede ser anterior al inicio de la asignación."}
+            )
 
 
 class Payment(TimestampedModel):
@@ -558,6 +1049,22 @@ class Payment(TimestampedModel):
         related_name="payments",
         verbose_name="venta",
     )
+    collector = models.ForeignKey(
+        Collector,
+        on_delete=models.PROTECT,
+        related_name="payments_collected",
+        blank=True,
+        null=True,
+        verbose_name="cobrador",
+    )
+    collection_assignment = models.ForeignKey(
+        CollectionAssignment,
+        on_delete=models.PROTECT,
+        related_name="payments",
+        blank=True,
+        null=True,
+        verbose_name="asignación de cobranza",
+    )
     payment_date = models.DateField(default=timezone.localdate, verbose_name="fecha")
     amount = models.DecimalField(
         max_digits=14,
@@ -571,6 +1078,10 @@ class Payment(TimestampedModel):
         choices=Kind.choices,
         default=Kind.INSTALLMENT,
         verbose_name="tipo de movimiento",
+    )
+    is_advance = models.BooleanField(
+        default=False,
+        verbose_name="pago adelantado",
     )
     notes = models.TextField(blank=True, verbose_name="observaciones")
     status = models.CharField(
@@ -600,12 +1111,35 @@ class Payment(TimestampedModel):
     def __str__(self) -> str:
         return f"{self.customer} — ${self.amount} — {self.payment_date:%d/%m/%Y}"
 
+    @property
+    def movement_label(self) -> str:
+        if self.kind == self.Kind.INSTALLMENT and self.is_advance:
+            return "Pago adelantado"
+        return self.get_kind_display()
+
     def clean(self) -> None:
         super().clean()
         errors: dict[str, str] = {}
 
         if self.sale_id and self.customer_id and self.sale.customer_id != self.customer_id:
             errors["customer"] = "El cliente del pago no coincide con el de la venta."
+
+        if bool(self.collector_id) != bool(self.collection_assignment_id):
+            errors["collector"] = (
+                "El cobrador y la asignación de cobranza deben registrarse juntos."
+            )
+        if self.collection_assignment_id:
+            assignment = self.collection_assignment
+            if assignment.customer_id != self.customer_id:
+                errors["collection_assignment"] = "La asignación no pertenece al cliente del pago."
+            elif assignment.assigned_date != self.payment_date:
+                errors["collection_assignment"] = "La asignación no pertenece a la fecha del pago."
+            elif assignment.route.collector_id != self.collector_id:
+                errors["collector"] = "El cobrador no coincide con el recorrido asignado."
+            elif self.kind != self.Kind.INSTALLMENT or self.is_advance:
+                errors["collection_assignment"] = (
+                    "Solo los pagos normales de cuotas pueden pertenecer a un recorrido."
+                )
 
         is_voided = self.status == self.Status.VOIDED
         if is_voided and not self.voided_at:
@@ -697,6 +1231,22 @@ class CollectionAttempt(TimestampedModel):
         related_name="collection_attempts",
         verbose_name="venta",
     )
+    collector = models.ForeignKey(
+        Collector,
+        on_delete=models.PROTECT,
+        related_name="collection_attempts",
+        blank=True,
+        null=True,
+        verbose_name="cobrador",
+    )
+    collection_assignment = models.ForeignKey(
+        CollectionAssignment,
+        on_delete=models.PROTECT,
+        related_name="attempts",
+        blank=True,
+        null=True,
+        verbose_name="asignación de cobranza",
+    )
     attempt_date = models.DateField(default=timezone.localdate, verbose_name="fecha")
     result = models.CharField(max_length=20, choices=Result.choices, verbose_name="resultado")
     notes = models.TextField(blank=True, verbose_name="observaciones")
@@ -721,10 +1271,27 @@ class CollectionAttempt(TimestampedModel):
 
     def clean(self) -> None:
         super().clean()
+        errors: dict[str, str] = {}
         if self.sale_id and self.customer_id and self.sale.customer_id != self.customer_id:
-            raise ValidationError(
-                {"customer": "El cliente del intento no coincide con el de la venta."}
+            errors["customer"] = "El cliente del intento no coincide con el de la venta."
+        if bool(self.collector_id) != bool(self.collection_assignment_id):
+            errors["collector"] = (
+                "El cobrador y la asignación de cobranza deben registrarse juntos."
             )
+        if self.collection_assignment_id:
+            assignment = self.collection_assignment
+            if assignment.customer_id != self.customer_id:
+                errors["collection_assignment"] = (
+                    "La asignación no pertenece al cliente de la visita."
+                )
+            elif assignment.assigned_date != self.attempt_date:
+                errors["collection_assignment"] = (
+                    "La asignación no pertenece a la fecha de la visita."
+                )
+            elif assignment.route.collector_id != self.collector_id:
+                errors["collector"] = "El cobrador no coincide con el recorrido asignado."
+        if errors:
+            raise ValidationError(errors)
 
 
 class AuditEvent(models.Model):

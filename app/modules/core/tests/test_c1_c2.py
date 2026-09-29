@@ -48,6 +48,9 @@ def test_multiuser_mode_requires_login_and_enforces_role_matrix(client):
     client.force_login(collector)
     assert client.get(reverse("core:analytics")).status_code == 200
     assert client.get(reverse("core:configuration")).status_code == 403
+    assert client.get(reverse("core:collection_routes")).status_code == 200
+    assert client.post(reverse("core:collection_routes"), {}).status_code == 403
+    assert client.get(reverse("core:secure_archive")).status_code == 403
 
     admin = _user_with_role("administrador", ADMIN_GROUP)
     client.force_login(admin)

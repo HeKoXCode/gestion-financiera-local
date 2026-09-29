@@ -1,7 +1,7 @@
 ACTUALIZACIÓN DE GESTIÓN FINANCIERA
 ===================================
 
-Esta actualización conserva los clientes, ventas, cuotas, pagos, configuración,
+Esta actualización conserva los clientes, ventas, préstamos, cuotas, pagos, configuración,
 logo, respaldos, exportaciones y archivos históricos ya existentes.
 
 ANTES DE ACTUALIZAR
@@ -19,7 +19,7 @@ CÓMO INSTALAR LA ACTUALIZACIÓN
    carpeta actual.
 4. Cuando Windows pregunte, elegí combinar carpetas y reemplazar archivos.
 5. Abrí GestiónFinanciera.exe normalmente.
-6. Comprobá un cliente, una venta y la pantalla Cobranza.
+6. Comprobá un cliente, una operación y la pantalla Cobranza.
 
 IMPORTANTE
 
@@ -30,13 +30,129 @@ Nunca elimines la instalación actual antes de aplicar una actualización. Si se
 hiciera una instalación limpia en otra carpeta, los datos no se trasladarían
 automáticamente.
 
-MEJORAS DE ESTA VERSIÓN — 07/08/2026
+NOVEDADES — VERSIÓN 1.8.0
+
+- Analítica incorpora cartera total y vencida, recuperación, aging, cohortes y
+  tres conciliaciones visibles.
+- La exportación analítica genera un data mart seudonimizado para Power BI, sin
+  nombre, DNI, teléfono, domicilio, notas ni credenciales.
+- Auditoría conserva un registro inmutable desde la aplicación para cada
+  operación web exitosa que modifica datos.
+- El código también admite un perfil multiusuario administrado con login,
+  roles, PostgreSQL y HTTPS. El portable continúa funcionando localmente con
+  SQLite y no requiere configurar ese perfil.
+
+- Operaciones permite registrar ventas de productos y préstamos de dinero.
+- Un préstamo guarda capital entregado, medio de entrega, interés total y total
+  final a devolver. El interés se aplica una sola vez; no es una tasa mensual.
+- Los préstamos usan el mismo calendario de cuotas, pagos, recargos, Cobranza,
+  cobradores, reportes, exportaciones y Archivo seguro que las ventas.
+- Las filas de clientes en Preparar planillas ahora crecen según el contenido;
+  nombres, distintivos, varias operaciones e importes no se superponen.
+
+FUNCIONES DE COBRANZA CONSERVADAS DESDE VERSIÓN 1.6
+
+- En una venta se puede pausar el interés diario desde Cobranza. La pausa no
+  borra deuda, atraso ni recargos anteriores: evita únicamente que los días
+  pausados generen recargos nuevos.
+- Al reactivar el interés no se cobran retroactivamente los días pausados.
+- Nueva frecuencia “Diaria”: crea una cuota por cada día habilitado en
+  Configuración y salta los días en los que no se cobra.
+- Cada cliente conserva un cobrador habitual. Al abrir la próxima fecha y
+  elegir la tarjeta de ese cobrador, sus clientes aparecen preseleccionados.
+- La primera vez después de actualizar, el sistema recupera el cobrador
+  habitual desde la última planilla válida de cada cliente.
+- La preparación de planillas se realiza tocando la tarjeta del cobrador; ya no
+  existe un selector desplegable adicional.
+
+PLANILLAS POR COBRADOR
+
+- En Cobranza, “Preparar planillas” permite buscar y seleccionar los clientes
+  de la fecha y asignarlos a un cobrador.
+- El cobrador se crea ahí mismo con su nombre; no necesita usuario ni clave.
+- Cada cliente puede pertenecer a un solo cobrador por día. Si tiene varias
+  ventas pendientes, aparece una sola vez con el total combinado.
+- Se puede imprimir una planilla individual o todas las del día. Cada hoja
+  identifica al cobrador y contiene hasta 10 clientes.
+- Los pagos y resultados de visita se atribuyen automáticamente al cobrador
+  asignado para esa fecha.
+- “Historial de cobradores” muestra días con recorridos, clientes asignados,
+  importes previstos, dinero cobrado y frecuencia por cliente.
+- Desde el historial se puede borrar un cobrador indicando el motivo. Se guarda
+  en Configuración > Archivo seguro y conserva todos sus recorridos y cobros.
+- Los cobradores, recorridos y asignaciones quedan incluidos en las copias de
+  seguridad y en la exportación CSV.
+
+La carpeta actualizada también incluye tres archivos numerados para pruebas:
+1_CARGAR_DATOS_FICTICIOS.bat, 2_LIMPIAR_BASE_DE_PRUEBA.bat y
+3_RESTAURAR_BASE_ORIGINAL.bat. El primero guarda y verifica la base real antes
+de cargar la demostración; el tercero la recupera automáticamente.
+
+Después de actualizar, abrí Cobranza, elegí “Preparar planillas”, creá un
+cobrador de prueba y asignale un cliente. Si no querés conservar esa prueba,
+descartá el recorrido antes de registrar pagos o visitas.
+
+NUEVA REGLA DE CUOTAS Y ATRASO — VERSIÓN 1.3
+
+- la cobranza suma el capital de todas las cuotas cuyas fechas ya pasaron;
+- los días generales de atraso se cuentan desde la cuota impaga más antigua;
+- el recargo, por ejemplo $5.000, se suma una sola vez por día para toda la
+  venta;
+- una segunda cuota atrasada suma su capital, pero no otra cadena de recargos;
+- el historial conserva los días individuales de cada cuota;
+- un pago puede cubrir varias cuotas vencidas;
+- los recargos superpuestos anteriores no se borran: la actualización deja sin
+  efecto el duplicado y conserva el registro para auditoría y exportación.
+
+Después de actualizar, abrí una venta con varias cuotas vencidas y comprobá que
+Cobranza sume sus capitales y muestre un único recargo diario acumulado.
+
+MEJORAS DE COBRANZA — 24/08/2026
+
+- desde “Día anterior” se puede abrir una fecha pasada y registrar el pago que
+  faltó cargar;
+- antes de continuar aparece una confirmación con cliente, producto, fecha y
+  deuda correspondiente a ese día;
+- el recargo diario se evalúa según la fecha real del pago;
+- la planilla diaria se divide en hojas A4 compactas de hasta 10 clientes, con
+  encabezado, total general y número de página en cada hoja;
+- si ya existe un pago posterior en esa venta, el sistema protege el orden
+  contable y pide revisarlo o anularlo antes de insertar el pago anterior.
+
+ARCHIVO SEGURO Y CORRECCIONES PROTEGIDAS — 23/08/2026
+
+- “Borrar cliente” lo retira de las pantallas habituales, pero conserva todos
+  sus datos y su historial en Configuración > Archivo seguro;
+- un cliente con una venta activa no se puede borrar hasta finalizarla o
+  cancelarla; la pantalla muestra enlaces a esas ventas;
+- cada corrección de los datos de un cliente guarda la versión anterior;
+- una venta activa se puede corregir hasta 2 veces;
+- antes de cada corrección se guarda una copia completa de la versión anterior;
+- una venta con pagos o visitas solo se corrige habilitando temporalmente la
+  herramienta excepcional de Configuración y confirmando el recálculo;
+- los pagos originales se conservan y, si no pueden encajar en las nuevas
+  condiciones, la venta queda exactamente como estaba;
+- las ventas canceladas se consultan en el Archivo seguro y ya no mezcladas con
+  la lista diaria de Ventas, el historial del cliente, sus resúmenes, Cobranza,
+  Semana, Inicio ni Reportes;
+- clientes borrados, ventas canceladas y todas las versiones anteriores son
+  registros de solo lectura: no se pueden modificar ni borrar.
+
+MEJORAS ANTERIORES INCLUIDAS — 20/08/2026
 
 - resumen A4 imprimible de cada cliente;
 - buscadores de clientes y productos en Nueva venta;
 - carga de cuotas anteriores ya pagadas para ventas viejas;
 - opción de registrar la cuota 1 pagada o pendiente al entregar;
-- validaciones de cálculos y recargos reforzadas.
-- préstamos de dinero con capital, medio de entrega, interés y cuotas;
-- historial, cobranza, planillas, reportes y exportación compatibles con préstamos.
-- nueva identidad visual azul verdosa en el sistema y su ventana de inicio.
+- validaciones de cálculos y recargos reforzadas;
+- guardados simultáneos en distintas ventanas procesados en orden, sin perder ventas;
+- el botón “Abrir sistema” no multiplica pestañas por error: si ya fue abierto,
+  pregunta antes de crear otra;
+- una segunda ejecución del EXE enfoca el panel ya iniciado, sin abrir otra pestaña
+  ni tocar nuevamente la base;
+- las pantallas dinámicas evitan mostrar información anterior guardada por el navegador;
+- registro técnico permanente en storage\gestion_financiera.log para futuros diagnósticos.
+
+Esta actualización corresponde a Gestión Financiera v1.8.0. Unifica la edición
+local 1.7.2 con analítica, auditoría y el perfil multiusuario publicado en
+GitHub, sin reemplazar los datos existentes.

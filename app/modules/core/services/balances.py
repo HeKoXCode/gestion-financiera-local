@@ -78,11 +78,9 @@ def registered_payment_filter(as_of: date | None, prefix: str = "") -> Q:
 
 
 def sale_effective_filter(as_of: date, prefix: str = "") -> Q:
-    """Sales that had not yet been cancelled at the requested date."""
+    """Exclude protected cancelled sales from every operational screen."""
     field_prefix = f"{prefix}__" if prefix else ""
-    return ~Q(**{f"{field_prefix}status": Sale.Status.CANCELLED}) | Q(
-        **{f"{field_prefix}cancelled_on__gt": as_of}
-    )
+    return ~Q(**{f"{field_prefix}status": Sale.Status.CANCELLED})
 
 
 def _payment_was_registered(payment: Payment, as_of: date | None) -> bool:
@@ -104,9 +102,7 @@ def get_installment_payment_timing(
     """Return when a fully paid installment was settled and its calendar delay."""
     cached_allocations = _cached_relation(installment, "payment_allocations")
     if cached_allocations is None:
-        allocations = list(
-            installment.payment_allocations.select_related("payment").all()
-        )
+        allocations = list(installment.payment_allocations.select_related("payment").all())
     else:
         allocations = list(cached_allocations)
 
@@ -153,23 +149,17 @@ def get_installment_balance(
             allocation
             for allocation in cached_allocations
             if _payment_was_registered(allocation.payment, as_of)
-            and (
-                as_of is None
-                or allocation.payment.payment_date <= as_of
-            )
+            and (as_of is None or allocation.payment.payment_date <= as_of)
         ]
         late_fees = [
-            late_fee
-            for late_fee in cached_late_fees
-            if as_of is None or late_fee.fee_date <= as_of
+            late_fee for late_fee in cached_late_fees if as_of is None or late_fee.fee_date <= as_of
         ]
         principal_paid = as_money(
             sum(
                 (
                     allocation.amount
                     for allocation in allocations
-                    if allocation.component
-                    == PaymentAllocation.Component.PRINCIPAL
+                    if allocation.component == PaymentAllocation.Component.PRINCIPAL
                 ),
                 ZERO,
             )
@@ -179,14 +169,13 @@ def get_installment_balance(
                 (
                     allocation.amount
                     for allocation in allocations
-                    if allocation.component
-                    == PaymentAllocation.Component.LATE_FEE
+                    if allocation.component == PaymentAllocation.Component.LATE_FEE
                 ),
                 ZERO,
             )
         )
         late_fees_generated = as_money(
-            sum((late_fee.amount for late_fee in late_fees), ZERO)
+            sum((late_fee.effective_amount for late_fee in late_fees), ZERO)
         )
     else:
         allocation_queryset = PaymentAllocation.objects.filter(
@@ -196,31 +185,25 @@ def get_installment_balance(
         late_fee_queryset = installment.late_fees.all()
 
         if as_of is not None:
-            allocation_queryset = allocation_queryset.filter(
-                payment__payment_date__lte=as_of
-            )
+            allocation_queryset = allocation_queryset.filter(payment__payment_date__lte=as_of)
             late_fee_queryset = late_fee_queryset.filter(fee_date__lte=as_of)
 
         principal_paid = _sum_amount(
-            allocation_queryset.filter(
-                component=PaymentAllocation.Component.PRINCIPAL
-            )
+            allocation_queryset.filter(component=PaymentAllocation.Component.PRINCIPAL)
         )
         late_fees_paid = _sum_amount(
-            allocation_queryset.filter(
-                component=PaymentAllocation.Component.LATE_FEE
-            )
+            allocation_queryset.filter(component=PaymentAllocation.Component.LATE_FEE)
         )
-        late_fees_generated = _sum_amount(late_fee_queryset)
+        late_fees_generated = as_money(
+            sum((late_fee.effective_amount for late_fee in late_fee_queryset), ZERO)
+        )
 
     principal_original = as_money(installment.original_amount)
     principal_due = max(ZERO, as_money(principal_original - principal_paid))
     late_fees_due = max(ZERO, as_money(late_fees_generated - late_fees_paid))
     total_due = as_money(principal_due + late_fees_due)
     effective_date = as_of or timezone.localdate()
-    days_overdue = (
-        max(0, (effective_date - installment.due_date).days) if total_due > ZERO else 0
-    )
+    days_overdue = max(0, (effective_date - installment.due_date).days) if total_due > ZERO else 0
 
     return InstallmentBalance(
         principal_original=principal_original,
@@ -237,8 +220,7 @@ def get_installment_balance(
 
 def get_sale_balance(sale: Sale, *, as_of: date | None = None) -> SaleBalance:
     balances = [
-        get_installment_balance(installment, as_of=as_of)
-        for installment in sale.installments.all()
+        get_installment_balance(installment, as_of=as_of) for installment in sale.installments.all()
     ]
 
     def total(attribute: str) -> Decimal:
@@ -256,21 +238,37 @@ def get_sale_balance(sale: Sale, *, as_of: date | None = None) -> SaleBalance:
     )
 
 
-def get_due_sale_balance(sale: Sale, *, as_of: date) -> SaleBalance:
-    """Return only debt that is due on or before the selected date."""
+def get_oldest_open_installment(
+    sale: Sale,
+    *,
+    as_of: date,
+) -> tuple[Installment, InstallmentBalance] | None:
+    """Return the oldest installment that still has principal or charges pending."""
     cached_installments = _cached_relation(sale, "installments")
     installments = (
-        [
-            installment
-            for installment in cached_installments
-            if installment.due_date <= as_of
-        ]
+        sorted(
+            cached_installments,
+            key=lambda item: (item.due_date, item.number, item.pk),
+        )
+        if cached_installments is not None
+        else sale.installments.order_by("due_date", "number", "pk")
+    )
+    for installment in installments:
+        balance = get_installment_balance(installment, as_of=as_of)
+        if balance.total_due > ZERO:
+            return installment, balance
+    return None
+
+
+def get_due_sale_balance(sale: Sale, *, as_of: date) -> SaleBalance:
+    """Return every installment whose fixed due date has already arrived."""
+    cached_installments = _cached_relation(sale, "installments")
+    installments = (
+        [item for item in cached_installments if item.due_date <= as_of]
         if cached_installments is not None
         else sale.installments.filter(due_date__lte=as_of)
     )
-    balances = [
-        get_installment_balance(installment, as_of=as_of) for installment in installments
-    ]
+    balances = [get_installment_balance(installment, as_of=as_of) for installment in installments]
 
     def total(attribute: str) -> Decimal:
         return as_money(sum((getattr(balance, attribute) for balance in balances), ZERO))

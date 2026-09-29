@@ -47,15 +47,15 @@
     <article class="report-kpi is-dark">
         <span>Total pendiente</span>
         <strong>{{ portfolio_pending|ars }}</strong>
-        <small>Incluye cuotas vencidas y futuras de {{ open_sales }} operación{{ open_sales|pluralize:"es" }}</small>
+        <small>Incluye cuotas vencidas y futuras de {{ open_sales }} {% if open_sales == 1 %}operación{% else %}operaciones{% endif %}</small>
     </article>
 </section>
 
 {% if loans_count %}
 <section class="portfolio-strip loan-report-strip" aria-label="Resumen de préstamos">
-    <div><span>Préstamos entregados</span><strong>{{ loans_count }}</strong></div>
+    <div><span>Préstamos registrados</span><strong>{{ loans_count }}</strong></div>
     <div><span>Capital prestado</span><strong>{{ loan_principal_total|ars }}</strong></div>
-    <div><span>Total acordado</span><strong>{{ loan_repayment_total|ars }}</strong></div>
+    <div><span>Total a devolver</span><strong>{{ loan_repayment_total|ars }}</strong></div>
     <div class="is-success"><span>Saldo pendiente</span><strong>{{ loan_pending_total|ars }}</strong></div>
 </section>
 {% endif %}
@@ -160,7 +160,7 @@
                 <span>{{ forloop.counter|stringformat:"02d" }}</span>
                 <div>
                     <a href="{% url 'core:customer_detail' row.customer.pk %}">{{ row.customer.full_name }}</a>
-                    <small>{{ row.open_sales }} operación{{ row.open_sales|pluralize:"es" }} con saldo</small>
+                    <small>{{ row.open_sales }} {% if row.open_sales == 1 %}operación{% else %}operaciones{% endif %} con saldo</small>
                 </div>
                 <strong>{{ row.total_balance|ars }}</strong>
             </li>

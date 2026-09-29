@@ -16,9 +16,9 @@ funcionarán las pantallas de clientes, ventas y cobranza.
 | Configuración | Parámetros únicos del sistema |
 | Cliente | Datos personales, domicilio y estado |
 | Producto | Catálogo simple de artículos |
-| Venta | Condiciones financiadas y recargo congelado |
+| Venta | Condiciones financiadas e importe diario congelado |
 | Cuota | Número, vencimiento e importe original |
-| Recargo | Importe diario asociado a una cuota y fecha |
+| Recargo | Cargo de una fecha asociado a la venta mediante una cuota |
 | Pago | Cabecera del ingreso de dinero |
 | Aplicación de pago | Distribución entre cuota, recargo y capital |
 | Intento de cobranza | No pagó, ausente, prometió pagar u otro |
@@ -60,13 +60,11 @@ La migración crea automáticamente una configuración con:
 
 ```text
 Nombre:                           Gestión Financiera
-Recargo diario:                  $5.000
+Recargo diario por atraso:       $5.000
 Días de cobranza:                lunes a sábado
 Frecuencias:                     semanal, quincenal y mensual
 Máximo de cuotas:                60
-Domingos generan recargo:        sí
-Recargo tras pago parcial:       sí
-Pagos adelantados:               no
+Pagos adelantados:               sí, mediante una acción separada
 Métodos de pago:                 efectivo, transferencia y otro
 ```
 
@@ -114,12 +112,13 @@ anula, deja automáticamente de reducir el saldo sin borrar su historial.
 
 El generador:
 
-1. busca cuotas vencidas de ventas activas;
-2. comienza al día siguiente del vencimiento;
-3. comprueba si había saldo al comenzar cada día;
-4. respeta la configuración de domingos y pagos parciales;
-5. usa el recargo congelado en la venta;
-6. crea como máximo un registro por cuota y fecha.
+1. busca las cuotas vencidas de cada venta activa;
+2. comienza al día siguiente del vencimiento impago más antiguo;
+3. usa el importe diario congelado en la venta;
+4. genera como máximo un cargo por venta y fecha;
+5. deja sin efecto los cargos superpuestos de otras cuotas sin borrar el
+   historial;
+6. mantiene visibles los días individuales de cada cuota.
 
 Es idempotente: ejecutarlo varias veces para la misma fecha produce el mismo
 resultado y no duplica importes.
@@ -145,12 +144,11 @@ Se verificaron:
 - recargos duplicados;
 - cronogramas semanales, quincenales y mensuales;
 - redondeo de última cuota;
-- recargo desde el día posterior;
-- tres días de atraso;
+- recargo diario desde el día posterior;
+- dos cuotas vencidas sin duplicar el recargo de una misma fecha;
 - ejecución idempotente;
-- inclusión y exclusión de domingos;
-- continuidad tras pago parcial;
-- interrupción configurable tras pago parcial;
+- domingos incluidos sólo en el contador de días;
+- pago parcial sin un segundo recargo;
 - detención después del pago total;
 - pago anulado;
 - venta cancelada;

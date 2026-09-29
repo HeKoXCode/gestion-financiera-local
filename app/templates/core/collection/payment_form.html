@@ -4,7 +4,7 @@
 {% block title %}Registrar pago · {{ sale.customer.full_name }}{% endblock %}
 
 {% block content %}
-<a class="back-link" href="{% url 'core:collection_list' %}">‹ Volver a cobranza</a>
+<a class="back-link" href="{{ return_to_collection }}">‹ Volver a cobranza</a>
 
 <header class="payment-hero">
     <div>
@@ -13,7 +13,7 @@
         <p>{{ sale.product_description }} · {{ sale.operation_name }} #{{ sale.pk }}</p>
     </div>
     <div class="payment-due">
-        <span>Pendiente hasta hoy</span>
+        <span>Pendiente al {{ selected_date|date:"d/m/Y" }}</span>
         <strong>{{ due_balance.total_due|ars }}</strong>
         {% if first_due %}<small>Desde el {{ first_due.due_date|date:"d/m/Y" }}</small>{% endif %}
     </div>
@@ -23,11 +23,31 @@
     <form method="post" id="payment-form" class="form-card payment-form" novalidate>
         {% csrf_token %}
         {{ form.operation_key }}
+        <input type="hidden" name="stage" value="payment">
+        <input type="hidden" name="selected_date" value="{{ selected_date|date:'Y-m-d' }}">
+        <input type="hidden" name="from_collection" value="{% if from_collection %}1{% else %}0{% endif %}">
         {% include "core/partials/form_errors.html" %}
 
+        {% if is_retroactive %}
+        <div class="dependency-alert">
+            <div>
+                <strong>Pago de una fecha anterior confirmado</strong>
+                <p>Se registrará como recibido el {{ selected_date|date:"d/m/Y" }} y el recargo diario se calculará solamente hasta esa fecha.</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if collection_assignment %}
+        <div class="route-payment-notice">
+            <span>Recorrido asignado</span>
+            <strong>{{ collection_assignment.route.collector.name }}</strong>
+            <small>Este pago quedará registrado automáticamente a nombre del cobrador.</small>
+        </div>
+        {% endif %}
+
         <div class="payment-breakdown">
-            <div><span>Cuotas pendientes</span><strong>{{ due_balance.principal_due|ars }}</strong></div>
-            <div><span>Recargos pendientes</span><strong>{{ due_balance.late_fees_due|ars }}</strong></div>
+            <div><span>Cuotas vencidas pendientes</span><strong>{{ due_balance.principal_due|ars }}</strong></div>
+            <div><span>Recargo diario acumulado</span><strong>{{ due_balance.late_fees_due|ars }}</strong></div>
         </div>
 
         <div class="field payment-amount-field">
@@ -39,7 +59,7 @@
 
         <div class="form-grid two-columns">
             <div class="field">
-                <label for="{{ form.payment_date.id_for_label }}">Fecha</label>
+                <label for="{{ form.payment_date.id_for_label }}">Fecha real del pago</label>
                 {{ form.payment_date }}
                 {% for error in form.payment_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
             </div>
@@ -56,7 +76,7 @@
         </div>
 
         <div class="form-actions">
-            <a class="btn btn-ghost" href="{% url 'core:collection_list' %}">Cancelar</a>
+            <a class="btn btn-ghost" href="{{ return_to_collection }}">Cancelar</a>
             <button class="btn btn-primary" id="payment-submit" type="submit">Guardar pago</button>
         </div>
     </form>
@@ -65,7 +85,7 @@
         <p class="eyebrow">Cómo se aplicará</p>
         <ol>
             <li><span>1</span><div><strong>Cuota más antigua</strong><small>Se comienza por la primera deuda vencida.</small></div></li>
-            <li><span>2</span><div><strong>Recargos</strong><small>Los recargos pendientes se cubren primero.</small></div></li>
+            <li><span>2</span><div><strong>Recargo por atraso</strong><small>El recargo diario acumulado se cubre primero.</small></div></li>
             <li><span>3</span><div><strong>Importe de la cuota</strong><small>El resto reduce el saldo de la cuota.</small></div></li>
         </ol>
         <div class="partial-note">

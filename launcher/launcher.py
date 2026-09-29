@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ctypes
 import os
 import signal
 import sys
@@ -41,15 +42,95 @@ CLOSE_BACKUP_RETENTION_DAYS = 90
 WINDOW_WIDTH = 620
 WINDOW_HEIGHT = 450
 
-COLOR_BACKGROUND = "#EEF4F6"
+COLOR_BACKGROUND = "#EEF4F7"
 COLOR_SURFACE = "#FFFFFF"
-COLOR_PRIMARY = "#123F4B"
-COLOR_PRIMARY_HOVER = "#0B303B"
-COLOR_ACCENT = "#43BFB7"
-COLOR_TEXT = "#14282E"
-COLOR_MUTED = "#61787E"
-COLOR_BORDER = "#D3E0E3"
-COLOR_SECONDARY_HOVER = "#E5EFF1"
+COLOR_HEADER = "#123F4B"
+COLOR_PRIMARY = "#187F94"
+COLOR_PRIMARY_HOVER = "#0D6274"
+COLOR_ACCENT = "#43C7BC"
+COLOR_TEXT = "#18313A"
+COLOR_MUTED = "#617984"
+COLOR_BORDER = "#CBDCE3"
+COLOR_SECONDARY_HOVER = "#DFEEF2"
+COLOR_HEADER_ACCENT = "#7FE0DA"
+COLOR_HEADER_MUTED = "#D8EEF2"
+
+WINDOWS_ALREADY_EXISTS = 183
+INSTANCE_MUTEX_NAME = "Local\\GestionFinancieraPortableSingleInstance"
+
+
+def acquire_instance_mutex() -> tuple[int | None, bool]:
+    """Prevent two launchers from operating on the portable database at once."""
+    if os.name != "nt":
+        return None, False
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateMutexW.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_wchar_p]
+    kernel32.CreateMutexW.restype = ctypes.c_void_p
+    handle = kernel32.CreateMutexW(None, False, INSTANCE_MUTEX_NAME)
+    if not handle:
+        return None, False
+    return int(handle), ctypes.get_last_error() == WINDOWS_ALREADY_EXISTS
+
+
+def release_instance_mutex(handle: int | None) -> None:
+    if os.name == "nt" and handle:
+        ctypes.windll.kernel32.CloseHandle(ctypes.c_void_p(handle))
+
+
+def focus_existing_launcher_window() -> bool:
+    """Bring the already-running Tk launcher to the front on Windows."""
+    if os.name != "nt":
+        return False
+
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    callback_type = ctypes.WINFUNCTYPE(
+        ctypes.c_bool,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+    )
+    matching_windows: list[int] = []
+
+    @callback_type
+    def visit_window(window_handle, _parameter):
+        if not user32.IsWindowVisible(window_handle):
+            return True
+
+        title_length = user32.GetWindowTextLengthW(window_handle)
+        if title_length <= 0:
+            return True
+
+        title = ctypes.create_unicode_buffer(title_length + 1)
+        class_name = ctypes.create_unicode_buffer(256)
+        user32.GetWindowTextW(window_handle, title, len(title))
+        user32.GetClassNameW(window_handle, class_name, len(class_name))
+        if class_name.value == "TkTopLevel" and title.value.endswith("· Gestión Financiera"):
+            matching_windows.append(int(window_handle))
+            return False
+        return True
+
+    user32.EnumWindows(visit_window, 0)
+    if not matching_windows:
+        return False
+
+    window_handle = ctypes.c_void_p(matching_windows[0])
+    user32.ShowWindow(window_handle, 9)  # SW_RESTORE
+    user32.SetForegroundWindow(window_handle)
+    return True
+
+
+def reopen_existing_system(port: int = DEFAULT_PORT) -> bool:
+    """Confirm the existing server and focus its launcher without new tabs."""
+    health_url = f"http://{HOST}:{port}/health/"
+    for _ in range(40):
+        try:
+            with urlopen(health_url, timeout=0.25) as response:
+                if response.status == 200:
+                    focus_existing_launcher_window()
+                    return True
+        except (URLError, TimeoutError):
+            threading.Event().wait(0.1)
+    return False
 
 
 class ThreadingServer(ThreadingMixIn, WSGIServer):
@@ -85,6 +166,7 @@ class LocalApplication:
         self.backup_path = self.root_path / "backups"
         self.export_path = self.root_path / "exports"
         self.media_path = self.root_path / "media"
+        self.storage_path = self.root_path / "storage"
         self.database_path = self.data_path / "gestion_financiera.sqlite3"
 
         self.server = None
@@ -103,6 +185,7 @@ class LocalApplication:
         self.business_logo_path = None
         self.logo_image = None
         self.closing = False
+        self.browser_opened = False
 
     def configure_django(self) -> None:
         for directory in (
@@ -110,6 +193,7 @@ class LocalApplication:
             self.backup_path,
             self.export_path,
             self.media_path,
+            self.storage_path,
         ):
             directory.mkdir(parents=True, exist_ok=True)
 
@@ -119,6 +203,7 @@ class LocalApplication:
         os.environ["GESTION_BACKUP_DIR"] = str(self.backup_path)
         os.environ["GESTION_EXPORT_DIR"] = str(self.export_path)
         os.environ["GESTION_MEDIA_DIR"] = str(self.media_path)
+        os.environ["GESTION_STORAGE_DIR"] = str(self.storage_path)
         os.environ.setdefault("DJANGO_DEBUG", "0")
         self.apply_mobile_settings()
 
@@ -153,15 +238,9 @@ class LocalApplication:
         )
 
     def apply_mobile_settings(self) -> None:
-        enabled = bool(
-            self.mobile_access_enabled
-            and self.mobile_ip
-            and self.mobile_token
-        )
+        enabled = bool(self.mobile_access_enabled and self.mobile_ip and self.mobile_token)
         os.environ["GESTION_MOBILE_ACCESS_ENABLED"] = "1" if enabled else "0"
-        os.environ["GESTION_MOBILE_ACCESS_TOKEN"] = (
-            self.mobile_token if enabled else ""
-        )
+        os.environ["GESTION_MOBILE_ACCESS_TOKEN"] = self.mobile_token if enabled else ""
         os.environ["GESTION_LAN_IP"] = self.mobile_ip if enabled else ""
 
         try:
@@ -169,9 +248,7 @@ class LocalApplication:
 
             if django_settings.configured:
                 django_settings.GESTION_MOBILE_ACCESS_ENABLED = enabled
-                django_settings.GESTION_MOBILE_ACCESS_TOKEN = (
-                    self.mobile_token if enabled else ""
-                )
+                django_settings.GESTION_MOBILE_ACCESS_TOKEN = self.mobile_token if enabled else ""
                 django_settings.GESTION_LAN_IP = self.mobile_ip if enabled else ""
                 allowed_hosts = [HOST, "localhost"]
                 if "testserver" in django_settings.ALLOWED_HOSTS:
@@ -281,13 +358,30 @@ class LocalApplication:
         validate_application_database(self.database_path)
 
     def open_browser(self) -> None:
+        if self.browser_opened:
+            reopen = messagebox.askyesno(
+                "El sistema ya está abierto",
+                (
+                    "El sistema ya debería estar abierto en una pestaña del navegador.\n\n"
+                    "Buscá la pestaña “Gestión Financiera”.\n\n"
+                    "¿Cerraste esa pestaña y necesitás abrirla nuevamente?"
+                ),
+            )
+            if not reopen:
+                self.status.set(
+                    "El sistema continúa abierto. Buscá la pestaña “Gestión Financiera” "
+                    "en el navegador."
+                )
+                return
+
         opened = webbrowser.open_new_tab(f"http://{HOST}:{self.port}/")
         if opened:
+            self.browser_opened = True
             self.status.set(
                 "El sistema está abierto en el navegador. "
                 "Dejá esta ventana abierta mientras trabajás."
             )
-            self.open_button.configure(text="Volver a abrir el sistema")
+            self.open_button.configure(text="Sistema abierto")
             return
 
         self.status.set("No se pudo abrir el navegador automáticamente.")
@@ -344,8 +438,7 @@ class LocalApplication:
 
         self.mobile_button.configure(text="Ver acceso celular")
         self.status.set(
-            f"Acceso celular activo en {self.mobile_ip}. "
-            "Se cerrará junto con el sistema."
+            f"Acceso celular activo en {self.mobile_ip}. Se cerrará junto con el sistema."
         )
         self.show_mobile_access()
 
@@ -460,28 +553,28 @@ class LocalApplication:
         )
         dialog.geometry(f"{width}x{height}+{position_x}+{position_y}")
 
-        header = Frame(dialog, background=COLOR_PRIMARY, padx=28, pady=18)
+        header = Frame(dialog, background=COLOR_HEADER, padx=28, pady=18)
         header.pack(fill="x")
         Label(
             header,
             text="ACCESO TEMPORAL PROTEGIDO",
             font=("Segoe UI Semibold", 9),
-            foreground="#A9E2E7",
-            background=COLOR_PRIMARY,
+            foreground=COLOR_HEADER_ACCENT,
+            background=COLOR_HEADER,
         ).pack(anchor="w")
         Label(
             header,
             text="Usar desde el celular",
             font=("Segoe UI Semibold", 20),
             foreground="#FFFFFF",
-            background=COLOR_PRIMARY,
+            background=COLOR_HEADER,
         ).pack(anchor="w", pady=(3, 0))
         Label(
             header,
             text="El acceso se cerrará automáticamente al cerrar el sistema.",
             font=("Segoe UI", 9),
-            foreground="#D2E8EB",
-            background=COLOR_PRIMARY,
+            foreground=COLOR_HEADER_MUTED,
+            background=COLOR_HEADER,
         ).pack(anchor="w", pady=(5, 0))
 
         content = Frame(
@@ -495,8 +588,7 @@ class LocalApplication:
         Label(
             content,
             text=(
-                "1. Conectá el celular a la misma red Wi-Fi.\n"
-                "2. Escaneá este código con la cámara."
+                "1. Conectá el celular a la misma red Wi-Fi.\n2. Escaneá este código con la cámara."
             ),
             font=("Segoe UI", 10),
             foreground=COLOR_TEXT,
@@ -513,9 +605,7 @@ class LocalApplication:
             pady=12,
         )
         qr_card.pack(pady=(11, 8))
-        self.mobile_qr_image = ImageTk.PhotoImage(
-            build_qr_image(access_url, target_size=180)
-        )
+        self.mobile_qr_image = ImageTk.PhotoImage(build_qr_image(access_url, target_size=180))
         Label(
             qr_card,
             image=self.mobile_qr_image,
@@ -658,13 +748,13 @@ class LocalApplication:
 
         header = Frame(
             self.window,
-            background=COLOR_PRIMARY,
+            background=COLOR_HEADER,
             padx=38,
             pady=24,
         )
         header.pack(fill="x")
 
-        brand_row = Frame(header, background=COLOR_PRIMARY)
+        brand_row = Frame(header, background=COLOR_HEADER)
         brand_row.pack(fill="x")
         self.logo_image = self.build_logo_image()
         if self.logo_image is not None:
@@ -681,21 +771,21 @@ class LocalApplication:
                 brand_row,
                 text="GF",
                 font=("Segoe UI Semibold", 15),
-                foreground="#083642",
-                background="#52C7C1",
+                foreground=COLOR_PRIMARY_HOVER,
+                background="#D7F0F3",
                 width=4,
                 height=2,
             )
         logo_widget.pack(side="left", padx=(0, 16))
 
-        brand_copy = Frame(brand_row, background=COLOR_PRIMARY)
+        brand_copy = Frame(brand_row, background=COLOR_HEADER)
         brand_copy.pack(side="left", fill="x", expand=True)
         Label(
             brand_copy,
             text="GESTIÓN FINANCIERA · SISTEMA LOCAL",
             font=("Segoe UI Semibold", 9),
-            foreground="#A9E2E7",
-            background=COLOR_PRIMARY,
+            foreground=COLOR_HEADER_ACCENT,
+            background=COLOR_HEADER,
         ).pack(anchor="w")
         Label(
             brand_copy,
@@ -705,7 +795,7 @@ class LocalApplication:
                 23 if len(self.business_name) <= 34 else 18,
             ),
             foreground="#FFFFFF",
-            background=COLOR_PRIMARY,
+            background=COLOR_HEADER,
             justify="left",
             wraplength=430,
         ).pack(anchor="w", pady=(2, 0))
@@ -713,8 +803,8 @@ class LocalApplication:
             brand_copy,
             text="Ventas financiadas y cobranza diaria",
             font=("Segoe UI", 10),
-            foreground="#D2E8EB",
-            background=COLOR_PRIMARY,
+            foreground=COLOR_HEADER_MUTED,
+            background=COLOR_HEADER,
         ).pack(anchor="w")
 
         content = Frame(
@@ -849,7 +939,7 @@ class LocalApplication:
             footer,
             text="Creado por Percy I. Marzoratti Hill.",
             font=("Segoe UI", 7, "italic"),
-            foreground="#89958F",
+            foreground="#7C9098",
             background=COLOR_BACKGROUND,
         ).pack(side="right", anchor="e", padx=(12, 0))
 
@@ -865,6 +955,28 @@ class LocalApplication:
 
 
 def main() -> None:
+    mutex_handle = None
+    if "--smoke-test" not in sys.argv:
+        mutex_handle, already_running = acquire_instance_mutex()
+        if already_running:
+            release_instance_mutex(mutex_handle)
+            if reopen_existing_system():
+                return
+            try:
+                root = Tk()
+                root.withdraw()
+                messagebox.showwarning(
+                    "Gestión Financiera ya está iniciando",
+                    (
+                        "Esperá unos segundos y volvé a presionar “Abrir sistema” "
+                        "en la ventana principal."
+                    ),
+                )
+                root.destroy()
+            except Exception:
+                pass
+            return
+
     app = LocalApplication()
     if "--smoke-test" in sys.argv:
         try:
@@ -875,17 +987,28 @@ def main() -> None:
             raise SystemExit(1) from None
         return
     try:
-        app.run()
-    except Exception as exc:
         try:
-            root = Tk()
-            root.withdraw()
-            messagebox.showerror("No se pudo iniciar Gestión Financiera", str(exc))
-            root.destroy()
-        except Exception:
-            if sys.stderr:
-                print(f"No se pudo iniciar Gestión Financiera: {exc}", file=sys.stderr)
-        raise SystemExit(1) from None
+            app.run()
+        except Exception as exc:
+            try:
+                app.storage_path.mkdir(parents=True, exist_ok=True)
+                (app.storage_path / "gestion_startup_error.log").write_text(
+                    traceback.format_exc(),
+                    encoding="utf-8",
+                )
+            except OSError:
+                pass
+            try:
+                root = Tk()
+                root.withdraw()
+                messagebox.showerror("No se pudo iniciar Gestión Financiera", str(exc))
+                root.destroy()
+            except Exception:
+                if sys.stderr:
+                    print(f"No se pudo iniciar Gestión Financiera: {exc}", file=sys.stderr)
+            raise SystemExit(1) from None
+    finally:
+        release_instance_mutex(mutex_handle)
 
 
 if __name__ == "__main__":

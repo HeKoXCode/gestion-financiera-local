@@ -31,7 +31,7 @@ Puede abrirse desde Cobranza o Reportes. La vista incluye:
 - referencia del domicilio;
 - producto y cuota de origen;
 - días de atraso;
-- capital, recargos y deuda total;
+- capital de cuotas vencidas, recargo diario acumulado y deuda total;
 - espacio de firma;
 - espacio de observaciones.
 
@@ -98,13 +98,11 @@ Se habilitó la opción `Configuración` del menú. Permite modificar:
 
 - nombre del negocio;
 - logo PNG, JPG o WEBP;
-- recargo diario para ventas nuevas;
+- recargo diario por atraso para ventas nuevas;
 - días habilitados para cobranza;
 - métodos de pago;
 - frecuencias;
 - cantidad máxima de cuotas;
-- recargos de domingos;
-- comportamiento después de pagos parciales;
 - pagos adelantados;
 - mensaje manual de WhatsApp.
 
@@ -116,8 +114,9 @@ aparece antes de abrir el sistema.
 - Los períodos terminan en la fecha de corte seleccionada.
 - La semana comienza el lunes.
 - La cartera pendiente incluye cuotas futuras.
-- La deuda exigible incluye cuotas vencidas y las que vencen en la fecha.
-- La deuda vencida incluye solamente vencimientos anteriores.
+- La deuda exigible suma todas las cuotas vencidas de una venta.
+- El recargo usa los días de la cuota impaga más antigua y no suma por separado
+  los días de las cuotas posteriores.
 - “Cliente al día” significa que conserva saldo financiado, pero no tiene
   cuotas vencidas.
 - Las ventas canceladas no integran cartera ni rankings.

@@ -42,7 +42,7 @@ exportación.
 | --- | --- |
 | Cobranza | Es el nombre habitual en Argentina para la tarea de cobrar cuotas pendientes. |
 | Cuota | Es breve, cotidiano y coincide con cada vencimiento del plan. |
-| Recargo diario | Describe exactamente el importe agregado por cada día de atraso. |
+| Recargo diario por atraso | Importe que se suma una vez por día para toda la venta atrasada. |
 | Pago parcial | Indica claramente que el pago no cancela todo el saldo. |
 | Saldo pendiente | Es conocido y representa el dinero que todavía falta pagar. |
 | Vencimiento | Es la fecha acordada para pagar una cuota. |
@@ -62,9 +62,9 @@ exportación.
   terminará pagando el cliente.
 - `Total final de la venta`: pago inicial aparte más total en cuotas.
 - `Cuotas pendientes`: parte impaga de las cuotas, sin contar recargos.
-- `Recargos pendientes`: importes acumulados por atraso que todavía no se pagaron.
-- `Pendiente hasta la fecha`: cuotas vencidas o que vencen ese día; no incluye
-  cuotas futuras.
+- `Recargo diario acumulado`: parte impaga de la única cadena diaria de la venta.
+- `Pendiente hasta la fecha`: cuotas vencidas acumuladas más el recargo diario
+  único de la venta.
 - `Saldo total pendiente`: incluye cuotas vencidas y futuras de ventas vigentes.
 
 ## Coherencia de acciones
@@ -79,3 +79,8 @@ exportación.
 - El encabezado del día usa `Así viene el día`, una frase directa y cotidiana.
 - `Clientes atrasados` identifica el contador operativo; `Clientes morosos`
   titula el informe detallado de deuda vencida.
+- Los selectores de fecha indican el resultado: `Mostrar día`, `Mostrar semana`
+  o `Mostrar fecha`; se evita el botón aislado `Ver` o `Ir`.
+- Para cobradores, `planilla` nombra la hoja que se prepara o imprime y
+  `recorrido` describe el trabajo ya realizado. Así los botones dicen `Guardar
+  planilla` y `Abrir planilla`.

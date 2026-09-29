@@ -9,20 +9,25 @@
         <p class="eyebrow">Trabajo del día</p>
         <h1>Cobranza del {{ selected_date|date:"d/m/Y" }}</h1>
         <p class="page-subtitle">
-            Cuotas pendientes hasta la fecha, agrupadas por operación, con recargos y saldo actualizado.
+            Suma las cuotas vencidas de cada operación y un solo recargo diario, contado desde la más antigua.
         </p>
     </div>
     <div class="collection-header-actions">
+        {% if allow_advance_payments %}
+        <a class="btn btn-primary" href="{% url 'core:advance_payment_list' %}">
+            Registrar pago adelantado
+        </a>
+        {% endif %}
         <a class="btn btn-secondary"
-           href="{% url 'core:collection_print' %}?fecha={{ selected_date|date:'Y-m-d' }}">
-            Imprimir planilla
+           href="{% url 'core:collection_routes' %}?fecha={{ selected_date|date:'Y-m-d' }}">
+            Preparar planillas
         </a>
         <form class="date-picker" method="get">
             <label for="collection-date">Cambiar fecha</label>
             <div>
                 <input id="collection-date" class="form-control" type="date" name="fecha"
                        value="{{ selected_date|date:'Y-m-d' }}">
-                <button class="btn btn-secondary" type="submit">Ver</button>
+                <button class="btn btn-secondary" type="submit">Mostrar día</button>
             </div>
         </form>
     </div>
@@ -45,7 +50,7 @@
     </article>
     <article class="stat-card">
         <div class="stat-icon" aria-hidden="true">$</div>
-        <div><span>Pendiente de cobro</span><strong>{{ total_expected|ars }}</strong><small>Cuotas y recargos pendientes</small></div>
+        <div><span>Pendiente de cobro</span><strong>{{ total_expected|ars }}</strong><small>Cuotas vencidas, más un único recargo diario por operación</small></div>
     </article>
     <article class="stat-card stat-warning">
         <div class="stat-icon" aria-hidden="true">!</div>
@@ -57,6 +62,19 @@
     </article>
 </section>
 
+{% if route_summaries %}
+<section class="collection-route-strip">
+    <div>
+        <span>Planillas preparadas</span>
+        <strong>{{ route_summaries|length }} cobrador{{ route_summaries|length|pluralize:"es" }} · {{ assigned_client_count }} cliente{{ assigned_client_count|pluralize }} asignado{{ assigned_client_count|pluralize }}</strong>
+    </div>
+    <div class="collection-route-names">
+        {% for summary in route_summaries %}<a href="{% url 'core:collection_route_print' summary.route.pk %}">{{ summary.route.collector.name }} <strong>{{ summary.assignment_count }}</strong></a>{% endfor %}
+    </div>
+    <a class="text-link" href="{% url 'core:collection_routes' %}?fecha={{ selected_date|date:'Y-m-d' }}">Administrar planillas ›</a>
+</section>
+{% endif %}
+
 {% if selected_date > today %}
 <div class="future-notice">
     <span aria-hidden="true">i</span>
@@ -66,7 +84,7 @@
 
 <section class="collection-list">
     {% for row in rows %}
-    <article class="collection-card {% if row.days_overdue %}is-overdue{% endif %}">
+    <article class="collection-card {% if row.days_overdue %}is-overdue {% endif %}{% if row.sale.is_loan %}is-loan-operation{% endif %}">
         <div class="collection-person">
             <div class="collection-avatar">
                 {{ row.customer.first_name|first|upper }}{{ row.customer.last_name|first|upper }}
@@ -79,6 +97,9 @@
                     {% else %}
                         <span class="badge badge-success">Vence hoy</span>
                     {% endif %}
+                    {% if row.collection_assignment %}<span class="badge badge-neutral">Planilla: {{ row.collection_assignment.route.collector.name }}</span>{% endif %}
+                    {% if row.show_habitual_collector %}<span class="badge badge-collector">Cobrador: {{ row.habitual_collector.name }}</span>{% endif %}
+                    {% if row.late_fee_pause_period %}<span class="badge badge-paused">Interés pausado desde {{ row.late_fee_pause_period.paused_from|date:'d/m/Y' }}</span>{% endif %}
                 </div>
                 <p>{{ row.customer.address }}{% if row.customer.neighborhood %} · {{ row.customer.neighborhood }}{% endif %}</p>
                 {% if row.customer.address_reference %}<small>{{ row.customer.address_reference }}</small>{% endif %}
@@ -86,7 +107,7 @@
         </div>
 
         <div class="collection-product">
-            <span>Operación</span>
+            <span>{% if row.sale.is_loan %}Préstamo{% else %}Producto{% endif %}</span>
             <strong>{{ row.sale.product_description }}</strong>
             <small>
                 Desde cuota {{ row.oldest_installment.number }}/{{ row.sale.installment_count }}
@@ -95,20 +116,45 @@
         </div>
 
         <div class="collection-breakdown">
-            <div><span>Cuotas pendientes</span><strong>{{ row.capital_due|ars }}</strong></div>
-            <div><span>Recargos</span><strong>{{ row.late_fees_due|ars }}</strong></div>
+            <div><span>Cuotas vencidas</span><strong>{{ row.capital_due|ars }}</strong></div>
+            <div><span>Recargo diario acumulado</span><strong>{{ row.late_fees_due|ars }}</strong></div>
             <div class="collection-total"><span>Total</span><strong>{{ row.total_due|ars }}</strong></div>
         </div>
 
         <div class="collection-actions">
             {% if selected_date <= today %}
-                <a class="btn btn-primary" href="{% url 'core:payment_create' row.sale.pk %}">Registrar pago</a>
+                <a class="btn btn-primary" href="{% url 'core:payment_create' row.sale.pk %}?fecha={{ selected_date|date:'Y-m-d' }}">Registrar pago</a>
                 <form method="post" action="{% url 'core:collection_did_not_pay' row.sale.pk %}">
                     {% csrf_token %}
                     <input type="hidden" name="fecha" value="{{ selected_date|date:'Y-m-d' }}">
                     <button class="btn btn-warning" type="submit">No pagó</button>
                 </form>
-                <a class="btn btn-ghost" href="{% url 'core:collection_attempt_create' row.sale.pk %}">Otro resultado</a>
+                <a class="btn btn-ghost" href="{% url 'core:collection_attempt_create' row.sale.pk %}?fecha={{ selected_date|date:'Y-m-d' }}">Otro resultado</a>
+                {% if selected_date == today %}
+                    {% if row.active_late_fee_pause %}
+                    <form class="interest-inline-action" method="post"
+                          action="{% url 'core:late_fee_resume' row.sale.pk %}"
+                          onsubmit="return confirm('¿Reactivar el interés diario? Si la deuda sigue impaga, hoy volverá a producir el recargo de mañana.');">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'core:collection_list' %}?fecha={{ selected_date|date:'Y-m-d' }}">
+                        <button class="interest-action is-resume" type="submit">Reactivar interés</button>
+                    </form>
+                    {% else %}
+                    <details class="interest-control">
+                        <summary>Pausar interés</summary>
+                        <form method="post" action="{% url 'core:late_fee_pause' row.sale.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{% url 'core:collection_list' %}?fecha={{ selected_date|date:'Y-m-d' }}">
+                            <label>
+                                <span>Motivo</span>
+                                <textarea class="form-control" name="reason" rows="2" maxlength="500" required placeholder="Ej. Acuerdo temporal"></textarea>
+                            </label>
+                            <small>No borra deuda ni recargos anteriores. Hoy no producirá un recargo para mañana.</small>
+                            <button class="btn btn-ghost" type="submit">Confirmar pausa</button>
+                        </form>
+                    </details>
+                    {% endif %}
+                {% endif %}
             {% endif %}
             {% if row.whatsapp_url %}
                 <a class="whatsapp-action" href="{{ row.whatsapp_url }}" target="_blank" rel="noopener">

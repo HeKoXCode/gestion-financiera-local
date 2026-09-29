@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load finance %}
+
+{% block title %}Confirmar pago anterior · {{ sale.customer.full_name }}{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{{ return_to_collection }}">‹ Volver a cobranza</a>
+
+<div class="confirm-layout">
+    <section class="confirm-card">
+        <span class="confirm-icon" aria-hidden="true">!</span>
+        <p class="eyebrow">Revisá la fecha</p>
+        <h1>Estás por registrar un pago de un día anterior</h1>
+        <p>
+            El pago quedará asentado el <strong>{{ selected_date|date:"d/m/Y" }}</strong>.
+            El recargo diario se recalculará hasta la fecha real en que recibiste el pago.
+        </p>
+
+        <dl class="confirm-summary">
+            <div><dt>Cliente</dt><dd>{{ sale.customer.full_name }}</dd></div>
+            <div><dt>Operación</dt><dd>{{ sale.product_description }}</dd></div>
+            <div><dt>Fecha que se guardará</dt><dd>{{ selected_date|date:"d/m/Y" }}</dd></div>
+            <div><dt>Pendiente en esa fecha</dt><dd>{{ due_balance.total_due|ars }}</dd></div>
+        </dl>
+
+        {% if later_payment %}
+        <div class="dependency-alert">
+            <div>
+                <strong>No se puede insertar antes de otro pago</strong>
+                <p>
+                    Ya existe un pago de {{ later_payment.amount|ars }} registrado el
+                    {{ later_payment.payment_date|date:"d/m/Y" }}. Revisalo o anulalo
+                    primero para no alterar el orden de la contabilidad.
+                </p>
+            </div>
+        </div>
+        <div class="form-actions">
+            <a class="btn btn-secondary" href="{{ return_to_collection }}">Volver a cobranza</a>
+        </div>
+        {% else %}
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="stage" value="confirm">
+            <input type="hidden" name="selected_date" value="{{ selected_date|date:'Y-m-d' }}">
+            <input type="hidden" name="from_collection" value="1">
+            <div class="form-actions">
+                <a class="btn btn-ghost" href="{{ return_to_collection }}">Cancelar</a>
+                <button class="btn btn-primary" type="submit">Confirmar fecha y continuar</button>
+            </div>
+        </form>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

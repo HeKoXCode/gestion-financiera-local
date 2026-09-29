@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% load finance %}
+
+{% block title %}Pago adelantado · Gestión Financiera{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'core:collection_list' %}">‹ Volver a cobranza</a>
+
+<header class="page-header">
+    <div>
+        <p class="eyebrow">Cobranza</p>
+        <h1>Registrar pago adelantado</h1>
+        <p class="page-subtitle">
+            Buscá al cliente que quiere pagar una cuota antes de su vencimiento.
+        </p>
+    </div>
+</header>
+
+<div class="dependency-alert">
+    <div>
+        <strong>El calendario original se conserva</strong>
+        <p>
+            El adelanto cancela o reduce la próxima cuota pendiente. No mueve las
+            fechas de las cuotas siguientes y no genera días de gracia.
+        </p>
+    </div>
+</div>
+
+<form class="search-form" method="get" role="search">
+    <label class="search-input">
+        <span aria-hidden="true">⌕</span>
+        <input type="search" name="q" value="{{ query }}"
+               placeholder="Buscar por cliente, DNI, producto o préstamo" autofocus>
+    </label>
+    <button class="btn btn-secondary" type="submit">Buscar</button>
+    {% if query %}<a class="btn btn-ghost" href="{% url 'core:advance_payment_list' %}">Limpiar</a>{% endif %}
+</form>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Operaciones activas</p>
+            <h2>{% if query %}Resultados de la búsqueda{% else %}Cuotas que pueden adelantarse{% endif %}</h2>
+        </div>
+        <span class="record-count">{{ rows|length }} resultado{{ rows|length|pluralize }}</span>
+    </div>
+
+    {% if rows %}
+    <div class="table-wrap">
+        <table class="data-table responsive-table advance-actions-table">
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>Operación</th>
+                    <th>Próxima cuota</th>
+                    <th>Vencimiento</th>
+                    <th class="align-right">Importe pendiente</th>
+                    <th>Situación</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td data-label="Cliente">
+                        <strong>{{ row.sale.customer.full_name }}</strong>
+                        {% if row.sale.customer.dni %}<small>DNI {{ row.sale.customer.dni }}</small>{% endif %}
+                    </td>
+                    <td data-label="Operación">{{ row.sale.product_description }}<small><span class="badge {% if row.sale.is_loan %}badge-loan{% else %}badge-neutral{% endif %}">{{ row.sale.operation_name }}</span></small></td>
+                    <td data-label="Próxima cuota">
+                        Cuota {{ row.next_future.installment.number }}/{{ row.sale.installment_count }}
+                    </td>
+                    <td data-label="Vencimiento">{{ row.next_future.installment.due_date|date:"d/m/Y" }}</td>
+                    <td data-label="Importe pendiente" class="money-cell">
+                        {{ row.next_future.balance.principal_due|ars }}
+                    </td>
+                    <td data-label="Situación">
+                        {% if row.can_advance %}
+                            <span class="badge badge-success">Al día</span>
+                        {% else %}
+                            <span class="badge badge-warning">Pago pendiente</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Acción" class="row-action">
+                        {% if row.can_advance %}
+                            <a class="btn btn-primary btn-compact"
+                               href="{% url 'core:advance_payment_create' row.sale.pk %}">
+                                Adelantar cuota
+                            </a>
+                        {% else %}
+                            <a class="btn btn-secondary btn-compact"
+                               href="{% url 'core:payment_create' row.sale.pk %}">
+                                Cobrar primero
+                            </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state compact">
+        <span class="empty-icon" aria-hidden="true">⌕</span>
+        <h3>No se encontraron cuotas futuras pendientes</h3>
+        <p>Probá buscando por nombre, apellido, DNI, producto o préstamo.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

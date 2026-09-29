@@ -17,7 +17,7 @@
         <div>
             <input id="agenda-date" class="form-control" type="date" name="fecha"
                    value="{{ selected_date|date:'Y-m-d' }}">
-            <button class="btn btn-secondary" type="submit">Ir</button>
+            <button class="btn btn-secondary" type="submit">Mostrar semana</button>
         </div>
     </form>
 </header>
@@ -112,6 +112,14 @@
                 <span class="is-muted">Sin barrios cargados</span>
             {% endfor %}
         </div>
+
+        {% if day.collector_count %}
+        <p class="weekly-collector-note">
+            {{ day.collector_count }} cobrador{{ day.collector_count|pluralize:"es" }} ·
+            {{ day.assigned_client_count }} cliente{{ day.assigned_client_count|pluralize }} asignado{{ day.assigned_client_count|pluralize }}
+            <small>{{ day.collector_names|join:", " }}</small>
+        </p>
+        {% endif %}
 
         <a class="btn {% if day.has_collection %}btn-primary{% else %}btn-secondary{% endif %}"
            href="{% url 'core:collection_list' %}?fecha={{ day.date|date:'Y-m-d' }}">

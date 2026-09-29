@@ -7,7 +7,16 @@ import pytest
 from modules.core.models import BusinessSettings
 from modules.core.templatetags.finance import versioned_static
 
-from launcher.launcher import LocalApplication, build_local_wsgi_application
+from launcher.launcher import (
+    COLOR_ACCENT,
+    COLOR_BACKGROUND,
+    COLOR_HEADER,
+    COLOR_PRIMARY,
+    LocalApplication,
+    build_local_wsgi_application,
+    reopen_existing_system,
+)
+from launcher.mobile_access import build_mobile_access_url, build_qr_image
 
 
 @pytest.mark.django_db
@@ -95,23 +104,92 @@ def test_open_browser_updates_the_launcher_message(monkeypatch):
     application = LocalApplication()
     recorded = {}
     application.status = SimpleNamespace(set=lambda value: recorded.update(status=value))
-    application.open_button = SimpleNamespace(
-        configure=lambda **values: recorded.update(values)
-    )
+    application.open_button = SimpleNamespace(configure=lambda **values: recorded.update(values))
     monkeypatch.setattr("launcher.launcher.webbrowser.open_new_tab", lambda _url: True)
 
     application.open_browser()
 
-    assert recorded["text"] == "Volver a abrir el sistema"
+    assert recorded["text"] == "Sistema abierto"
     assert "abierto en el navegador" in recorded["status"]
+    assert application.browser_opened is True
+
+
+def test_open_browser_does_not_create_another_tab_without_confirmation(monkeypatch):
+    application = LocalApplication()
+    application.browser_opened = True
+    recorded = {}
+    opened = []
+    application.status = SimpleNamespace(set=lambda value: recorded.update(status=value))
+    application.open_button = SimpleNamespace(configure=lambda **_values: None)
+    monkeypatch.setattr("launcher.launcher.messagebox.askyesno", lambda *_args: False)
+    monkeypatch.setattr(
+        "launcher.launcher.webbrowser.open_new_tab",
+        lambda url: opened.append(url) or True,
+    )
+
+    application.open_browser()
+
+    assert opened == []
+    assert "continúa abierto" in recorded["status"]
+
+
+def test_open_browser_can_reopen_a_closed_tab_after_confirmation(monkeypatch):
+    application = LocalApplication()
+    application.browser_opened = True
+    opened = []
+    application.status = SimpleNamespace(set=lambda _value: None)
+    application.open_button = SimpleNamespace(configure=lambda **_values: None)
+    monkeypatch.setattr("launcher.launcher.messagebox.askyesno", lambda *_args: True)
+    monkeypatch.setattr(
+        "launcher.launcher.webbrowser.open_new_tab",
+        lambda url: opened.append(url) or True,
+    )
+
+    application.open_browser()
+
+    assert opened == ["http://127.0.0.1:8765/"]
+
+
+def test_second_launcher_focuses_existing_launcher_without_opening_browser(monkeypatch):
+    focused = []
+
+    class HealthyResponse:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+    monkeypatch.setattr("launcher.launcher.urlopen", lambda *_args, **_kwargs: HealthyResponse())
+    monkeypatch.setattr(
+        "launcher.launcher.focus_existing_launcher_window",
+        lambda: focused.append(True) or True,
+    )
+
+    assert reopen_existing_system(8765) is True
+    assert focused == [True]
 
 
 def test_launcher_includes_creator_signature():
-    launcher_source = (
-        Path(__file__).resolve().parents[1] / "launcher" / "launcher.py"
-    ).read_text(encoding="utf-8")
+    launcher_source = (Path(__file__).resolve().parents[1] / "launcher" / "launcher.py").read_text(
+        encoding="utf-8"
+    )
 
     assert "Creado por Percy I. Marzoratti Hill." in launcher_source
+
+
+def test_launcher_and_mobile_qr_share_the_blue_visual_identity():
+    assert COLOR_HEADER == "#123F4B"
+    assert COLOR_PRIMARY == "#187F94"
+    assert COLOR_ACCENT == "#43C7BC"
+    assert COLOR_BACKGROUND == "#EEF4F7"
+
+    qr_image = build_qr_image(
+        build_mobile_access_url("192.168.1.8", 8765, "visual-identity-test")
+    )
+    assert (13, 98, 116) in set(qr_image.getdata())
 
 
 @pytest.mark.django_db
@@ -135,9 +213,7 @@ def test_launcher_loads_configured_business_name_and_logo(settings, tmp_path):
 
 def test_visual_system_includes_gradients_and_warning_action():
     project_root = Path(__file__).resolve().parents[1]
-    css = (project_root / "app" / "static" / "css" / "app.css").read_text(
-        encoding="utf-8"
-    )
+    css = (project_root / "app" / "static" / "css" / "app.css").read_text(encoding="utf-8")
     collection_template = (
         project_root / "app" / "templates" / "core" / "collection" / "list.html"
     ).read_text(encoding="utf-8")

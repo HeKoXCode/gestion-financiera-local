@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% load finance %}
+
+{% block title %}Adelantar cuota · {{ sale.customer.full_name }}{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{{ return_url }}">‹ {% if origin == "venta" %}Volver a la operación{% else %}Volver a pagos adelantados{% endif %}</a>
+
+<header class="payment-hero">
+    <div>
+        <p class="eyebrow">Pago adelantado</p>
+        <h1>{{ sale.customer.full_name }}</h1>
+        <p>{{ sale.product_description }} · {{ sale.operation_name }} #{{ sale.pk }}</p>
+    </div>
+    <div class="payment-due">
+        <span>Próxima cuota</span>
+        <strong>{{ next_future.balance.principal_due|ars }}</strong>
+        <small>
+            Cuota {{ next_future.installment.number }}/{{ sale.installment_count }} ·
+            vence el {{ next_future.installment.due_date|date:"d/m/Y" }}
+        </small>
+    </div>
+</header>
+
+<div class="dependency-alert">
+    <div>
+        <strong>Se registra hoy, sin cambiar el plan</strong>
+        <p>
+            La cuota recibe el dinero con fecha {{ today|date:"d/m/Y" }}. No mueve las fechas:
+            su vencimiento original y los demás permanecen iguales.
+        </p>
+    </div>
+</div>
+
+<div class="payment-layout">
+    <form method="post" id="advance-payment-form" class="form-card payment-form" novalidate>
+        {% csrf_token %}
+        {{ form.operation_key }}
+        <input type="hidden" name="origin" value="{{ origin }}">
+        {% include "core/partials/form_errors.html" %}
+
+        <div class="payment-breakdown">
+            <div><span>Próxima cuota pendiente</span><strong>{{ next_future.balance.principal_due|ars }}</strong></div>
+            <div><span>Total futuro disponible</span><strong>{{ future_total|ars }}</strong></div>
+        </div>
+
+        <div class="field payment-amount-field">
+            <label for="{{ form.amount.id_for_label }}">Monto recibido por adelantado</label>
+            <div class="money-input large"><span>$</span>{{ form.amount }}</div>
+            <p class="field-help">
+                Puede cubrir una parte, una cuota completa o varias cuotas futuras,
+                hasta {{ future_total|ars }}.
+            </p>
+            {% for error in form.amount.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+        </div>
+
+        <div class="form-grid two-columns">
+            <div class="field">
+                <label for="{{ form.payment_date.id_for_label }}">Fecha real del pago</label>
+                {{ form.payment_date }}
+                {% for error in form.payment_date.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="field">
+                <label for="{{ form.payment_method.id_for_label }}">Medio de pago</label>
+                {{ form.payment_method }}
+                {% for error in form.payment_method.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+            <div class="field span-2">
+                <label for="{{ form.notes.id_for_label }}">Observaciones <span>Opcional</span></label>
+                {{ form.notes }}
+                {% for error in form.notes.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a class="btn btn-ghost" href="{{ return_url }}">Cancelar</a>
+            <button class="btn btn-primary" id="advance-payment-submit" type="submit">
+                Guardar pago adelantado
+            </button>
+        </div>
+    </form>
+
+    <aside class="payment-help">
+        <p class="eyebrow">Qué ocurrirá</p>
+        <ol>
+            <li><span>1</span><div><strong>Próxima cuota</strong><small>El dinero se aplica a la cuota futura más cercana.</small></div></li>
+            <li><span>2</span><div><strong>Sin nueva fecha</strong><small>El vencimiento acordado no cambia.</small></div></li>
+            <li><span>3</span><div><strong>Sin días de gracia</strong><small>La cuota siguiente mantiene su día original.</small></div></li>
+        </ol>
+        <div class="partial-note">
+            Si el monto no completa la cuota, el saldo restante vencerá en la fecha original.
+        </div>
+    </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelector("#advance-payment-form")?.addEventListener("submit", function () {
+    const button = document.querySelector("#advance-payment-submit");
+    if (button && this.checkValidity()) {
+        button.disabled = true;
+        button.textContent = "Guardando adelanto…";
+    }
+});
+</script>
+{% endblock %}

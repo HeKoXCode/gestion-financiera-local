@@ -1,0 +1,157 @@
+GESTIÓN FINANCIERA 1.8.0
+PLAN EXACTO DE INTEGRACIÓN, QA Y PUBLICACIÓN
+Fecha de trabajo: 29/09/2026
+
+OBJETIVO
+-------
+
+Unificar la edición local 1.7.2 con la edición 1.1.0 publicada en GitHub sin
+perder funciones, datos compatibles ni el historial del repositorio. La salida
+debe ser una versión 1.8.0 gratuita, reproducible, verificable y publicable.
+
+DECISIÓN DE PRODUCTO
+--------------------
+
+Distribuir la aplicación completa y gratuita bajo MIT.
+
+No implementar un límite artificial de clientes mediante un archivo cifrado
+local. Al publicar el código, la clave y la validación también quedarían en el
+equipo del usuario; el límite sería evitable, agregaría estados de error y
+debilitaría la reproducibilidad del portfolio sin constituir una licencia
+robusta.
+
+La demostración no será una versión recortada. Será la aplicación completa con
+una base ficticia separada, reversible y claramente identificada. Si en el
+futuro existe una edición comercial, conviene vender instalación, soporte,
+hosting o una edición profesional con servicio remoto y licencias firmadas.
+
+FUENTES ANALIZADAS
+------------------
+
+1. Edición local final:
+   GestionFinanciera_Version_1.7.2 (fuente local externa al repositorio)
+
+   Aporta préstamos, cobradores, recorridos, cuotas diarias, pagos adelantados,
+   recargo único diario, correcciones versionadas, Archivo seguro, concurrencia
+   SQLite, logs, demo reversible y acabado visual azul/cian.
+
+2. Repositorio publicado:
+   clon de trabajo de gestion-financiera-local
+   https://github.com/HeKoXCode/gestion-financiera-local
+
+   Aporta historia Git, autenticación, roles, auditoría, analítica, exportación
+   Power BI, PostgreSQL, Docker, Caddy, backups del perfil compartido y CI.
+
+3. Conflicto resuelto:
+   Ambas ramas tenían una migración distinta llamada 0008. Se conservan las dos
+   ramas y se agrega 0015 como migración de unión. No se renumera ni se finge
+   equivalencia, de modo que una base nacida en cualquiera de las dos líneas
+   pueda actualizarse.
+
+ORDEN DE EJECUCIÓN
+------------------
+
+FASE 1 - PROTECCIÓN Y REFERENCIA
+
+[OK] 1. Confirmar que el clon Git está limpio y sincronizado con origin/main.
+[OK] 2. No modificar las carpetas portables ni las bases del usuario.
+[OK] 3. Usar directorios tmp/qa-* para migraciones, demo y smoke tests.
+[OK] 4. Inventariar archivos únicos, archivos diferentes y migraciones.
+
+FASE 2 - INTEGRACIÓN FUNCIONAL
+
+[OK] 5. Tomar 1.7.2 como base funcional de producto dentro del clon Git.
+[OK] 6. Conservar autenticación de Django y los roles Administradores/Cobradores.
+[OK] 7. Reincorporar middleware de roles y auditoría junto al bloqueo de
+       escrituras SQLite de la edición local.
+[OK] 8. Mantener SQLite para el portable y PostgreSQL para multiusuario.
+[OK] 9. Integrar analítica, exportación BI y backups por motor de base.
+[OK] 10. Integrar préstamos, cobradores, recorridos, Archivo seguro, revisiones,
+        pagos adelantados y recargos de 1.7.2.
+[OK] 11. Unir las ramas de migración con 0015.
+[OK] 12. Adaptar URLs, navegación, login, permisos y empaquetado PyInstaller.
+
+FASE 3 - CONSISTENCIA DE PRODUCTO
+
+[OK] 13. Versionar como 1.8.0: es una entrega de funciones, no un parche 1.7.x.
+[OK] 14. Documentar los perfiles local y multiusuario sin llamar cloud al
+        portable.
+[OK] 15. Mantener la demo ficticia separada y sin límites de clientes.
+[OK] 16. Actualizar README, changelog, índice y notas de release.
+[OK] 17. Mantener fuera de Git bases, secretos, backups, exports y binarios.
+
+FASE 4 - QA AUTOMÁTICO
+
+[OK] 18. Ejecutar Ruff.
+[OK] 19. Ejecutar la suite completa de Pytest.
+[OK] 20. Ejecutar cobertura con el umbral configurado.
+[OK] 21. Ejecutar manage.py check.
+[OK] 22. Ejecutar makemigrations --check --dry-run.
+[OK] 23. Crear una base nueva y aplicar todas las migraciones.
+[OK] 24. Ensayar actualización desde una base con historia GitHub 1.1.0.
+[OK] 25. Ensayar actualización desde una base con historia local 1.7.2.
+[OK] 26. Validar permisos de administrador y cobrador.
+[OK] 27. Validar exportación BI y conciliaciones en cero.
+[OK] 28. Validar backup/restauración SQLite en copia aislada.
+[OK] 28.1. Validar settings endurecidos y sintaxis de Docker Compose.
+[PENDIENTE] 28.2. Confirmar la construcción de la imagen Docker mediante CI;
+                  el motor local de Docker Desktop no estuvo disponible.
+
+FASE 5 - QA DE DISTRIBUCIÓN
+
+[OK] 29. Construir ZIP completo y ZIP de actualización 1.8.0.
+[OK] 30. Confirmar que la actualización no contiene data/, backups/,
+         exports/, media/ ni storage/ del usuario.
+[OK] 31. Extraer el ZIP completo en una carpeta temporal y ejecutar el smoke
+         test sin Python del sistema.
+[OK] 32. Cargar demo ficticia, abrir pantallas críticas y restaurar la base
+         protegida.
+[OK] 33. Buscar rutas locales, secretos, credenciales y datos personales.
+[OK] 34. Ejecutar Microsoft Defender sobre los artefactos.
+[OK] 35. Registrar SHA-256 y reportes JSON de auditoría.
+
+FASE 6 - PUBLICACIÓN
+
+[OK] 36. Revisar git diff y confirmar que no contiene datos del usuario.
+[PENDIENTE] 37. Crear un commit legible de release 1.8.0.
+[PENDIENTE] 38. Crear y verificar la etiqueta anotada v1.8.0.
+[PENDIENTE] 39. Subir main y v1.8.0 a GitHub.
+[PENDIENTE] 40. Crear la release de GitHub y adjuntar ZIP completo, ZIP de
+                 actualización, SHA256SUMS.txt y reportes de auditoría.
+[PENDIENTE] 41. Verificar desde GitHub que README, imágenes, tag y artefactos se
+                 muestran y descargan correctamente.
+
+CRITERIOS DE ACEPTACIÓN
+-----------------------
+
+- Ninguna función documentada de 1.7.2 o 1.1.0 desaparece sin justificación.
+- Una instalación local existente conserva sus datos al actualizar.
+- El perfil local no exige login y el multiusuario sí lo exige.
+- El cobrador no puede configurar, corregir, cancelar, anular, respaldar ni
+  consultar la auditoría.
+- La analítica y el data mart usan el mismo motor financiero y concilian.
+- El repositorio no contiene datos reales, contraseñas ni artefactos generados.
+- Los dos ZIP se validan desde una extracción limpia.
+- README, versión, changelog, tag, nombres de ZIP y hashes coinciden.
+
+ROLLBACK
+--------
+
+Si falla una migración o el smoke test, no reemplazar ninguna instalación.
+Conservar el tag anterior, corregir en el clon y repetir QA. Para una base real,
+crear primero un backup verificado, cerrar normalmente la aplicación y probar
+la actualización sobre una copia. Nunca reemplazar data/, backups/, exports/,
+media/ ni storage/ con el ZIP de actualización.
+
+RESULTADO DE CIERRE
+-------------------
+
+Este bloque se completa únicamente después del QA y de verificar GitHub:
+
+- Commit: PENDIENTE
+- Tag: PENDIENTE
+- Pruebas: 336 aprobadas en la integración, incluidas ambas rutas de migración
+- Cobertura: 88% (umbral obligatorio: 85%)
+- ZIP completo SHA-256: 428B0A10CC86CDFE8B32612FE29A80EB0365734D18D2B62E76AC209E0E537538
+- ZIP actualización SHA-256: B1D523374382DC0BF948ECCF9BE65F2AB729FEDBA9F09EEB0064043CA6360002
+- Publicación GitHub: PENDIENTE

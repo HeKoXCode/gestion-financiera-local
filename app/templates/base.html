@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#123a32">
+    <meta name="theme-color" content="#123F4B">
     <title>{% block title %}Gestión Financiera{% endblock %}</title>
     <link rel="stylesheet" href="{% versioned_static 'css/app.css' %}">
 </head>
@@ -29,31 +29,37 @@
             <nav class="main-nav" aria-label="Navegación principal">
                 <span class="nav-section-label">Uso diario</span>
                 <a class="nav-link {% if current == 'home' %}is-active{% endif %}"
+                   {% if current == 'home' %}aria-current="page"{% endif %}
                    href="{% url 'core:home' %}">
                     <span class="nav-icon" aria-hidden="true">⌂</span>
                     <span>Resumen</span>
                 </a>
                 <a class="nav-link {% if 'customer' in current %}is-active{% endif %}"
+                   {% if 'customer' in current %}aria-current="page"{% endif %}
                    href="{% url 'core:customer_list' %}">
                     <span class="nav-icon" aria-hidden="true">◎</span>
                     <span>Clientes</span>
                 </a>
                 <a class="nav-link {% if 'product' in current %}is-active{% endif %}"
+                   {% if 'product' in current %}aria-current="page"{% endif %}
                    href="{% url 'core:product_list' %}">
                     <span class="nav-icon" aria-hidden="true">◇</span>
                     <span>Productos</span>
                 </a>
                 <a class="nav-link {% if 'sale' in current %}is-active{% endif %}"
+                   {% if 'sale' in current %}aria-current="page"{% endif %}
                    href="{% url 'core:sale_list' %}">
                     <span class="nav-icon" aria-hidden="true">▤</span>
-                    <span>Ventas</span>
+                    <span>Operaciones</span>
                 </a>
-                <a class="nav-link {% if 'collection' in current or 'payment' in current %}is-active{% endif %}"
+                <a class="nav-link {% if 'collection' in current or 'payment' in current or 'collector' in current %}is-active{% endif %}"
+                   {% if 'collection' in current or 'payment' in current or 'collector' in current %}aria-current="page"{% endif %}
                    href="{% url 'core:collection_list' %}">
                     <span class="nav-icon" aria-hidden="true">$</span>
                     <span>Cobranza</span>
                 </a>
                 <a class="nav-link {% if current == 'agenda' %}is-active{% endif %}"
+                   {% if current == 'agenda' %}aria-current="page"{% endif %}
                    href="{% url 'core:agenda' %}">
                     <span class="nav-icon" aria-hidden="true">□</span>
                     <span>Semana</span>
@@ -61,27 +67,32 @@
 
                 <span class="nav-section-label nav-section-secondary">Análisis</span>
                 <a class="nav-link {% if current == 'reports' %}is-active{% endif %}"
+                   {% if current == 'reports' %}aria-current="page"{% endif %}
                    href="{% url 'core:reports' %}">
                     <span class="nav-icon" aria-hidden="true">⌁</span>
                     <span>Reportes</span>
                 </a>
                 <a class="nav-link {% if current == 'analytics' %}is-active{% endif %}"
+                   {% if current == 'analytics' %}aria-current="page"{% endif %}
                    href="{% url 'core:analytics' %}">
                     <span class="nav-icon" aria-hidden="true">◫</span>
                     <span>Analítica</span>
                 </a>
                 {% if current_role == 'admin' or not auth_required %}
                 <a class="nav-link {% if current == 'audit_events' %}is-active{% endif %}"
+                   {% if current == 'audit_events' %}aria-current="page"{% endif %}
                    href="{% url 'core:audit_events' %}">
                     <span class="nav-icon" aria-hidden="true">✓</span>
                     <span>Auditoría</span>
                 </a>
-                <a class="nav-link {% if current == 'configuration' %}is-active{% endif %}"
+                <a class="nav-link {% if current == 'configuration' or current == 'secure_archive' or current == 'sale_revision_detail' or current == 'customer_revision_detail' %}is-active{% endif %}"
+                   {% if current == 'configuration' or current == 'secure_archive' or current == 'sale_revision_detail' or current == 'customer_revision_detail' %}aria-current="page"{% endif %}
                    href="{% url 'core:configuration' %}">
                     <span class="nav-icon" aria-hidden="true">⚙</span>
                     <span>Configuración</span>
                 </a>
                 <a class="nav-link {% if 'backup' in current or 'export' in current or current == 'data_management' %}is-active{% endif %}"
+                   {% if 'backup' in current or 'export' in current or current == 'data_management' %}aria-current="page"{% endif %}
                    href="{% url 'core:data_management' %}">
                     <span class="nav-icon" aria-hidden="true">▣</span>
                     <span>Datos y respaldo</span>
@@ -140,6 +151,7 @@
         </div>
     </div>
     {% endwith %}
+    <script src="{% versioned_static 'js/ui.js' %}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

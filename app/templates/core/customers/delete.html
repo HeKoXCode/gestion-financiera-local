@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Borrar cliente · Gestión Financiera{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'core:customer_detail' customer.pk %}">‹ Volver al cliente</a>
+
+<div class="confirm-layout">
+    <section class="confirm-card">
+        <span class="confirm-icon" aria-hidden="true">!</span>
+        <p class="eyebrow">Borrado protegido</p>
+        <h1>Borrar a {{ customer.full_name }}</h1>
+        <p>
+            El cliente desaparecerá de las pantallas de trabajo y quedará guardado
+            de forma permanente en Configuración → Archivo seguro.
+        </p>
+
+        <dl class="confirm-summary">
+            <div><dt>DNI</dt><dd>{{ customer.dni|default:"No informado" }}</dd></div>
+            <div><dt>Dirección</dt><dd>{{ customer.address }}</dd></div>
+            <div><dt>Operaciones registradas</dt><dd>{{ customer.sales.count }}</dd></div>
+        </dl>
+
+        {% if blocked %}
+            <div class="dependency-alert">
+                <div><strong>No se puede borrar todavía</strong><p>{{ blocked }}</p></div>
+            </div>
+            {% if active_sales %}
+            <div class="dependency-list">
+                <strong>Operaciones que primero debés revisar</strong>
+                {% for sale in active_sales %}
+                <a class="dependency-item" href="{% url 'core:sale_detail' sale.pk %}">
+                    <span><b>{{ sale.operation_name }} #{{ sale.pk }} · {{ sale.product_description }}</b><small>{% if sale.is_loan %}Dinero entregado{% else %}Entrega{% endif %} {{ sale.delivery_date|date:'d/m/Y' }} · {{ sale.installment_count }} cuotas</small></span>
+                    <em>Ver venta ›</em>
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div class="form-actions">
+                <a class="btn btn-secondary" href="{% url 'core:customer_detail' customer.pk %}">Volver al cliente</a>
+            </div>
+        {% else %}
+            <form method="post" novalidate>
+                {% csrf_token %}
+                {% include "core/partials/form_errors.html" %}
+                <div class="field">
+                    <label for="{{ form.reason.id_for_label }}">Motivo del borrado</label>
+                    {{ form.reason }}
+                    <p class="field-help">Este motivo también quedará protegido y no podrá editarse.</p>
+                    {% for error in form.reason.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="form-actions">
+                    <a class="btn btn-ghost" href="{% url 'core:customer_detail' customer.pk %}">Conservar cliente</a>
+                    <button class="btn btn-danger" type="submit">Confirmar y enviar al Archivo seguro</button>
+                </div>
+            </form>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

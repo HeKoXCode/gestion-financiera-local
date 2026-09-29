@@ -37,12 +37,9 @@ def test_daily_screen_is_available_without_records(client):
     assert "No queda cobranza pendiente" in response.content.decode()
 
 
-def test_daily_screen_shows_due_and_overdue_installments(client):
-    sale = make_sale(
-        installment_count=2,
-        financed_amount=Decimal("40000.00"),
-        daily_late_fee=Decimal("0.00"),
-    )
+def test_daily_screen_shows_due_and_overdue_installments(client, monkeypatch):
+    monkeypatch.setattr(timezone, "localdate", lambda: date(2026, 8, 18))
+    sale = make_sale(installment_count=2, financed_amount=Decimal("40000.00"))
     create_installments(sale)
 
     response = client.get(reverse("core:home"), {"fecha": "2026-08-25"})
@@ -129,7 +126,9 @@ def test_sale_form_explains_missing_dependencies(client):
     response = client.get(reverse("core:sale_create"))
 
     assert response.status_code == 200
-    assert "necesitás un cliente y un producto activos" in response.content.decode()
+    content = response.content.decode()
+    assert "necesitás un cliente activo" in content
+    assert "Podés registrar préstamos normalmente" in content
 
 
 def test_phase_three_pages_render_with_existing_records(client):

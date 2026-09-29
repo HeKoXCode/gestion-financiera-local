@@ -96,7 +96,7 @@ def test_reports_separate_portfolio_due_and_overdue_amounts():
 
     assert report["portfolio_pending"] == Decimal("40000.00")
     assert report["due_total"] == Decimal("40000.00")
-    assert report["overdue_total"] == Decimal("20000.00")
+    assert report["overdue_total"] == Decimal("40000.00")
     assert report["overdue_clients"] == 1
     assert report["debtors"][0]["customer"] == sale.customer
     assert report["highest_debt"][0]["total_balance"] == Decimal("40000.00")
@@ -122,6 +122,13 @@ def test_reports_respect_partial_payments():
 
 def test_cancelled_sales_are_excluded_from_reports():
     sale = make_report_sale()
+    register_payment(
+        sale=sale,
+        amount=Decimal("5000.00"),
+        payment_date=timezone.localdate(),
+        payment_method="Efectivo",
+        operation_key=uuid.uuid4(),
+    )
     sale.status = Sale.Status.CANCELLED
     sale.cancelled_on = timezone.localdate()
     sale.cancellation_reason = "Operación cancelada"
@@ -131,6 +138,11 @@ def test_cancelled_sales_are_excluded_from_reports():
     report = build_reports(as_of=timezone.localdate())
 
     assert report["portfolio_pending"] == Decimal("0.00")
+    assert report["collected_today"] == Decimal("0.00")
+    assert report["collected_week"] == Decimal("0.00")
+    assert report["collected_month"] == Decimal("0.00")
+    assert report["collection_trend"][-1]["amount"] == Decimal("0.00")
+    assert report["payment_methods"] == []
     assert report["products_most_sold"] == []
     assert report["highest_debt"] == []
 

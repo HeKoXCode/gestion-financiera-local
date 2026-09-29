@@ -1,0 +1,43 @@
+{
+    "schema_version":  "1.0.0",
+    "project":  "gestion-financiera-local",
+    "artifact":  {
+                     "file":  "GestionFinanciera-v1.2.0-edicion01ago-windows-x64.zip",
+                     "bytes":  47875213,
+                     "sha256":  "63AA84B0FB0DC76A7439A04EB4F65C396121304C5F29F9494131F1C6ED630673",
+                     "entries":  6387
+                 },
+    "gates":  {
+                  "checksum":  "passed",
+                  "zip_paths":  "passed",
+                  "sensitive_content":  "passed",
+                  "isolated_smoke_test":  "passed",
+                  "antivirus":  {
+                                    "provider":  "Microsoft Defender",
+                                    "executed":  true,
+                                    "status":  "passed",
+                                    "signature_version":  "1.457.308.0",
+                                    "signature_updated_at":  "2026-08-23T12:19:45.0000000Z",
+                                    "detections":  0
+                                },
+                  "authenticode":  [
+                                       {
+                                           "file":  "GestionFinanciera.exe",
+                                           "status":  "NotSigned",
+                                           "signer":  null
+                                       },
+                                       {
+                                           "file":  "Restaurador.exe",
+                                           "status":  "NotSigned",
+                                           "signer":  null
+                                       },
+                                       {
+                                           "file":  "ArchivarYReiniciar.exe",
+                                           "status":  "NotSigned",
+                                           "signer":  null
+                                       }
+                                   ]
+              },
+    "signing_policy":  "Unsigned release: no code-signing certificate is available. Authenticity is provided through the GitHub Release and SHA-256 checksum.",
+    "verified_at_utc":  "2026-08-24T02:56:54.6495929Z"
+}

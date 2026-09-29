@@ -51,9 +51,13 @@ foreach ($requiredFile in @(
     "GestionFinanciera.exe",
     "Restaurador.exe",
     "ArchivarYReiniciar.exe",
+    "DatosPrueba.exe",
     "INICIAR.bat",
     "RESTAURAR_DATOS.bat",
     "ARCHIVAR_Y_REINICIAR.bat",
+    "1_CARGAR_DATOS_FICTICIOS.bat",
+    "2_LIMPIAR_BASE_DE_PRUEBA.bat",
+    "3_RESTAURAR_BASE_ORIGINAL.bat",
     "HABILITAR_ACCESO_CELULAR.bat",
     "DESHABILITAR_ACCESO_CELULAR.bat",
     "LEEME_PRIMERO.txt"
@@ -124,6 +128,73 @@ try {
         throw "La prueba de cierre no creo su backup final."
     }
 
+    $demoExecutable = Join-Path $smokeDirectory "DatosPrueba.exe"
+    $demoSeedProcess = Start-Process `
+        -FilePath $demoExecutable `
+        -ArgumentList @("seed", "--yes") `
+        -WorkingDirectory $smokeDirectory `
+        -WindowStyle Hidden `
+        -Wait `
+        -PassThru
+    if ($demoSeedProcess.ExitCode -ne 0) {
+        throw "DatosPrueba.exe no pudo cargar los datos ficticios."
+    }
+    & $pythonExecutable -c @"
+import sqlite3
+with sqlite3.connect(r'$databasePath') as connection:
+    counts = {
+        'clientes': connection.execute('SELECT COUNT(*) FROM core_customer').fetchone()[0],
+        'ventas': connection.execute('SELECT COUNT(*) FROM core_sale').fetchone()[0],
+        'cobradores': connection.execute('SELECT COUNT(*) FROM core_collector').fetchone()[0],
+    }
+if counts['clientes'] < 50 or counts['ventas'] < 70 or counts['cobradores'] < 5:
+    raise RuntimeError(f'La ingesta portable quedo incompleta: {counts}')
+print('Ingesta portable validada:', counts)
+"@
+    if ($LASTEXITCODE -ne 0) {
+        throw "Los datos ficticios del portable no superaron la validacion externa."
+    }
+
+    $demoClearProcess = Start-Process `
+        -FilePath $demoExecutable `
+        -ArgumentList @("clear", "--yes") `
+        -WorkingDirectory $smokeDirectory `
+        -WindowStyle Hidden `
+        -Wait `
+        -PassThru
+    if ($demoClearProcess.ExitCode -ne 0) {
+        throw "DatosPrueba.exe no pudo limpiar la base ficticia."
+    }
+
+    $demoRestoreProcess = Start-Process `
+        -FilePath $demoExecutable `
+        -ArgumentList @("restore", "--yes") `
+        -WorkingDirectory $smokeDirectory `
+        -WindowStyle Hidden `
+        -Wait `
+        -PassThru
+    if ($demoRestoreProcess.ExitCode -ne 0) {
+        throw "DatosPrueba.exe no pudo restaurar la base original."
+    }
+    $demoSessionPath = Join-Path $smokeDirectory "storage\datos_prueba\sesion_datos_ficticios.json"
+    if (Test-Path -LiteralPath $demoSessionPath -PathType Leaf) {
+        throw "La restauracion dejo una sesion ficticia pendiente."
+    }
+    & $pythonExecutable -c @"
+import sqlite3
+with sqlite3.connect(r'$databasePath') as connection:
+    business_rows = sum(
+        connection.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0]
+        for table in ('core_customer', 'core_sale', 'core_collector', 'core_collectionroute')
+    )
+if business_rows:
+    raise RuntimeError('La restauracion portable no recupero la base original vacia.')
+print('Carga, limpieza y restauracion portable: correctas')
+"@
+    if ($LASTEXITCODE -ne 0) {
+        throw "La base restaurada por DatosPrueba.exe no supero la validacion externa."
+    }
+
     $restorerProcess = Start-Process `
         -FilePath (Join-Path $smokeDirectory "Restaurador.exe") `
         -ArgumentList "--smoke-test" `
@@ -184,10 +255,18 @@ validate_application_backup(
     working_directory=Path(r'$databasePath').parent,
 )
 with sqlite3.connect(r'$databasePath') as connection:
-    monthly_migration = connection.execute(
+    latest_migration = connection.execute(
         'SELECT 1 FROM django_migrations WHERE app = ? AND name = ?',
-        ('core', '0004_add_monthly_frequency'),
+        ('core', '0013_collector_safe_archive'),
     ).fetchone()
+    customer_revision_table = connection.execute(
+        'SELECT 1 FROM sqlite_master WHERE type = ? AND name = ?',
+        ('table', 'core_customerrevision'),
+    ).fetchone()
+    collector_archive_columns = {
+        row[1]
+        for row in connection.execute('PRAGMA table_info(core_collector)')
+    }
     business_rows = sum(
         connection.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0]
         for table in (
@@ -199,8 +278,12 @@ with sqlite3.connect(r'$databasePath') as connection:
             'core_collectionattempt',
         )
     )
-if monthly_migration is None:
-    raise RuntimeError('El portable no aplico la migracion de frecuencia mensual.')
+if (
+    latest_migration is None
+    or customer_revision_table is None
+    or not {'archived_at', 'archive_reason'} <= collector_archive_columns
+):
+    raise RuntimeError('El portable no aplico todas las migraciones protegidas.')
 if business_rows:
     raise RuntimeError('El archivador portable no dejo vacios los datos comerciales.')
 print('Base portable: integridad y estructura correctas')

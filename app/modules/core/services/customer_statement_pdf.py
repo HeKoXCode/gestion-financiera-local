@@ -369,8 +369,8 @@ def build_customer_statement_pdf(
             data.append(
                 [
                     _paragraph(row["sale"].product_description, styles["Cell"]),
-                    f'{row["installment"].number}/{row["sale"].installment_count}',
-                    f'{row["installment"].due_date:%d/%m/%Y}',
+                    f"{row['installment'].number}/{row['sale'].installment_count}",
+                    f"{row['installment'].due_date:%d/%m/%Y}",
                     _paragraph(row["status_label"], styles["Cell"]),
                     _paragraph(
                         format_ars(row["installment"].original_amount),
@@ -413,7 +413,7 @@ def build_customer_statement_pdf(
             data.append(
                 [
                     f"{payment.payment_date:%d/%m/%Y}",
-                    payment.get_kind_display(),
+                    payment.movement_label,
                     _paragraph(payment.sale.product_description, styles["Cell"]),
                     payment_status,
                     _paragraph(format_ars(payment.amount), styles["CellRight"]),

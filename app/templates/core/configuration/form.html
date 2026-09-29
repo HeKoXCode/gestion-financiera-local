@@ -11,6 +11,7 @@
             Personalizá el negocio, las cobranzas y los datos que aparecen en las impresiones.
         </p>
     </div>
+    <a class="btn btn-secondary" href="{% url 'core:secure_archive' %}">Archivo seguro</a>
 </header>
 
 <form method="post" enctype="multipart/form-data" class="configuration-form" novalidate>
@@ -44,13 +45,13 @@
             <section class="form-card">
                 <div class="form-section-heading">
                     <span>02</span>
-                    <div><h2>Condiciones financieras</h2><p>Los cambios se aplican a ventas nuevas; las anteriores conservan su recargo.</p></div>
+                    <div><h2>Condiciones financieras</h2><p>Los cambios se aplican a operaciones nuevas; las anteriores conservan su importe diario.</p></div>
                 </div>
                 <div class="form-grid two-columns">
                     <div class="field">
-                        <label for="{{ form.daily_late_fee.id_for_label }}">Recargo diario</label>
+                        <label for="{{ form.daily_late_fee.id_for_label }}">Recargo diario por atraso</label>
                         {{ form.daily_late_fee }}
-                        <p class="field-help">Importe que se suma por cada día de atraso.</p>
+                        <p class="field-help">Se suma una vez por cada día de atraso de la operación, aunque existan varias cuotas vencidas.</p>
                         {% for error in form.daily_late_fee.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                     </div>
                     <div class="field">
@@ -66,6 +67,7 @@
                     <div class="field">
                         <label>Frecuencias disponibles</label>
                         <div class="choice-grid">{{ form.available_frequencies }}</div>
+                        {% if form.available_frequencies.help_text %}<p class="field-help">{{ form.available_frequencies.help_text }}</p>{% endif %}
                         {% for error in form.available_frequencies.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                     </div>
                     <div class="field">
@@ -80,12 +82,12 @@
             <section class="form-card">
                 <div class="form-section-heading">
                     <span>03</span>
-                    <div><h2>Comportamiento</h2><p>Reglas generales para ventas nuevas y recordatorios.</p></div>
+                    <div><h2>Comportamiento</h2><p>Reglas generales para operaciones nuevas y recordatorios.</p></div>
                 </div>
                 <div class="toggle-list">
                     <label>{{ form.charge_sundays }} <span><strong>Generar recargos los domingos</strong><small>Cuenta el domingo como un día de atraso.</small></span></label>
-                    <label>{{ form.late_fee_after_partial_payment }} <span><strong>Seguir sumando recargo después de un pago parcial</strong><small>Se mantiene mientras quede saldo en la cuota.</small></span></label>
-                    <label>{{ form.allow_advance_payments }} <span><strong>Permitir pagos adelantados</strong><small>Autoriza aplicar dinero a cuotas que aún no vencieron.</small></span></label>
+                    <label>{{ form.late_fee_after_partial_payment }} <span><strong>Seguir sumando recargo después de un pago parcial</strong><small>Se mantiene mientras la operación continúe atrasada.</small></span></label>
+                    <label>{{ form.allow_advance_payments }} <span><strong>Permitir pagos adelantados</strong><small>Autoriza pagar cuotas futuras sin mover vencimientos ni dar días de gracia.</small></span></label>
                 </div>
                 <div class="field">
                     <label for="{{ form.whatsapp_message.id_for_label }}">Mensaje de WhatsApp</label>
@@ -94,6 +96,26 @@
                     {% for error in form.whatsapp_message.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
                 </div>
             </section>
+
+            <details class="form-card advanced-safety-card" {% if form.allow_exceptional_sale_edits.value or form.exceptional_edit_unlock_confirmation.errors %}open{% endif %}>
+                <summary>
+                    <span>04</span>
+                    <div><h2>Herramienta excepcional de soporte</h2><p>Mantenela cerrada durante el uso normal.</p></div>
+                </summary>
+                <div class="archive-edit-warning">
+                    <strong>Corrección contable avanzada</strong>
+                    <p>Solo habilitala para corregir una operación que ya tiene pagos o visitas. El sistema intentará reconstruir las cuotas sin cambiar los pagos históricos y rechazará la corrección si no es coherente.</p>
+                </div>
+                <div class="toggle-list">
+                    <label>{{ form.allow_exceptional_sale_edits }} <span><strong>Habilitar una sola corrección excepcional</strong><small>Se desactiva automáticamente después de una corrección exitosa.</small></span></label>
+                </div>
+                <div class="field">
+                    <label for="{{ form.exceptional_edit_unlock_confirmation.id_for_label }}">Confirmación</label>
+                    {{ form.exceptional_edit_unlock_confirmation }}
+                    <p class="field-help">Para activarla, escribí exactamente <strong>HABILITAR</strong> y guardá la configuración.</p>
+                    {% for error in form.exceptional_edit_unlock_confirmation.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
+            </details>
         </div>
 
         <aside class="configuration-preview">

@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% load finance %}
+
+{% block title %}Versión anterior · Archivo seguro{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'core:secure_archive' %}?tipo=revisions">‹ Volver al Archivo seguro</a>
+
+<header class="page-header archive-detail-header">
+    <div>
+        <p class="eyebrow">Copia protegida · Solo lectura</p>
+        <h1>Operación #{{ revision.sale_id }} antes de la edición {{ revision.revision_number }}</h1>
+        <p class="page-subtitle">Archivada el {{ revision.archived_at|date:"d/m/Y H:i" }} porque: {{ revision.reason }}</p>
+    </div>
+    <a class="btn btn-secondary" href="{% url 'core:sale_detail' revision.sale_id %}">Ver operación actual</a>
+</header>
+
+<div class="archive-lock-notice">
+    <strong>Registro inalterable</strong>
+    <p>Esta copia no puede editarse ni borrarse. Sirve para comprobar exactamente qué información tenía la operación antes de la corrección.</p>
+</div>
+
+<section class="panel detail-card">
+    <div class="panel-header compact"><h2>Condiciones anteriores</h2></div>
+    <dl class="detail-list">
+        <div><dt>Cliente</dt><dd>{{ snapshot_sale.customer_name }}</dd></div>
+        <div><dt>DNI</dt><dd>{{ snapshot_sale.customer_dni|default:"No informado" }}</dd></div>
+        <div><dt>Domicilio</dt><dd>{{ snapshot_sale.customer_address|default:"No informado" }}</dd></div>
+        <div><dt>Tipo de operación</dt><dd>{{ snapshot_sale.operation_type_label|default:"Venta de producto" }}</dd></div>
+        <div><dt>{% if snapshot_sale.operation_type == "loan" %}Detalle del préstamo{% else %}Producto{% endif %}</dt><dd>{{ snapshot_sale.product_description }}</dd></div>
+        <div><dt>Fecha de entrega</dt><dd>{{ snapshot_sale.delivery_date_display }}</dd></div>
+        <div><dt>{% if snapshot_sale.operation_type == "loan" %}Dinero prestado{% else %}Precio del producto{% endif %}</dt><dd>{{ snapshot_sale.cash_price|ars }}</dd></div>
+        {% if snapshot_sale.operation_type != "loan" %}<div><dt>Pago inicial aparte</dt><dd>{{ snapshot_sale.down_payment|ars }}</dd></div>{% endif %}
+        <div><dt>{% if snapshot_sale.operation_type == "loan" %}Total a devolver{% else %}Total en cuotas{% endif %}</dt><dd>{{ snapshot_sale.financed_amount|ars }}</dd></div>
+        <div><dt>Frecuencia</dt><dd>{{ snapshot_sale.frequency_label }}</dd></div>
+        <div><dt>Cantidad de cuotas</dt><dd>{{ snapshot_sale.installment_count }}</dd></div>
+        <div><dt>Vencimiento de cuota 1</dt><dd>{{ snapshot_sale.first_due_date_display }}</dd></div>
+        <div><dt>Recargo diario por atraso</dt><dd>{{ snapshot_sale.daily_late_fee|ars }}</dd></div>
+        <div><dt>Estado anterior</dt><dd>{{ snapshot_sale.status_label }}</dd></div>
+        {% if snapshot_sale.loan_disbursement_method %}<div><dt>Entrega del préstamo</dt><dd>{{ snapshot_sale.loan_disbursement_method }}</dd></div>{% endif %}
+        {% if snapshot_sale.operation_type == "loan" %}<div><dt>Interés total</dt><dd>{{ snapshot_sale.loan_interest_rate }}%</dd></div>{% endif %}
+        {% if snapshot_sale.cancellation_reason %}<div class="detail-wide"><dt>Motivo de cancelación</dt><dd>{{ snapshot_sale.cancellation_reason }}</dd></div>{% endif %}
+    </dl>
+</section>
+
+<section class="panel">
+    <div class="panel-header compact"><div><p class="eyebrow">Plan anterior</p><h2>Cuotas archivadas</h2></div><span class="record-count">{{ snapshot_installments|length }}</span></div>
+    {% if snapshot_installments %}
+    <div class="table-wrap">
+        <table class="data-table responsive-table">
+            <thead><tr><th>Cuota</th><th>Vencimiento</th><th class="align-right">Importe original</th><th>Recargos archivados</th></tr></thead>
+            <tbody>
+                {% for installment in snapshot_installments %}
+                <tr>
+                    <td data-label="Cuota">{{ installment.number }}</td>
+                    <td data-label="Vencimiento">{{ installment.due_date_display }}</td>
+                    <td data-label="Importe" class="money-cell">{{ installment.original_amount|ars }}</td>
+                    <td data-label="Recargos">
+                        {% if installment.late_fees %}
+                            {% for fee in installment.late_fees %}<small class="archive-line">{{ fee.fee_date_display|default:fee.fee_date }} · vigente {{ fee.effective_amount|default:fee.amount|ars }}{% if fee.waived_reason %} · dejado sin efecto {{ fee.waived_amount|ars }}{% endif %}</small>{% endfor %}
+                        {% else %}Sin recargos{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</section>
+
+{% if snapshot_payments %}
+<section class="panel">
+    <div class="panel-header compact"><div><p class="eyebrow">Movimientos anteriores</p><h2>Pagos archivados</h2></div><span class="record-count">{{ snapshot_payments|length }}</span></div>
+    <div class="table-wrap">
+        <table class="data-table responsive-table">
+            <thead><tr><th>Fecha</th><th>Tipo</th><th>Medio</th><th class="align-right">Importe</th><th>Estado</th><th>Aplicación original</th><th>Observaciones</th></tr></thead>
+            <tbody>
+                {% for payment in snapshot_payments %}
+                <tr>
+                    <td data-label="Fecha">{{ payment.payment_date_display }}</td>
+                    <td data-label="Tipo">{{ payment.kind_label|default:payment.kind }}</td>
+                    <td data-label="Medio">{{ payment.payment_method }}</td>
+                    <td data-label="Importe" class="money-cell">{{ payment.amount|ars }}</td>
+                    <td data-label="Estado">{{ payment.status_label|default:payment.status }}{% if payment.void_reason %}<small>{{ payment.void_reason }}</small>{% endif %}</td>
+                    <td data-label="Aplicación">
+                        {% for allocation in payment.allocations %}<small class="archive-line">Cuota {{ allocation.installment_number|default:"?" }} · {{ allocation.component_label|default:allocation.component }} · {{ allocation.amount|ars }}</small>{% empty %}Sin aplicaciones{% endfor %}
+                    </td>
+                    <td data-label="Observaciones">{{ payment.notes|default:"Sin observaciones" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if snapshot_attempts %}
+<section class="panel">
+    <div class="panel-header compact"><div><p class="eyebrow">Cobranza anterior</p><h2>Visitas y resultados archivados</h2></div><span class="record-count">{{ snapshot_attempts|length }}</span></div>
+    <div class="table-wrap">
+        <table class="data-table responsive-table">
+            <thead><tr><th>Fecha</th><th>Resultado</th><th>Observaciones</th></tr></thead>
+            <tbody>{% for attempt in snapshot_attempts %}<tr><td data-label="Fecha">{{ attempt.attempt_date_display|default:attempt.attempt_date }}</td><td data-label="Resultado">{{ attempt.result_label }}</td><td data-label="Observaciones">{{ attempt.notes|default:"Sin observaciones" }}</td></tr>{% endfor %}</tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if snapshot_pause_periods %}
+<section class="panel">
+    <div class="panel-header compact"><div><p class="eyebrow">Interés diario</p><h2>Pausas archivadas</h2></div><span class="record-count">{{ snapshot_pause_periods|length }}</span></div>
+    <div class="table-wrap">
+        <table class="data-table responsive-table">
+            <thead><tr><th>Pausado desde</th><th>Reanudado</th><th>Motivo</th></tr></thead>
+            <tbody>{% for period in snapshot_pause_periods %}<tr><td data-label="Pausado desde">{{ period.paused_from }}</td><td data-label="Reanudado">{{ period.resumed_at|default:"Todavía pausado" }}</td><td data-label="Motivo">{{ period.reason }}</td></tr>{% endfor %}</tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

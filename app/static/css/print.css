@@ -96,6 +96,16 @@ body {
     box-shadow: 0 8px 35px rgb(20 38 31 / 15%);
 }
 
+.print-page {
+    break-after: page;
+    page-break-after: always;
+}
+
+.print-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+}
+
 .print-header {
     display: flex;
     gap: 24px;
@@ -210,14 +220,14 @@ body {
 
 .print-list {
     display: grid;
-    gap: 7px;
+    gap: 3px;
 }
 
 .print-entry {
     position: relative;
     display: grid;
-    grid-template-columns: 25px minmax(0, 1fr);
-    min-height: 55mm;
+    grid-template-columns: 20px minmax(0, 1fr);
+    min-height: 21.5mm;
     overflow: hidden;
     border: 1px solid #aebbb5;
     border-radius: 7px;
@@ -230,21 +240,21 @@ body {
     place-items: center;
     background: var(--soft);
     color: var(--muted);
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 900;
     writing-mode: vertical-rl;
 }
 
 .entry-main {
-    padding: 8px 10px;
+    padding: 4px 7px;
 }
 
 .entry-person {
     display: flex;
-    gap: 12px;
+    gap: 8px;
     align-items: flex-start;
     justify-content: space-between;
-    padding-bottom: 5px;
+    padding-bottom: 2px;
     border-bottom: 1px solid var(--line);
 }
 
@@ -260,15 +270,25 @@ body {
 
 .entry-person h2 {
     margin: 1px 0 0;
-    font-size: 14px;
+    font-size: 11px;
     line-height: 1.1;
 }
 
 .entry-late,
 .entry-current {
-    padding: 3px 6px;
+    padding: 2px 5px;
     border-radius: 99px;
-    font-size: 8px;
+    font-size: 7px;
+    white-space: nowrap;
+}
+
+.entry-paused {
+    padding: 2px 5px;
+    border-radius: 99px;
+    background: #fff0cf;
+    color: #805314;
+    font-size: 7px;
+    font-weight: 800;
     white-space: nowrap;
 }
 
@@ -285,8 +305,8 @@ body {
 .entry-details {
     display: grid;
     grid-template-columns: 1.2fr 1fr 0.7fr;
-    gap: 12px;
-    padding-top: 6px;
+    gap: 9px;
+    padding-top: 3px;
 }
 
 .entry-details > div {
@@ -303,29 +323,32 @@ body {
 
 .entry-details strong {
     margin-top: 1px;
-    font-size: 10px;
+    font-size: 8.5px;
 }
 
 .entry-details span {
     color: var(--muted);
-    font-size: 8px;
+    font-size: 7px;
 }
 
 .entry-details .entry-amount {
-    font-size: 13px;
+    font-size: 10px;
 }
 
 .entry-reference {
-    margin: 4px 0 0;
+    margin: 1px 0 0;
+    overflow: hidden;
     color: var(--muted);
-    font-size: 8px;
+    font-size: 7px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .entry-writing {
     display: grid;
     grid-template-columns: 0.75fr 1.25fr;
-    gap: 18px;
-    margin-top: 10px;
+    gap: 12px;
+    margin-top: 3px;
 }
 
 .entry-writing > div {
@@ -337,12 +360,12 @@ body {
 
 .entry-writing span {
     color: var(--muted);
-    font-size: 8px;
+    font-size: 7px;
 }
 
 .entry-writing i {
     display: block;
-    height: 17px;
+    height: 7px;
     border-bottom: 1px solid #7f8d87;
 }
 
@@ -394,8 +417,18 @@ body {
         box-shadow: none;
     }
 
+    .print-page {
+        break-after: page;
+        page-break-after: always;
+    }
+
+    .print-page:last-child {
+        break-after: auto;
+        page-break-after: auto;
+    }
+
     .print-entry {
-        min-height: 52mm;
+        min-height: 21.5mm;
     }
 
 }

@@ -196,7 +196,7 @@ def test_voided_payment_is_excluded_from_total_but_stays_in_timeline(client):
     assert "payment_voided" in event_kinds
 
 
-def test_cancelled_sale_remains_visible_but_is_not_exigible(client):
+def test_cancelled_sale_is_only_available_from_safe_archive(client):
     sale = make_todays_sale()
     sale.status = Sale.Status.CANCELLED
     sale.cancelled_on = timezone.localdate()
@@ -206,11 +206,12 @@ def test_cancelled_sale_remains_visible_but_is_not_exigible(client):
 
     response = client.get(reverse("core:customer_detail", args=[sale.customer_id]))
 
-    assert len(response.context["sale_rows"]) == 1
-    assert response.context["sale_rows"][0]["exigible_total"] == Decimal("0.00")
+    assert response.context["sale_rows"] == []
+    assert response.context["installment_rows"] == []
+    assert response.context["payments"] == []
     assert response.context["total_financed"] == Decimal("0.00")
     assert response.context["total_balance"] == Decimal("0.00")
-    assert any(event["kind"] == "cancelled" for event in response.context["events"])
+    assert response.context["events"] == []
 
 
 def test_customer_history_marks_overdue_installments(client):

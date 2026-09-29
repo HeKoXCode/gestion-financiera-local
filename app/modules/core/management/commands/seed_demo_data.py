@@ -11,18 +11,32 @@ from django.utils import timezone
 from modules.core.models import (
     ZERO,
     BusinessSettings,
+    CollectionAssignment,
     CollectionAttempt,
+    CollectionRoute,
+    Collector,
     Customer,
+    CustomerCollectorLink,
+    CustomerRevision,
     Installment,
     LateFee,
+    LateFeePausePeriod,
     Payment,
     PaymentAllocation,
     Product,
     Sale,
+    SaleRevision,
 )
 from modules.core.services.balances import get_due_sale_balance
-from modules.core.services.installments import create_installments
-from modules.core.services.late_fees import generate_missing_late_fees
+from modules.core.services.installments import (
+    create_installments,
+    next_enabled_collection_day,
+)
+from modules.core.services.late_fees import (
+    generate_missing_late_fees,
+    pause_late_fee_generation,
+    resume_late_fee_generation,
+)
 from modules.core.services.money import as_money
 from modules.core.services.payments import (
     register_initial_payment,
@@ -53,7 +67,16 @@ def _backdate(instance, day: date, *, hour: int = 10) -> None:
     )
 
 
-def _first_due_date(delivery_date: date, frequency: str) -> date:
+def _first_due_date(
+    delivery_date: date,
+    frequency: str,
+    collection_days: list[int],
+) -> date:
+    if frequency == Sale.Frequency.DAILY:
+        return next_enabled_collection_day(
+            delivery_date + timedelta(days=1),
+            collection_days,
+        )
     if frequency == Sale.Frequency.WEEKLY:
         return delivery_date + timedelta(days=7)
     if frequency == Sale.Frequency.BIWEEKLY:
@@ -79,9 +102,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if not options["confirm_reset"]:
-            raise CommandError(
-                "Por seguridad debés ejecutar el comando con --confirm-reset."
-            )
+            raise CommandError("Por seguridad debés ejecutar el comando con --confirm-reset.")
 
         as_of: date = options["as_of"] or timezone.localdate()
         if as_of > timezone.localdate():
@@ -99,7 +120,9 @@ class Command(BaseCommand):
                 customers=customers,
             )
             self._create_collection_attempts(as_of=as_of, sales=sales)
+            self._create_late_fee_pauses(as_of=as_of, sales=sales)
             generate_missing_late_fees(as_of=as_of, settings=settings)
+            self._create_collectors_and_routes(as_of=as_of)
 
         summary = self._summary()
         self.stdout.write(self.style.SUCCESS("Datos de demostración creados correctamente."))
@@ -111,8 +134,15 @@ class Command(BaseCommand):
         PaymentAllocation.objects.all().delete()
         Payment.objects.all().delete()
         LateFee.objects.all().delete()
+        LateFeePausePeriod.objects.all().delete()
         Installment.objects.all().delete()
+        CustomerCollectorLink.objects.all().delete()
+        CollectionAssignment.objects.all().delete()
+        CollectionRoute.objects.all().delete()
+        SaleRevision.objects.all().delete()
+        CustomerRevision.objects.all().delete()
         Sale.objects.all().delete()
+        Collector.objects.all().delete()
         Customer.objects.all().delete()
         Product.objects.all().delete()
 
@@ -128,6 +158,7 @@ class Command(BaseCommand):
             "Otro",
         ]
         settings.available_frequencies = [
+            Sale.Frequency.DAILY,
             Sale.Frequency.WEEKLY,
             Sale.Frequency.BIWEEKLY,
             Sale.Frequency.MONTHLY,
@@ -135,10 +166,9 @@ class Command(BaseCommand):
         settings.max_installments = 60
         settings.charge_sundays = False
         settings.late_fee_after_partial_payment = True
-        settings.allow_advance_payments = False
+        settings.allow_advance_payments = True
         settings.whatsapp_message = (
-            "Hola {nombre}. Demo: tenés pendiente {monto}, "
-            "con vencimiento {vencimiento}."
+            "Hola {nombre}. Demo: tenés pendiente {monto}, con vencimiento {vencimiento}."
         )
         settings.save()
         return settings
@@ -181,7 +211,7 @@ class Command(BaseCommand):
             "Barrio Largo para Probar Diseño",
         ]
         customers = []
-        for index in range(1, 49):
+        for index in range(1, 51):
             customer = Customer.objects.create(
                 first_name=f"Cliente {index:02d}",
                 last_name=f"Apellido Inventado {index:02d}",
@@ -190,9 +220,7 @@ class Command(BaseCommand):
                 address=f"Domicilio Inventado {index} — Altura {100 + index}",
                 neighborhood=neighborhoods[(index - 1) % len(neighborhoods)],
                 address_reference=(
-                    ""
-                    if index % 4 == 0
-                    else f"Referencia ficticia {index}: portón color demo"
+                    "" if index % 4 == 0 else f"Referencia ficticia {index}: portón color demo"
                 ),
                 notes=(
                     "Sin observaciones"
@@ -202,7 +230,7 @@ class Command(BaseCommand):
                 is_active=index % 11 != 0,
             )
             # Spread the customer records from roughly three months ago to today.
-            days_ago = round((48 - index) * 90 / 47)
+            days_ago = round((50 - index) * 90 / 49)
             _backdate(customer, as_of - timedelta(days=days_ago))
             customers.append(customer)
         return customers
@@ -216,6 +244,7 @@ class Command(BaseCommand):
         customers: list[Customer],
     ) -> list[Sale]:
         frequencies = [
+            Sale.Frequency.DAILY,
             Sale.Frequency.WEEKLY,
             Sale.Frequency.BIWEEKLY,
             Sale.Frequency.MONTHLY,
@@ -223,39 +252,56 @@ class Command(BaseCommand):
         payment_methods = settings.payment_methods
         sales = []
 
-        for index, customer in enumerate(customers, start=1):
+        for index in range(1, 71):
+            customer = customers[(index - 1) % len(customers)]
             scenario = (index - 1) % len(SCENARIO_LABELS)
             frequency = frequencies[(index - 1) % len(frequencies)]
             age_by_scenario = [90, 88, 65, 52, 10, 45, 38, 78]
             age = max(3, age_by_scenario[scenario] - ((index - 1) // 8))
             delivery_date = as_of - timedelta(days=age)
             installment_count = 3 if scenario in {0, 1} else 6 + (index % 5)
-            product = products[(index - 1) % (len(products) - 1)]
+            is_loan = index % 5 == 0
+            product = None if is_loan else products[(index - 1) % (len(products) - 1)]
 
-            product_price = Decimal(120000 + index * 27500).quantize(
-                Decimal("0.01")
-            )
+            product_price = Decimal(120000 + index * 27500).quantize(Decimal("0.01"))
             down_payment = (
-                as_money(product_price * Decimal("0.20"))
+                ZERO
+                if is_loan
+                else as_money(product_price * Decimal("0.20"))
                 if index % 3 == 0
                 else ZERO
             )
             base_total = as_money(product_price - down_payment)
-            adjustment_mode = index % 3
-            if adjustment_mode == 1:
-                installment_total = as_money(base_total * Decimal("1.10"))
-            elif adjustment_mode == 2:
-                installment_total = as_money(base_total * Decimal("0.95"))
+            if is_loan:
+                loan_interest_rate = Decimal([15, 20, 25, 30][index % 4])
+                installment_total = as_money(
+                    product_price * (Decimal("1.00") + loan_interest_rate / Decimal("100"))
+                )
             else:
-                installment_total = base_total
+                loan_interest_rate = ZERO
+                adjustment_mode = index % 3
+                if adjustment_mode == 1:
+                    installment_total = as_money(base_total * Decimal("1.10"))
+                elif adjustment_mode == 2:
+                    installment_total = as_money(base_total * Decimal("0.95"))
+                else:
+                    installment_total = base_total
 
             sale = Sale(
                 customer=customer,
                 product=product,
                 product_description=(
-                    f"{product.name} — venta demo {index:02d} "
-                    f"({SCENARIO_LABELS[scenario]})"
+                    f"Préstamo demo {index:02d} ({SCENARIO_LABELS[scenario]})"
+                    if is_loan
+                    else f"{product.name} — venta demo {index:02d} ({SCENARIO_LABELS[scenario]})"
                 ),
+                operation_type=(
+                    Sale.OperationType.LOAN if is_loan else Sale.OperationType.PRODUCT
+                ),
+                loan_disbursement_method=(
+                    payment_methods[index % len(payment_methods)] if is_loan else ""
+                ),
+                loan_interest_rate=loan_interest_rate,
                 delivery_date=delivery_date,
                 cash_price=product_price,
                 down_payment=down_payment,
@@ -265,11 +311,13 @@ class Command(BaseCommand):
                 daily_late_fee=(
                     Decimal("0.00")
                     if index % 10 == 0
-                    else [Decimal("1500.00"), Decimal("2500.00"), Decimal("5000.00")][
-                        index % 3
-                    ]
+                    else [Decimal("1500.00"), Decimal("2500.00"), Decimal("5000.00")][index % 3]
                 ),
-                first_due_date=_first_due_date(delivery_date, frequency),
+                first_due_date=_first_due_date(
+                    delivery_date,
+                    frequency,
+                    settings.collection_days,
+                ),
                 status=Sale.Status.ACTIVE,
             )
             sale.full_clean()
@@ -394,9 +442,7 @@ class Command(BaseCommand):
         if scenario == 5:
             sale.status = Sale.Status.CANCELLED
             sale.cancelled_on = min(sale.delivery_date + timedelta(days=5), as_of)
-            sale.cancellation_reason = (
-                "Cancelación ficticia para comprobar estados e historial."
-            )
+            sale.cancellation_reason = "Cancelación ficticia para comprobar estados e historial."
             sale.full_clean()
             sale.save(
                 update_fields=[
@@ -488,6 +534,121 @@ class Command(BaseCommand):
             )
             _backdate(attempt, attempt_date, hour=17)
 
+    def _create_late_fee_pauses(self, *, as_of: date, sales: list[Sale]) -> None:
+        candidates = list(
+            Sale.objects.filter(
+                pk__in=[sale.pk for sale in sales],
+                status=Sale.Status.ACTIVE,
+                daily_late_fee__gt=ZERO,
+            ).order_by("pk")
+        )
+        for index, sale in enumerate(candidates[:8]):
+            pause_date = as_of - timedelta(days=4 + (index % 2))
+            pause_late_fee_generation(
+                sale=sale,
+                reason=f"Pausa ficticia {index + 1} para comprobar la versión 1.6.",
+                action_date=pause_date,
+            )
+            if index % 2:
+                resume_late_fee_generation(
+                    sale=sale,
+                    reason="Reanudación ficticia para QA.",
+                    action_date=as_of - timedelta(days=1),
+                )
+
+    def _create_collectors_and_routes(self, *, as_of: date) -> None:
+        collector_names = [
+            "Cobrador Demo Norte",
+            "Cobrador Demo Sur",
+            "Cobrador Demo Centro",
+            "Cobrador Demo Oeste",
+            "Cobrador Demo Apoyo",
+        ]
+        collectors = [Collector.objects.create(name=name) for name in collector_names]
+        customers = {customer.pk: customer for customer in Customer.objects.all()}
+        activity: dict[tuple[date, int], dict[str, list]] = {}
+
+        for payment in Payment.objects.filter(
+            status=Payment.Status.REGISTERED,
+            kind=Payment.Kind.INSTALLMENT,
+        ).select_related("sale"):
+            key = (payment.payment_date, payment.customer_id)
+            item = activity.setdefault(key, {"payments": [], "attempts": [], "sales": []})
+            item["payments"].append(payment)
+            item["sales"].append(payment.sale)
+
+        for attempt in CollectionAttempt.objects.select_related("sale"):
+            key = (attempt.attempt_date, attempt.customer_id)
+            item = activity.setdefault(key, {"payments": [], "attempts": [], "sales": []})
+            item["attempts"].append(attempt)
+            item["sales"].append(attempt.sale)
+
+        for (activity_date, customer_id), item in sorted(activity.items()):
+            collector = collectors[(customer_id - 1) % len(collectors)]
+            route, _ = CollectionRoute.objects.get_or_create(
+                collection_date=activity_date,
+                collector=collector,
+            )
+            customer = customers[customer_id]
+            unique_sales = {sale.pk: sale for sale in item["sales"]}
+            expected_amount = as_money(sum((payment.amount for payment in item["payments"]), ZERO))
+            if expected_amount <= ZERO and unique_sales:
+                first_sale = next(iter(unique_sales.values()))
+                first_installment = first_sale.installments.order_by("number").first()
+                expected_amount = first_installment.original_amount if first_installment else ZERO
+            assignment = CollectionAssignment.objects.create(
+                route=route,
+                customer=customer,
+                assigned_date=activity_date,
+                expected_amount=expected_amount,
+                snapshot={
+                    "customer_name": customer.full_name,
+                    "phone": customer.phone,
+                    "address": customer.address,
+                    "neighborhood": customer.neighborhood,
+                    "address_reference": customer.address_reference,
+                    "days_overdue": max(0, (as_of - activity_date).days),
+                    "has_installment_today": True,
+                    "capital_due": str(expected_amount),
+                    "late_fees_due": "0.00",
+                    "items": [
+                        {
+                            "sale_id": sale.pk,
+                            "product": sale.product_description,
+                            "oldest_installment": 1,
+                            "installment_count": sale.installment_count,
+                            "due_installment_count": 1,
+                            "total_due": str(expected_amount),
+                            "late_fees_due": "0.00",
+                        }
+                        for sale in unique_sales.values()
+                    ],
+                },
+            )
+            Payment.objects.filter(pk__in=[payment.pk for payment in item["payments"]]).update(
+                collector=collector, collection_assignment=assignment
+            )
+            CollectionAttempt.objects.filter(
+                pk__in=[attempt.pk for attempt in item["attempts"]]
+            ).update(collector=collector, collection_assignment=assignment)
+            _backdate(route, activity_date, hour=9)
+            _backdate(assignment, activity_date, hour=9)
+
+        latest_assignments = {}
+        for assignment in CollectionAssignment.objects.select_related(
+            "route",
+            "route__collector",
+        ).order_by("assigned_date", "pk"):
+            latest_assignments[assignment.customer_id] = assignment
+        for assignment in latest_assignments.values():
+            CustomerCollectorLink.objects.create(
+                customer_id=assignment.customer_id,
+                collector=assignment.route.collector,
+                started_at=as_of,
+                source_route=assignment.route,
+                reason="Asignación ficticia habitual para QA 1.6",
+            )
+
     def _summary(self) -> dict[str, int]:
         return {
             "clientes": Customer.objects.count(),
@@ -495,17 +656,17 @@ class Command(BaseCommand):
             "productos": Product.objects.count(),
             "ventas": Sale.objects.count(),
             "ventas activas": Sale.objects.filter(status=Sale.Status.ACTIVE).count(),
-            "ventas finalizadas": Sale.objects.filter(
-                status=Sale.Status.COMPLETED
-            ).count(),
-            "ventas canceladas": Sale.objects.filter(
-                status=Sale.Status.CANCELLED
-            ).count(),
+            "ventas finalizadas": Sale.objects.filter(status=Sale.Status.COMPLETED).count(),
+            "ventas canceladas": Sale.objects.filter(status=Sale.Status.CANCELLED).count(),
             "cuotas": Installment.objects.count(),
             "recargos": LateFee.objects.count(),
+            "pausas de interés": LateFeePausePeriod.objects.count(),
             "pagos": Payment.objects.count(),
-            "pagos anulados": Payment.objects.filter(
-                status=Payment.Status.VOIDED
-            ).count(),
+            "pagos anulados": Payment.objects.filter(status=Payment.Status.VOIDED).count(),
             "visitas": CollectionAttempt.objects.count(),
+            "cobradores": Collector.objects.count(),
+            "recorridos": CollectionRoute.objects.count(),
+            "clientes con cobrador habitual": CustomerCollectorLink.objects.filter(
+                ended_at__isnull=True
+            ).count(),
         }

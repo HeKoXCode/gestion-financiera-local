@@ -11,4 +11,3 @@ def configure_sqlite_connection(sender, connection, **kwargs) -> None:
         cursor.execute("PRAGMA foreign_keys = ON")
         cursor.execute("PRAGMA busy_timeout = 20000")
         cursor.execute("PRAGMA journal_mode = WAL")
-

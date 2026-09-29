@@ -4,9 +4,13 @@
 {% block title %}{{ sale.operation_name }} · {{ sale.product_description }} · Gestión Financiera{% endblock %}
 
 {% block content %}
+{% if sale.status == "cancelled" %}
+<a class="back-link" href="{% url 'core:secure_archive' %}?tipo=cancelled">‹ Volver al Archivo seguro</a>
+{% else %}
 <a class="back-link" href="{% url 'core:sale_list' %}">‹ Volver a ventas y préstamos</a>
+{% endif %}
 
-<section class="sale-hero">
+<section class="sale-hero{% if sale.is_loan %} is-loan-hero{% endif %}">
     <div>
         <p class="eyebrow">{{ sale.operation_name }} #{{ sale.pk }}</p>
         <div class="title-with-badge">
@@ -24,6 +28,14 @@
             {% if due_balance.total_due > 0 %}
                 <a class="btn btn-primary" href="{% url 'core:payment_create' sale.pk %}">Registrar pago</a>
             {% endif %}
+            {% if can_advance_sale %}
+                <a class="btn btn-primary" href="{% url 'core:advance_payment_create' sale.pk %}?origen=venta">Adelantar próxima cuota</a>
+            {% endif %}
+            {% if not edit_block_reason %}
+                <a class="btn btn-secondary" href="{% url 'core:sale_edit' sale.pk %}">{% if exceptional_edit_available %}Corrección excepcional{% else %}Editar {{ sale.operation_name|lower }} · {{ remaining_edits }} disponible{{ remaining_edits|pluralize }}{% endif %}</a>
+            {% else %}
+                <button class="btn btn-secondary" type="button" disabled title="{{ edit_block_reason }}">Editar operación no disponible</button>
+            {% endif %}
             <a class="btn btn-danger-ghost" href="{% url 'core:sale_cancel' sale.pk %}">Cancelar {{ sale.operation_name|lower }}</a>
         {% endif %}
     </div>
@@ -36,7 +48,25 @@
 </div>
 {% endif %}
 
-<section class="sale-summary-grid">
+{% if sale.edit_count %}
+<div class="archive-notice">
+    <strong>{% if sale.edit_count == 1 %}1 versión anterior protegida{% else %}{{ sale.edit_count }} versiones anteriores protegidas{% endif %}</strong>
+    <p>Las condiciones previas permanecen ineditables en el Archivo seguro.</p>
+    <a href="{% url 'core:secure_archive' %}?tipo=revisions&q={{ sale.pk }}">Ver historial de ediciones</a>
+</div>
+{% endif %}
+
+{% if active_late_fee_pause %}
+<div class="interest-pause-notice">
+    <div>
+        <strong>Interés diario pausado desde {{ active_late_fee_pause.paused_from|date:"d/m/Y" }}</strong>
+        <p>La deuda, los días de atraso y los recargos anteriores siguen vigentes. Los días pausados no generan recargos nuevos.</p>
+    </div>
+    <a class="btn btn-secondary btn-compact" href="{% url 'core:collection_list' %}">Ir a Cobranza</a>
+</div>
+{% endif %}
+
+<section class="sale-summary-grid{% if sale.is_loan %} is-loan-summary{% endif %}">
     <article>
         <span>{% if sale.is_loan %}Dinero prestado{% else %}Precio del producto{% endif %}</span>
         <strong>{{ sale.cash_price|ars }}</strong>
@@ -64,9 +94,9 @@
         <div class="panel-header compact"><h2>Condiciones acordadas</h2></div>
         <dl class="detail-list">
             {% if sale.is_loan %}
-            <div><dt>Tipo de operación</dt><dd>Préstamo de dinero</dd></div>
+            <div><dt>Tipo de operación</dt><dd><span class="badge badge-loan">Préstamo de dinero</span></dd></div>
             <div><dt>Medio de entrega</dt><dd>{{ sale.loan_disbursement_method }}</dd></div>
-            <div><dt>Interés total</dt><dd>{{ sale.loan_interest_rate }}%</dd></div>
+            <div><dt>Interés total acordado</dt><dd>{{ sale.loan_interest_rate }}%</dd></div>
             <div><dt>Interés en pesos</dt><dd>{{ sale.loan_interest_amount|ars }}</dd></div>
             {% else %}
             <div><dt>Producto del catálogo</dt><dd>{{ sale.product.name }}</dd></div>
@@ -77,12 +107,27 @@
             {% if not sale.is_loan %}<div>
                 <dt>{% if sale.financing_adjustment > 0 %}Costo de financiación{% elif sale.financing_adjustment < 0 %}Descuento en cuotas{% else %}Ajuste por financiación{% endif %}</dt>
                 <dd>{{ sale.financing_adjustment|ars }}</dd>
-            </div>{% endif %}
-            {% if not sale.is_loan %}<div><dt>Medio del pago inicial aparte</dt><dd>{% if initial_payment %}{{ initial_payment.payment_method }}{% else %}Sin pago inicial{% endif %}</dd></div>{% endif %}
+            </div>
+            <div><dt>Medio del pago inicial aparte</dt><dd>{% if initial_payment %}{{ initial_payment.payment_method }}{% else %}Sin pago inicial{% endif %}</dd></div>{% endif %}
             <div><dt>Vencimiento de la cuota 1</dt><dd>{{ sale.first_due_date|date:"d/m/Y" }}</dd></div>
-            <div><dt>Recargo diario</dt><dd>{{ sale.daily_late_fee|ars }}</dd></div>
+            <div><dt>Recargo diario por atraso</dt><dd>{{ sale.daily_late_fee|ars }}</dd></div>
+            <div><dt>Estado del interés diario</dt><dd>{% if active_late_fee_pause %}<span class="badge badge-paused">Pausado</span>{% else %}<span class="badge badge-success">Activo</span>{% endif %}</dd></div>
             <div><dt>{{ sale.operation_name }} {% if sale.is_loan %}registrado{% else %}registrada{% endif %}</dt><dd>{{ sale.created_at|date:"d/m/Y H:i" }}</dd></div>
         </dl>
+        {% if late_fee_pause_periods %}
+        <details class="pause-history">
+            <summary>Ver historial de pausas</summary>
+            <ul>
+                {% for period in late_fee_pause_periods %}
+                <li>
+                    <strong>{{ period.paused_from|date:"d/m/Y" }}</strong>
+                    {% if period.resumed_at %} → reactivado {{ period.resumed_at|date:"d/m/Y" }}{% else %} → vigente{% endif %}
+                    <span>{{ period.reason }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </details>
+        {% endif %}
     </section>
     <aside class="panel balance-card">
         <p class="eyebrow">{% if sale.status == "cancelled" %}Saldo histórico{% else %}Saldo de la operación{% endif %}</p>
@@ -104,7 +149,7 @@
         <span class="record-count">{{ sale.get_frequency_display }}</span>
     </div>
     <div class="table-wrap">
-        <table class="data-table responsive-table">
+        <table class="data-table responsive-table advance-actions-table">
             <thead>
                 <tr>
                     <th>Cuota</th>
@@ -113,6 +158,7 @@
                     <th class="align-right">Importe de cuota</th>
                     <th class="align-right">Recargos</th>
                     <th class="align-right">Saldo</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -128,7 +174,7 @@
                         {% elif row.balance.total_due == 0 %}
                             <span class="badge badge-success">Pagada en fecha</span>
                         {% elif row.installment.due_date < today %}
-                            <span class="badge badge-danger">{{ row.balance.days_overdue }} días de atraso</span>
+                            <span class="badge badge-danger">{{ row.balance.days_overdue }} día{{ row.balance.days_overdue|pluralize }} de atraso</span>
                         {% elif row.installment.due_date == today %}
                             <span class="badge badge-warning">Vence hoy</span>
                         {% else %}
@@ -138,6 +184,15 @@
                     <td data-label="Importe" class="money-cell">{{ row.installment.original_amount|ars }}</td>
                     <td data-label="Recargos" class="money-cell">{{ row.balance.late_fees_generated|ars }}</td>
                     <td data-label="Saldo" class="money-cell"><strong>{{ row.balance.total_due|ars }}</strong></td>
+                    <td data-label="Acción" class="row-action">
+                        {% if row.can_advance %}
+                            <a class="btn btn-primary btn-compact" href="{% url 'core:advance_payment_create' sale.pk %}?origen=venta">
+                                Adelantar esta cuota
+                            </a>
+                        {% elif row.advance_locked %}
+                            <span class="badge badge-neutral" title="Primero debe completarse la cuota futura anterior">Después de la anterior</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -172,7 +227,7 @@
                     {% for payment in payments %}
                     <tr>
                         <td data-label="Fecha">{{ payment.payment_date|date:"d/m/Y" }}</td>
-                        <td data-label="Tipo">{{ payment.get_kind_display }}</td>
+                        <td data-label="Tipo">{{ payment.movement_label }}</td>
                         <td data-label="Medio de pago">{{ payment.payment_method }}</td>
                         <td data-label="Estado">
                             {% if payment.status == "registered" %}
@@ -185,7 +240,7 @@
                         <td data-label="Observaciones">{{ payment.notes|default:"—" }}</td>
                         <td data-label="Importe" class="money-cell">{{ payment.amount|ars }}</td>
                         <td data-label="Acciones" class="payment-action-cell">
-                            {% if payment.status == "registered" and payment.kind != "initial" %}
+                            {% if payment.status == "registered" and payment.kind != "initial" and sale.status != "cancelled" and not sale.customer.is_deleted %}
                                 <a class="mini-action danger" href="{% url 'core:payment_void' payment.pk %}">Anular</a>
                             {% endif %}
                         </td>
@@ -198,7 +253,7 @@
         <div class="empty-state compact">
             <span class="empty-icon" aria-hidden="true">$</span>
             <h3>Sin pagos registrados</h3>
-            <p>Los pagos de cuotas y, cuando corresponda, el pago inicial aparecerán en esta sección.</p>
+            <p>{% if sale.is_loan %}Los pagos de cuotas aparecerán en esta sección.{% else %}El pago inicial aparte y los pagos de cuotas aparecerán en esta sección.{% endif %}</p>
         </div>
         {% endif %}
     </section>

@@ -120,18 +120,23 @@ Abrir `Configuración` y revisar, en este orden:
 
 1. nombre del negocio;
 2. logo opcional PNG, JPG o WEBP de hasta 2 MB;
-3. recargo diario;
+3. recargo diario por atraso;
 4. días en los que se realizan cobranzas;
 5. frecuencias habilitadas: semanal, quincenal y/o mensual;
 6. medios de pago, uno por línea;
 7. cantidad máxima de cuotas;
-8. si los domingos generan recargo;
-9. si el recargo continúa después de un pago parcial;
-10. si se permiten pagos adelantados;
-11. texto que se prepara al abrir WhatsApp.
+8. si se permiten pagos adelantados;
+9. texto que se prepara al abrir WhatsApp.
 
-Explicar que el recargo configurado se copia en cada venta nueva. Cambiarlo más
-adelante no altera retroactivamente las condiciones de las ventas anteriores.
+Explicar que las cuotas vencidas suman sus importes, pero el recargo se calcula
+una sola vez por día para toda la venta desde la cuota impaga más antigua. Los
+días individuales siguen visibles en el historial. El valor configurado se
+copia en cada venta nueva.
+
+Para adelantar una cuota existen dos accesos: Cobranza → Registrar pago
+adelantado, o Clientes → cliente → Venta → Adelantar esta cuota. Se propone la
+próxima cuota completa, aunque también admite un pago parcial o varias cuotas.
+El adelanto se fecha hoy y nunca mueve el cronograma ni agrega días de gracia.
 
 El texto `Sincronizado localmente` significa que los cambios ya están guardados
 en esta PC. No significa que exista una nube ni que los datos se hayan enviado
@@ -315,8 +320,8 @@ siguen impagas. Por cada venta muestra:
 
 - cliente y domicilio;
 - producto;
-- cuotas pendientes;
-- recargos;
+- cuotas vencidas acumuladas por venta;
+- un solo recargo diario acumulado;
 - total exigible;
 - cantidad de días de atraso.
 
@@ -395,9 +400,9 @@ Permiten revisar una fecha y muestran:
 
 ### Configuración
 
-Permite adaptar el sistema sin tocar código: negocio y logo, reglas de recargo,
-días, frecuencias, medios de pago, máximo de cuotas, adelantos y mensaje de
-WhatsApp.
+Permite adaptar el sistema sin tocar código: negocio y logo, recargo diario por
+atraso, días, frecuencias, medios de pago, máximo de cuotas, adelantos y mensaje
+de WhatsApp.
 
 ### Datos y respaldo
 

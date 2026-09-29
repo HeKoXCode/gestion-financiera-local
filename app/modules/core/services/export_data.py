@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import json
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
@@ -13,14 +14,21 @@ from django.utils import timezone
 
 from modules.core.models import (
     BusinessSettings,
+    CollectionAssignment,
     CollectionAttempt,
+    CollectionRoute,
+    Collector,
     Customer,
+    CustomerCollectorLink,
+    CustomerRevision,
     Installment,
     LateFee,
+    LateFeePausePeriod,
     Payment,
     PaymentAllocation,
     Product,
     Sale,
+    SaleRevision,
 )
 
 
@@ -38,12 +46,19 @@ class ExportInfo:
 
 EXPECTED_FILES = {
     "clientes.csv",
+    "historial_ediciones_clientes.csv",
     "productos.csv",
     "ventas.csv",
+    "historial_ediciones_ventas.csv",
     "cuotas.csv",
     "recargos.csv",
+    "pausas_recargo_diario.csv",
     "pagos.csv",
     "aplicaciones_pago.csv",
+    "cobradores.csv",
+    "cobradores_habituales.csv",
+    "recorridos_cobranza.csv",
+    "asignaciones_cobranza.csv",
     "intentos_cobranza.csv",
     "configuracion.csv",
     "resumen.txt",
@@ -96,6 +111,8 @@ def _export_tables() -> dict[str, tuple[list[str], list[tuple]]]:
                 "referencia_domicilio",
                 "observaciones",
                 "activo",
+                "borrado_el",
+                "motivo_borrado",
                 "creado",
                 "modificado",
             ],
@@ -111,10 +128,33 @@ def _export_tables() -> dict[str, tuple[list[str], list[tuple]]]:
                     item.address_reference,
                     item.notes,
                     item.is_active,
+                    item.deleted_at,
+                    item.deletion_reason,
                     item.created_at,
                     item.updated_at,
                 )
                 for item in Customer.objects.order_by("pk")
+            ],
+        ),
+        "historial_ediciones_clientes.csv": (
+            [
+                "id",
+                "cliente_id",
+                "numero_edicion",
+                "motivo",
+                "copia_anterior_json",
+                "archivada_el",
+            ],
+            [
+                (
+                    item.pk,
+                    item.customer_id,
+                    item.revision_number,
+                    item.reason,
+                    json.dumps(item.snapshot, ensure_ascii=False, sort_keys=True),
+                    item.archived_at,
+                )
+                for item in CustomerRevision.objects.order_by("pk")
             ],
         ),
         "productos.csv": (
@@ -146,11 +186,12 @@ def _export_tables() -> dict[str, tuple[list[str], list[tuple]]]:
                 "total_en_cuotas",
                 "frecuencia",
                 "cantidad_cuotas",
-                "recargo_diario",
+                "recargo_diario_atraso",
                 "primer_vencimiento",
                 "estado",
                 "fecha_cancelacion",
                 "motivo_cancelacion",
+                "cantidad_ediciones",
                 "creado",
                 "modificado",
             ],
@@ -174,10 +215,32 @@ def _export_tables() -> dict[str, tuple[list[str], list[tuple]]]:
                     item.status,
                     item.cancelled_on,
                     item.cancellation_reason,
+                    item.edit_count,
                     item.created_at,
                     item.updated_at,
                 )
                 for item in Sale.objects.order_by("pk")
+            ],
+        ),
+        "historial_ediciones_ventas.csv": (
+            [
+                "id",
+                "venta_id",
+                "numero_edicion",
+                "motivo",
+                "copia_anterior_json",
+                "archivada_el",
+            ],
+            [
+                (
+                    item.pk,
+                    item.sale_id,
+                    item.revision_number,
+                    item.reason,
+                    json.dumps(item.snapshot, ensure_ascii=False, sort_keys=True),
+                    item.archived_at,
+                )
+                for item in SaleRevision.objects.order_by("pk")
             ],
         ),
         "cuotas.csv": (
@@ -204,17 +267,57 @@ def _export_tables() -> dict[str, tuple[list[str], list[tuple]]]:
             ],
         ),
         "recargos.csv": (
-            ["id", "cuota_id", "fecha", "importe", "creado", "modificado"],
+            [
+                "id",
+                "cuota_id",
+                "fecha",
+                "importe_original",
+                "importe_dejado_sin_efecto",
+                "importe_vigente",
+                "motivo_importe_sin_efecto",
+                "dejado_sin_efecto_el",
+                "creado",
+                "modificado",
+            ],
             [
                 (
                     item.pk,
                     item.installment_id,
                     item.fee_date,
                     item.amount,
+                    item.waived_amount,
+                    item.effective_amount,
+                    item.waived_reason,
+                    item.waived_at,
                     item.created_at,
                     item.updated_at,
                 )
                 for item in LateFee.objects.order_by("pk")
+            ],
+        ),
+        "pausas_recargo_diario.csv": (
+            [
+                "id",
+                "venta_id",
+                "pausado_desde",
+                "reanudado_el",
+                "motivo_pausa",
+                "motivo_reanudacion",
+                "creado",
+                "modificado",
+            ],
+            [
+                (
+                    item.pk,
+                    item.sale_id,
+                    item.paused_from,
+                    item.resumed_at,
+                    item.reason,
+                    item.resume_reason,
+                    item.created_at,
+                    item.updated_at,
+                )
+                for item in LateFeePausePeriod.objects.order_by("pk")
             ],
         ),
         "pagos.csv": (
@@ -223,10 +326,13 @@ def _export_tables() -> dict[str, tuple[list[str], list[tuple]]]:
                 "clave_operacion",
                 "cliente_id",
                 "venta_id",
+                "cobrador_id",
+                "asignacion_cobranza_id",
                 "fecha",
                 "importe",
                 "metodo",
                 "tipo",
+                "pago_adelantado",
                 "observaciones",
                 "estado",
                 "anulado_el",
@@ -240,10 +346,13 @@ def _export_tables() -> dict[str, tuple[list[str], list[tuple]]]:
                     item.idempotency_key,
                     item.customer_id,
                     item.sale_id,
+                    item.collector_id,
+                    item.collection_assignment_id,
                     item.payment_date,
                     item.amount,
                     item.payment_method,
                     item.kind,
+                    item.is_advance,
                     item.notes,
                     item.status,
                     item.voided_at,
@@ -277,11 +386,101 @@ def _export_tables() -> dict[str, tuple[list[str], list[tuple]]]:
                 for item in PaymentAllocation.objects.order_by("pk")
             ],
         ),
+        "cobradores.csv": (
+            [
+                "id",
+                "nombre",
+                "activo",
+                "archivado_el",
+                "motivo_archivado",
+                "creado",
+                "modificado",
+            ],
+            [
+                (
+                    item.pk,
+                    item.name,
+                    item.is_active,
+                    item.archived_at,
+                    item.archive_reason,
+                    item.created_at,
+                    item.updated_at,
+                )
+                for item in Collector.objects.order_by("pk")
+            ],
+        ),
+        "cobradores_habituales.csv": (
+            [
+                "id",
+                "cliente_id",
+                "cobrador_id",
+                "asignado_desde",
+                "finalizado_el",
+                "recorrido_origen_id",
+                "motivo",
+                "creado",
+                "modificado",
+            ],
+            [
+                (
+                    item.pk,
+                    item.customer_id,
+                    item.collector_id,
+                    item.started_at,
+                    item.ended_at,
+                    item.source_route_id,
+                    item.reason,
+                    item.created_at,
+                    item.updated_at,
+                )
+                for item in CustomerCollectorLink.objects.order_by("pk")
+            ],
+        ),
+        "recorridos_cobranza.csv": (
+            ["id", "fecha", "cobrador_id", "creado", "modificado"],
+            [
+                (
+                    item.pk,
+                    item.collection_date,
+                    item.collector_id,
+                    item.created_at,
+                    item.updated_at,
+                )
+                for item in CollectionRoute.objects.order_by("pk")
+            ],
+        ),
+        "asignaciones_cobranza.csv": (
+            [
+                "id",
+                "recorrido_id",
+                "cliente_id",
+                "fecha_asignada",
+                "importe_esperado",
+                "detalle_al_asignar_json",
+                "creado",
+                "modificado",
+            ],
+            [
+                (
+                    item.pk,
+                    item.route_id,
+                    item.customer_id,
+                    item.assigned_date,
+                    item.expected_amount,
+                    json.dumps(item.snapshot, ensure_ascii=False, sort_keys=True),
+                    item.created_at,
+                    item.updated_at,
+                )
+                for item in CollectionAssignment.objects.order_by("pk")
+            ],
+        ),
         "intentos_cobranza.csv": (
             [
                 "id",
                 "cliente_id",
                 "venta_id",
+                "cobrador_id",
+                "asignacion_cobranza_id",
                 "fecha",
                 "resultado",
                 "observaciones",
@@ -293,6 +492,8 @@ def _export_tables() -> dict[str, tuple[list[str], list[tuple]]]:
                     item.pk,
                     item.customer_id,
                     item.sale_id,
+                    item.collector_id,
+                    item.collection_assignment_id,
                     item.attempt_date,
                     item.result,
                     item.notes,
@@ -306,14 +507,15 @@ def _export_tables() -> dict[str, tuple[list[str], list[tuple]]]:
             [
                 "nombre_negocio",
                 "logo",
-                "recargo_diario",
+                "recargo_diario_atraso",
                 "dias_cobranza",
                 "metodos_pago",
                 "frecuencias",
                 "maximo_cuotas",
-                "recargo_domingos",
-                "recargo_tras_pago_parcial",
+                "generar_recargo_domingos",
+                "continuar_recargo_tras_pago_parcial",
                 "pagos_adelantados",
+                "correccion_excepcional_habilitada",
                 "mensaje_whatsapp",
                 "modificado",
             ],
@@ -329,6 +531,7 @@ def _export_tables() -> dict[str, tuple[list[str], list[tuple]]]:
                     business.charge_sundays,
                     business.late_fee_after_partial_payment,
                     business.allow_advance_payments,
+                    business.allow_exceptional_sale_edits,
                     business.whatsapp_message,
                     business.updated_at,
                 )

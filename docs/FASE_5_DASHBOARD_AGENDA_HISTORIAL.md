@@ -29,9 +29,9 @@ La pantalla inicial ahora muestra para la fecha seleccionada:
 - visitas de cobranza registradas;
 - últimos cinco pagos.
 
-Las cobranzas se agrupan por venta. Si una venta tiene varias cuotas exigibles,
-se presenta una sola fila con el total pendiente. El orden prioriza mayor
-atraso y luego el nombre del cliente.
+Las cobranzas se agrupan por venta. Cada venta presenta solamente su cuota
+abierta más antigua, aun cuando también hayan pasado fechas posteriores. El
+orden prioriza mayor atraso y luego el nombre del cliente.
 
 El dashboard permite cambiar rápidamente entre lunes y sábado. Una consulta
 histórica respeta los pagos existentes hasta esa fecha y no ofrece registrar
@@ -79,16 +79,18 @@ El detalle del cliente ahora reúne:
 - total en cuotas de ventas no canceladas;
 - total abonado mediante pagos vigentes;
 - saldo pendiente;
-- cantidad de cuotas atrasadas y pagadas;
-- todas las ventas y productos;
-- todas las cuotas y su estado;
-- pagos registrados y anulados;
-- visitas e intentos de cobranza;
-- línea de tiempo de ventas, cancelaciones, pagos y visitas.
+- cantidad de cuotas actuales atrasadas y cuotas pagadas;
+- todas las ventas vigentes o finalizadas y sus productos;
+- todas las cuotas de esas operaciones y su estado;
+- sus pagos registrados y anulados;
+- sus visitas e intentos de cobranza;
+- línea de tiempo de ventas, pagos y visitas operativas.
 
-Una venta cancelada permanece visible para conservar la trazabilidad, pero su
-saldo se muestra como no exigible. Un pago anulado también permanece en el
-historial, aunque no integra el total abonado.
+Una venta cancelada, sus cuotas, pagos y visitas se retiran del historial
+operativo y de los resúmenes que se comparten con el cliente. La trazabilidad
+completa se conserva únicamente en Configuración → Archivo seguro. Un pago
+anulado de una venta no cancelada permanece en el historial, aunque no integra
+el total abonado.
 
 ## Diseño
 
@@ -125,7 +127,8 @@ Se agregaron pruebas para:
 - historial de ventas, pagos y visitas;
 - exclusión contable de pagos anulados;
 - trazabilidad de ventas canceladas;
-- estados de cuotas atrasadas.
+- cada cuota atrasada con sus propios días, aunque el recargo diario se calcule
+  una sola vez para toda la venta.
 
 Resultado final:
 

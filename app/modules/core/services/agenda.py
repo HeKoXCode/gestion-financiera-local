@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from datetime import date, timedelta
 
-from modules.core.models import Installment, Sale
+from modules.core.models import CollectionRoute, Installment, Sale
 from modules.core.services.balances import (
     get_installment_balance,
     installment_balance_prefetches,
@@ -24,9 +24,18 @@ def build_weekly_agenda(*, containing_date: date, today: date) -> dict:
         Installment.objects.select_related("sale", "sale__customer")
         .prefetch_related(*installment_balance_prefetches())
         .filter(due_date__range=(dates[0], dates[-1]))
+        .exclude(sale__status=Sale.Status.CANCELLED)
     )
     for installment in exact_installments:
         installments_by_date[installment.due_date].append(installment)
+    routes_by_date = defaultdict(list)
+    weekly_routes = (
+        CollectionRoute.objects.select_related("collector")
+        .prefetch_related("assignments")
+        .filter(collection_date__range=(dates[0], dates[-1]))
+    )
+    for route in weekly_routes:
+        routes_by_date[route.collection_date].append(route)
 
     days = []
     weekly_scheduled_amount = ZERO
@@ -36,9 +45,7 @@ def build_weekly_agenda(*, containing_date: date, today: date) -> dict:
     for current_date in dates:
         rows = build_collection_rows(as_of=current_date)
         route_customers = {row["customer"].pk: row["customer"] for row in rows}
-        overdue_customer_ids = {
-            row["customer"].pk for row in rows if row["days_overdue"] > 0
-        }
+        overdue_customer_ids = {row["customer"].pk for row in rows if row["days_overdue"] > 0}
         carryover_customer_ids = {
             row["customer"].pk
             for row in rows
@@ -49,11 +56,6 @@ def build_weekly_agenda(*, containing_date: date, today: date) -> dict:
         scheduled_installments = 0
         scheduled_customer_ids: set[int] = set()
         for installment in installments_by_date[current_date]:
-            if (
-                installment.sale.status == Sale.Status.CANCELLED
-                and installment.sale.cancelled_on <= current_date
-            ):
-                continue
             balance = get_installment_balance(installment, as_of=current_date)
             if balance.total_due <= ZERO:
                 continue
@@ -62,8 +64,7 @@ def build_weekly_agenda(*, containing_date: date, today: date) -> dict:
             scheduled_customer_ids.add(installment.sale.customer_id)
 
         neighborhood_counts = Counter(
-            customer.neighborhood or "Sin barrio"
-            for customer in route_customers.values()
+            customer.neighborhood or "Sin barrio" for customer in route_customers.values()
         )
         neighborhoods = [
             {"name": name, "count": count}
@@ -73,6 +74,8 @@ def build_weekly_agenda(*, containing_date: date, today: date) -> dict:
             )
         ]
         route_total = as_money(sum((row["total_due"] for row in rows), ZERO))
+        planned_routes = routes_by_date[current_date]
+        assigned_client_count = sum(len(route.assignments.all()) for route in planned_routes)
 
         days.append(
             {
@@ -89,6 +92,9 @@ def build_weekly_agenda(*, containing_date: date, today: date) -> dict:
                 "route_total": route_total,
                 "neighborhoods": neighborhoods,
                 "has_collection": bool(rows),
+                "collector_count": len(planned_routes),
+                "assigned_client_count": assigned_client_count,
+                "collector_names": [route.collector.name for route in planned_routes],
             }
         )
         weekly_scheduled_amount += scheduled_amount

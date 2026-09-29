@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from modules.core.models import CollectionAttempt, Installment, Payment, Sale
+from modules.core.models import (
+    CollectionAssignment,
+    CollectionAttempt,
+    CollectionRoute,
+    Installment,
+    Payment,
+    Sale,
+)
 from modules.core.services.balances import (
     get_sale_balance,
     installment_balance_prefetches,
@@ -18,6 +25,7 @@ def build_dashboard(*, as_of: date) -> dict:
     overdue_rows = [row for row in collection_rows if row["days_overdue"] > 0]
     registered_payments = Payment.objects.filter(
         registered_payment_filter(as_of),
+        sale_effective_filter(as_of, "sale"),
         payment_date=as_of,
     )
     installment_payments = registered_payments.filter(
@@ -53,6 +61,11 @@ def build_dashboard(*, as_of: date) -> dict:
     open_portfolio = [balance for balance in portfolio_balances if balance.total_due > ZERO]
     portfolio_total = as_money(sum((balance.total_due for balance in open_portfolio), ZERO))
     upcoming_until = as_of + timedelta(days=7)
+    collection_routes = list(
+        CollectionRoute.objects.select_related("collector")
+        .filter(collection_date=as_of)
+        .order_by("collector__name", "pk")
+    )
 
     return {
         "collection_rows": collection_rows,
@@ -76,10 +89,19 @@ def build_dashboard(*, as_of: date) -> dict:
             due_date__gt=as_of,
             due_date__lte=upcoming_until,
         ).count(),
-        "visits_today": CollectionAttempt.objects.filter(attempt_date=as_of).count(),
+        "visits_today": CollectionAttempt.objects.filter(
+            sale_effective_filter(as_of, "sale"),
+            attempt_date=as_of,
+        ).count(),
+        "collector_count": len(collection_routes),
+        "assigned_collection_clients": CollectionAssignment.objects.filter(
+            assigned_date=as_of
+        ).count(),
+        "route_collector_names": [route.collector.name for route in collection_routes],
         "recent_payments": Payment.objects.select_related("customer", "sale")
         .filter(
             registered_payment_filter(as_of),
+            sale_effective_filter(as_of, "sale"),
             payment_date__lte=as_of,
         )
         .order_by("-payment_date", "-created_at")[:5],

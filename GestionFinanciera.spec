@@ -18,6 +18,7 @@ core_modules = [
 ]
 django_app_modules = []
 for package in (
+    "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.messages",
     "django.contrib.sessions",
@@ -55,7 +56,6 @@ application_analysis = Analysis(
     runtime_hooks=[],
     excludes=[
         "django.contrib.admin",
-        "django.contrib.auth",
         "django.contrib.gis",
         "django.contrib.postgres",
         "django.test",
@@ -126,7 +126,6 @@ archive_analysis = Analysis(
     runtime_hooks=[],
     excludes=[
         "django.contrib.admin",
-        "django.contrib.auth",
         "django.contrib.gis",
         "django.contrib.postgres",
         "django.test",
@@ -154,6 +153,44 @@ archive_exe = EXE(
     entitlements_file=None,
 )
 
+demo_data_analysis = Analysis(
+    [str(PROJECT_ROOT / "launcher" / "demo_data.py")],
+    pathex=[str(APP_ROOT), str(PROJECT_ROOT)],
+    binaries=[],
+    datas=[],
+    hiddenimports=application_hidden_imports,
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=[
+        "django.contrib.admin",
+        "django.contrib.gis",
+        "django.contrib.postgres",
+        "django.test",
+        "pytest",
+    ],
+    noarchive=False,
+    optimize=1,
+)
+demo_data_pyz = PYZ(demo_data_analysis.pure)
+demo_data_exe = EXE(
+    demo_data_pyz,
+    demo_data_analysis.scripts,
+    [],
+    exclude_binaries=True,
+    name="DatosPrueba",
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=False,
+    console=True,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+)
+
 portable_package = COLLECT(
     application_exe,
     application_analysis.binaries,
@@ -164,6 +201,9 @@ portable_package = COLLECT(
     archive_exe,
     archive_analysis.binaries,
     archive_analysis.datas,
+    demo_data_exe,
+    demo_data_analysis.binaries,
+    demo_data_analysis.datas,
     strip=False,
     upx=False,
     upx_exclude=[],

@@ -79,7 +79,7 @@ def build_qr_image(value: str, *, target_size: int = 230) -> Image.Image:
     module_count = qr.modules_count + (qr.border * 2)
     qr.box_size = max(3, target_size // module_count)
     image = qr.make_image(
-        fill_color="#123D31",
+        fill_color="#0D6274",
         back_color="#FFFFFF",
     ).convert("RGB")
     return image

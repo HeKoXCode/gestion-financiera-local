@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load finance %}
+
+{% block title %}{{ collector.name }} · Cobradores{% endblock %}
+
+{% block content %}
+<header class="page-header collector-detail-header">
+    <div>
+        <p class="eyebrow">Historial del cobrador</p>
+        <h1>{{ collector.name }}</h1>
+        <p class="page-subtitle">Días trabajados, clientes visitados y cobros registrados a su nombre.</p>
+    </div>
+    <div class="route-header-actions">
+        {% if collector.is_archived %}
+        <a class="btn btn-secondary" href="{% url 'core:secure_archive' %}?tipo=collectors">Volver al Archivo seguro</a>
+        {% else %}
+        <a class="btn btn-secondary" href="{% url 'core:collector_list' %}">Volver a cobradores</a>
+        {% endif %}
+    </div>
+</header>
+
+{% if collector.is_archived %}
+<section class="archive-readonly-banner">
+    <strong>Registro guardado en el Archivo seguro</strong>
+    <span>Borrado el {{ collector.archived_at|date:"d/m/Y H:i" }} · {{ collector.archive_reason }}</span>
+</section>
+{% endif %}
+
+<section class="stats-grid collector-stats">
+    <article class="stat-card stat-primary"><div><span>Días trabajados</span><strong>{{ days_worked }}</strong><small>Fechas con al menos una planilla</small></div></article>
+    <article class="stat-card"><div><span>Clientes distintos</span><strong>{{ unique_clients }}</strong><small>{{ assignment_count }} visita{{ assignment_count|pluralize }} asignada{{ assignment_count|pluralize }} en total</small></div></article>
+    <article class="stat-card"><div><span>Clientes habituales</span><strong>{{ habitual_client_count }}</strong><small>Preseleccionados para la próxima cobranza</small></div></article>
+    <article class="stat-card stat-dark"><div><span>Total cobrado</span><strong>{{ total_collected|ars }}</strong><small>Pagos registrados a su nombre</small></div></article>
+    <article class="stat-card"><div><span>Total previsto</span><strong>{{ total_expected|ars }}</strong><small>Importe al preparar las planillas</small></div></article>
+</section>
+
+<div class="collector-detail-layout">
+    <section class="panel collector-day-panel">
+        <div class="panel-header"><div><p class="eyebrow">Actividad por día</p><h2>Qué cobró cada día</h2></div></div>
+        {% if daily_rows %}
+        <div class="collector-day-list">
+            {% for row in daily_rows %}
+            <article>
+                <time>{{ row.route.collection_date|date:"d/m/Y" }}</time>
+                <div><span>Clientes</span><strong>{{ row.assignment_count }}</strong></div>
+                <div><span>Previsto</span><strong>{{ row.expected_amount|ars }}</strong></div>
+                <div><span>Cobrado</span><strong>{{ row.collected_amount|ars }}</strong></div>
+                <div><span>Pagaron</span><strong>{{ row.paid_client_count }}</strong></div>
+                <div><span>Sin pago</span><strong>{{ row.attempt_count }}</strong></div>
+                <a class="mini-action primary" href="{% url 'core:collection_route_print' row.route.pk %}">Imprimir planilla</a>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}<p class="side-empty">Todavía no tiene recorridos guardados.</p>{% endif %}
+    </section>
+
+    <aside class="panel">
+        <div class="panel-header"><div><p class="eyebrow">Frecuencia</p><h2>Clientes asignados</h2></div></div>
+        {% if frequent_customers %}
+        <div class="collector-client-frequency">
+            {% for row in frequent_customers %}
+            <a href="{% url 'core:customer_detail' row.customer.pk %}">
+                <span><strong>{{ row.customer.full_name }}</strong><small>{{ row.assignment_count }} visita{{ row.assignment_count|pluralize }} asignada{{ row.assignment_count|pluralize }} · {{ row.paid_visit_count }} fecha{{ row.paid_visit_count|pluralize }} con pago</small></span>
+                <em>{{ row.total_collected|ars }}</em>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}<p class="side-empty">Sin clientes asignados.</p>{% endif %}
+    </aside>
+</div>
+
+<section class="panel collector-payment-history">
+    <div class="panel-header"><div><p class="eyebrow">Movimientos</p><h2>Pagos cobrados</h2></div></div>
+    {% if payments %}
+    <div class="table-wrap">
+        <table class="data-table responsive-table collector-payments-table">
+            <thead><tr><th>Fecha</th><th>Cliente</th><th>Operación</th><th>Medio</th><th>Importe</th></tr></thead>
+            <tbody>
+                {% for payment in payments %}
+                <tr>
+                    <td data-label="Fecha">{{ payment.payment_date|date:"d/m/Y" }}</td>
+                    <td data-label="Cliente"><a href="{% url 'core:customer_detail' payment.customer_id %}">{{ payment.customer.full_name }}</a></td>
+                    <td data-label="Operación"><a href="{% url 'core:sale_detail' payment.sale_id %}">{{ payment.sale.product_description }}</a></td>
+                    <td data-label="Medio de pago">{{ payment.payment_method }}</td>
+                    <td data-label="Importe"><strong>{{ payment.amount|ars }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}<p class="side-empty">Todavía no hay pagos atribuidos a este cobrador.</p>{% endif %}
+</section>
+
+{% if not collector.is_archived %}
+<section class="panel collector-delete-panel">
+    <div class="panel-header compact">
+        <div><p class="eyebrow">Archivo seguro</p><h2>Borrar cobrador</h2></div>
+    </div>
+    <form method="post" action="{% url 'core:collector_toggle' collector.pk %}"
+          onsubmit="return confirm('¿Enviar este cobrador al Archivo seguro? Dejará de aparecer en planillas nuevas.') && confirm('Confirmación final: su historial y sus cobros seguirán disponibles. ¿Querés continuar?');">
+        {% csrf_token %}
+        <label for="{{ archive_form.reason.id_for_label }}">{{ archive_form.reason.label }}</label>
+        {{ archive_form.reason }}
+        <p>No se elimina su historial. Simplemente deja de aparecer al preparar planillas nuevas.</p>
+        <button class="btn btn-danger-ghost" type="submit">Borrar y guardar en Archivo seguro</button>
+    </form>
+</section>
+{% endif %}
+{% endblock %}

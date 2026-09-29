@@ -171,9 +171,7 @@ def test_generated_tokens_are_long_and_change_each_time():
 
 
 def test_qr_generator_returns_a_compact_readable_image():
-    image = build_qr_image(
-        build_mobile_access_url("192.168.1.8", 8765, create_mobile_token())
-    )
+    image = build_qr_image(build_mobile_access_url("192.168.1.8", 8765, create_mobile_token()))
 
     assert image.mode == "RGB"
     assert 100 <= image.width <= 230
@@ -183,9 +181,7 @@ def test_qr_generator_returns_a_compact_readable_image():
 def test_launcher_activates_mobile_mode_with_detected_network(monkeypatch):
     application = LocalApplication()
     recorded = []
-    application.mobile_button = SimpleNamespace(
-        configure=lambda **values: recorded.append(values)
-    )
+    application.mobile_button = SimpleNamespace(configure=lambda **values: recorded.append(values))
     application.status = SimpleNamespace(set=lambda value: recorded.append(value))
 
     monkeypatch.setattr("launcher.launcher.detect_lan_ip", lambda: LAN_HOST)

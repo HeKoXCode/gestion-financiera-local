@@ -141,7 +141,7 @@
                     {% for payment in payments %}
                     <tr class="{% if payment.status == 'voided' %}is-voided{% endif %}">
                         <td>{{ payment.payment_date|date:"d/m/Y" }}</td>
-                        <td>{{ payment.get_kind_display }}</td>
+                        <td>{{ payment.movement_label }}</td>
                         <td>{{ payment.sale.product_description }}</td>
                         <td>{% if payment.status == "registered" %}Registrado{% else %}Anulado{% endif %}</td>
                         <td class="amount"><strong>{{ payment.amount|ars }}</strong></td>

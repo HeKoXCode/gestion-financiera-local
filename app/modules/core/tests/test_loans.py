@@ -2,6 +2,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 import pytest
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils import timezone
@@ -12,7 +13,13 @@ from modules.core.services.installments import create_installments
 from modules.core.services.reports import build_reports
 from modules.core.tests.factories import make_customer, make_sale
 
-pytestmark = pytest.mark.django_db
+pytestmark = [
+    pytest.mark.django_db,
+    pytest.mark.skipif(
+        not settings.LOANS_ENABLED,
+        reason="La versión principal no incluye préstamos.",
+    ),
+]
 
 
 def loan_post_data(customer, **overrides):
@@ -62,9 +69,10 @@ def test_loan_is_registered_without_fake_product_and_generates_installments(clie
     assert loan.loan_interest_rate == Decimal("20.00")
     assert loan.financed_amount == Decimal("120000.00")
     assert loan.loan_interest_amount == Decimal("20000.00")
-    assert list(loan.installments.values_list("original_amount", flat=True)) == [
-        Decimal("12000.00")
-    ] * 10
+    assert (
+        list(loan.installments.values_list("original_amount", flat=True))
+        == [Decimal("12000.00")] * 10
+    )
     assert not loan.payments.exists()
 
 

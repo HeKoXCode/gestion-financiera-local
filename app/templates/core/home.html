@@ -81,7 +81,7 @@
                 <p class="eyebrow">Orden sugerido</p>
                 <h2>Prioridades de cobranza</h2>
             </div>
-            <a class="text-link" href="{% url 'core:collection_list' %}?fecha={{ selected_date|date:'Y-m-d' }}">Ver todas</a>
+            <a class="text-link" href="{% url 'core:collection_list' %}?fecha={{ selected_date|date:'Y-m-d' }}">Ver cobranza completa</a>
         </div>
         {% if priority_rows %}
         <div class="priority-list">
@@ -107,7 +107,7 @@
                 {% if row.sale.status == "active" %}
                     <a class="mini-action primary" href="{% url 'core:payment_create' row.sale.pk %}">Cobrar</a>
                 {% else %}
-                    <a class="mini-action" href="{% url 'core:sale_detail' row.sale.pk %}">Detalle</a>
+                    <a class="mini-action" href="{% url 'core:sale_detail' row.sale.pk %}">Ver venta</a>
                 {% endif %}
             </article>
             {% endfor %}
@@ -125,10 +125,15 @@
         <section class="panel mini-overview">
             <div class="panel-header compact"><h2>Estado general</h2></div>
             <dl>
-                <div><dt>Ventas activas</dt><dd>{{ active_sales_count }}</dd></div>
+                <div><dt>Operaciones activas</dt><dd>{{ active_sales_count }}</dd></div>
                 <div><dt>Cuotas en los próximos 7 días</dt><dd>{{ upcoming_installments }}</dd></div>
                 <div><dt>Visitas en la fecha</dt><dd>{{ visits_today }}</dd></div>
+                <div><dt>Cobradores asignados</dt><dd>{{ collector_count }}</dd></div>
             </dl>
+            {% if collector_count %}
+            <p class="dashboard-route-note">{{ assigned_collection_clients }} clientes en planillas · {{ route_collector_names|join:", " }}</p>
+            {% endif %}
+            <a class="btn btn-secondary btn-compact" href="{% url 'core:collection_routes' %}?fecha={{ selected_date|date:'Y-m-d' }}">Ver planillas</a>
             <a class="btn btn-secondary btn-compact" href="{% url 'core:agenda' %}">Ver semana completa</a>
         </section>
 
@@ -138,7 +143,7 @@
             <div class="compact-payment-list">
                 {% for payment in recent_payments %}
                 <a href="{% url 'core:sale_detail' payment.sale_id %}">
-                    <span>{{ payment.customer.full_name }}<small>{{ payment.get_kind_display }} · {{ payment.payment_date|date:"d/m/Y" }}</small></span>
+                    <span>{{ payment.customer.full_name }}<small>{{ payment.movement_label }} · {{ payment.payment_date|date:"d/m/Y" }}</small></span>
                     <strong>{{ payment.amount|ars }}</strong>
                 </a>
                 {% endfor %}

@@ -98,7 +98,7 @@ Docker no forma parte de los requisitos para abrir, desarrollar ni utilizar el s
 1. La persona hace doble clic en `GestionFinanciera.exe` o `Iniciar.bat`.
 2. El sistema valida la base de datos.
 3. Crea una copia de seguridad de inicio si corresponde.
-4. Aplica recargos diarios faltantes.
+4. Actualiza el recargo diario único de cada venta atrasada.
 5. Abre automáticamente el navegador.
 6. Muestra el dashboard y la cobranza del día.
 7. La persona trabaja normalmente.
@@ -153,7 +153,7 @@ código. Actualizar el sistema no deberá reemplazar los datos.
 
 - nombre del negocio o persona;
 - logo;
-- recargo diario;
+- recargo diario por atraso;
 - días de cobranza;
 - métodos de pago;
 - frecuencias disponibles;
@@ -190,7 +190,7 @@ código. Actualizar el sistema no deberá reemplazar los datos.
 - total en cuotas;
 - frecuencia semanal, quincenal o mensual;
 - cantidad de cuotas;
-- recargo diario congelado;
+- recargo diario por atraso congelado;
 - primer vencimiento;
 - estado activa/finalizada/cancelada.
 
@@ -239,13 +239,15 @@ Una restricción impedirá crear dos recargos para la misma cuota y fecha.
 
 Para poder terminar en 2–3 días se usarán inicialmente estas reglas:
 
-1. El recargo comienza al día siguiente del vencimiento.
-2. Se aplica por cuota y por día calendario.
-3. Continúa mientras quede saldo.
-4. Un pago se aplica a la cuota más antigua.
-5. Dentro de la cuota se pagan primero recargos y después capital.
-6. Un pago no puede superar la deuda exigible seleccionada.
-7. Los atrasados aparecen todos los días.
+1. El recargo diario comienza al día siguiente del vencimiento impago.
+2. Cada día agrega el importe configurado una sola vez por venta.
+3. Todas las cuotas vencidas integran el capital de la cobranza normal.
+4. Los días de cuotas posteriores se informan, pero no forman otra cadena de
+   recargos.
+5. Se paga primero el recargo acumulado y después el capital más antiguo.
+6. Un pago parcial sigue la regla configurada para días posteriores.
+7. Un pago puede cubrir varias cuotas vencidas; sólo requiere permiso especial
+   para alcanzar cuotas futuras.
 8. “No pagó” no cambia el saldo.
 9. El recargo configurado se copia a la venta.
 10. Cambiar la configuración no modifica ventas anteriores.
@@ -358,10 +360,8 @@ La persona revisará el mensaje y presionará Enviar manualmente. Esto evita:
 
 Confirmar:
 
-1. si domingos generan recargo;
-2. si el pago parcial continúa generando recargo;
-3. si se permiten pagos adelantados;
-4. qué significa cancelar una venta;
+1. si se permiten pagos adelantados;
+2. qué significa cancelar una venta;
 5. si existen datos anteriores para importar.
 
 Resultado:
@@ -432,7 +432,7 @@ Aceptación:
 
 Acciones:
 
-1. Aplicar recargos faltantes al abrir.
+1. Actualizar el recargo diario único de cada venta al abrir.
 2. Mostrar deuda de hoy.
 3. Mostrar atrasados.
 4. Mostrar dirección y producto.

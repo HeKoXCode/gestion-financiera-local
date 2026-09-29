@@ -73,7 +73,7 @@ def create_payment_with_allocations(
     return payment
 
 
-def test_three_days_late_generate_expected_amount():
+def test_three_days_late_generate_three_daily_charges_and_keep_days():
     _, installment = make_single_installment_sale()
 
     result = generate_missing_late_fees(as_of=date(2026, 8, 21))
@@ -116,7 +116,7 @@ def test_sunday_generates_late_fee_by_default():
     assert installment.late_fees.get().fee_date.weekday() == 6
 
 
-def test_sunday_can_be_excluded_by_configuration():
+def test_sunday_setting_skips_sunday_and_charges_monday():
     settings = BusinessSettings.get_solo()
     settings.charge_sundays = False
     settings.save()
@@ -125,12 +125,10 @@ def test_sunday_can_be_excluded_by_configuration():
     result = generate_missing_late_fees(as_of=date(2026, 8, 24), settings=settings)
 
     assert result.created == 1
-    assert list(installment.late_fees.values_list("fee_date", flat=True)) == [
-        date(2026, 8, 24)
-    ]
+    assert list(installment.late_fees.values_list("fee_date", flat=True)) == [date(2026, 8, 24)]
 
 
-def test_partial_payment_keeps_generating_full_daily_fee():
+def test_partial_payment_keeps_daily_charge_when_configured():
     _, installment = make_single_installment_sale()
     generate_missing_late_fees(as_of=date(2026, 8, 19))
     create_payment_with_allocations(
@@ -193,7 +191,7 @@ def test_voided_payment_does_not_reduce_balance():
         principal_amount=Decimal("20000.00"),
     )
     payment.status = Payment.Status.VOIDED
-    payment.voided_at = timezone.make_aware(datetime(2026, 8, 18, 12, 0))
+    payment.voided_at = timezone.make_aware(datetime(2026, 8, 18, 12))
     payment.void_reason = "Pago cargado por error"
     payment.save()
 

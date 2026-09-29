@@ -17,6 +17,21 @@ urlpatterns = [
     ),
     path("auditoria/", views.audit_events, name="audit_events"),
     path("configuracion/", views.configuration, name="configuration"),
+    path(
+        "configuracion/archivo-seguro/",
+        views.secure_archive,
+        name="secure_archive",
+    ),
+    path(
+        "configuracion/archivo-seguro/ediciones/<int:pk>/",
+        views.sale_revision_detail,
+        name="sale_revision_detail",
+    ),
+    path(
+        "configuracion/archivo-seguro/clientes/<int:pk>/",
+        views.customer_revision_detail,
+        name="customer_revision_detail",
+    ),
     path("datos/", views.data_management, name="data_management"),
     path("datos/backups/crear/", views.backup_create, name="backup_create"),
     path(
@@ -49,6 +64,7 @@ urlpatterns = [
         name="customer_statement_pdf",
     ),
     path("clientes/<int:pk>/editar/", views.customer_edit, name="customer_edit"),
+    path("clientes/<int:pk>/eliminar/", views.customer_delete, name="customer_delete"),
     path("clientes/<int:pk>/estado/", views.customer_toggle, name="customer_toggle"),
     path("productos/", views.product_list, name="product_list"),
     path("productos/nuevo/", views.product_create, name="product_create"),
@@ -57,12 +73,53 @@ urlpatterns = [
     path("ventas/", views.sale_list, name="sale_list"),
     path("ventas/nueva/", views.sale_create, name="sale_create"),
     path("ventas/<int:pk>/", views.sale_detail, name="sale_detail"),
+    path("ventas/<int:pk>/editar/", views.sale_edit, name="sale_edit"),
     path("ventas/<int:pk>/cancelar/", views.sale_cancel, name="sale_cancel"),
     path("cobranza/", views.collection_list, name="collection_list"),
     path(
         "cobranza/planilla/",
         views.collection_print,
         name="collection_print",
+    ),
+    path(
+        "cobranza/recorridos/",
+        views.collection_routes,
+        name="collection_routes",
+    ),
+    path(
+        "cobranza/recorridos/imprimir/",
+        views.collection_routes_print,
+        name="collection_routes_print",
+    ),
+    path(
+        "cobranza/recorridos/<int:pk>/imprimir/",
+        views.collection_route_print,
+        name="collection_route_print",
+    ),
+    path(
+        "cobranza/cobradores/",
+        views.collector_list,
+        name="collector_list",
+    ),
+    path(
+        "cobranza/cobradores/<int:pk>/",
+        views.collector_detail,
+        name="collector_detail",
+    ),
+    path(
+        "cobranza/cobradores/<int:pk>/estado/",
+        views.collector_toggle,
+        name="collector_toggle",
+    ),
+    path(
+        "cobranza/pago-adelantado/",
+        views.advance_payment_list,
+        name="advance_payment_list",
+    ),
+    path(
+        "cobranza/pago-adelantado/ventas/<int:pk>/",
+        views.advance_payment_create,
+        name="advance_payment_create",
     ),
     path(
         "cobranza/ventas/<int:pk>/pagar/",
@@ -78,6 +135,16 @@ urlpatterns = [
         "cobranza/ventas/<int:pk>/visita/",
         views.collection_attempt_create,
         name="collection_attempt_create",
+    ),
+    path(
+        "cobranza/ventas/<int:pk>/pausar-interes/",
+        views.late_fee_pause,
+        name="late_fee_pause",
+    ),
+    path(
+        "cobranza/ventas/<int:pk>/reactivar-interes/",
+        views.late_fee_resume,
+        name="late_fee_resume",
     ),
     path(
         "pagos/<int:pk>/anular/",

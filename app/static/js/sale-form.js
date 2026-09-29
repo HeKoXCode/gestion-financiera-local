@@ -71,12 +71,20 @@
     const customTotalHelp = document.querySelector("#custom-total-help");
     const deliveryDateLabel = document.querySelector("#delivery-date-label");
     const sameDayDueLabel = document.querySelector("#same-day-due-label");
+    const deliveryInstallmentQuestion = document.querySelector(
+        "#delivery-installment-question"
+    );
+    const deliveryInstallmentHelp = document.querySelector(
+        "#delivery-installment-help"
+    );
     const firstInstallmentPaidLabel = document.querySelector(
         "label[for='id_first_installment_delivery_status_0']"
     );
     const previewTotalLabel = document.querySelector("#preview-total-label");
     const previewPriceLabel = document.querySelector("#preview-price-label");
-    const previewOperationTotalLabel = document.querySelector("#preview-operation-total-label");
+    const previewOperationTotalLabel = document.querySelector(
+        "#preview-operation-total-label"
+    );
     const financingModeNote = document.querySelector("#financing-mode-note");
     const captionOutput = document.querySelector("#preview-caption");
     const frequencyOutput = document.querySelector("#preview-frequency");
@@ -87,6 +95,12 @@
     const saleDraftLinks = document.querySelectorAll("[data-sale-draft-link]");
     const saleDraftKey = "gestion-financiera:nueva-venta-borrador";
     const today = dateFromIso(form.dataset.today);
+    const collectionDays = new Set(
+        String(form.dataset.collectionDays || "")
+            .split(",")
+            .filter(Boolean)
+            .map((value) => Number.parseInt(value, 10))
+    );
     let lastAutomaticDescription = "";
     let historicalLateState = {};
     let applyingInstallmentCalculation = false;
@@ -140,7 +154,9 @@
     }
 
     function operationType() {
-        return document.querySelector("input[name='operation_type']:checked")?.value || "product";
+        const checked = document.querySelector("input[name='operation_type']:checked");
+        const stored = document.querySelector("input[name='operation_type']");
+        return checked?.value || stored?.value || "product";
     }
 
     function isLoan() {
@@ -165,6 +181,19 @@
 
     function plannedDueDates(firstDate, frequency, count) {
         if (!firstDate || !count || count < 1) return [];
+        if (frequency === "daily") {
+            const dates = [];
+            const candidate = new Date(firstDate);
+            while (dates.length < count) {
+                const pythonWeekday = (candidate.getUTCDay() + 6) % 7;
+                if (collectionDays.has(pythonWeekday)) {
+                    dates.push(new Date(candidate));
+                }
+                candidate.setUTCDate(candidate.getUTCDate() + 1);
+                if (!collectionDays.size) return [];
+            }
+            return dates;
+        }
         const isMonthly = frequency === "monthly";
         const interval = frequency === "biweekly" ? 14 : 7;
         return Array.from({ length: count }, (_, offset) => {
@@ -420,9 +449,11 @@
             const amountText = installmentAmountCents > 0
                 ? ` por ${currency.format(installmentAmountCents / 100)}`
                 : "";
+            const extraMessage = isLoan()
+                ? ""
+                : " El pago inicial aparte, si existe, se guardará como un movimiento separado.";
             deliveryInstallmentSummary.textContent =
-                `Se registrará la cuota 1${amountText} como pagada en la fecha de entrega. ` +
-                "El pago inicial aparte, si existe, se guardará como un movimiento separado.";
+                `Se registrará la cuota 1${amountText} como pagada en la fecha de entrega.${extraMessage}`;
         } else if (status === "pending") {
             deliveryInstallmentSummary.textContent =
                 "La cuota 1 aparecerá pendiente en Cobranza el día de la entrega. " +
@@ -516,8 +547,6 @@
         const adjustmentCents = operationTotalCents - productPriceCents;
         const count = Number.parseInt(countInput.value, 10);
         const firstDate = dateFromIso(firstDueInput.value);
-        const isMonthly = frequencyInput.value === "monthly";
-        const interval = frequencyInput.value === "biweekly" ? 14 : 7;
         const frequencyLabel =
             frequencyInput.options[frequencyInput.selectedIndex]?.text || "Sin datos";
         const estimatedInstallmentCents = totalCents && count > 0
@@ -536,10 +565,10 @@
         adjustmentLabel.textContent = isLoan()
             ? "Interés total"
             : adjustmentCents > 0
-              ? "Costo de financiación"
-              : adjustmentCents < 0
-                ? "Descuento en cuotas"
-                : "Ajuste por financiación";
+                ? "Costo de financiación"
+                : adjustmentCents < 0
+                  ? "Descuento en cuotas"
+                  : "Ajuste por financiación";
         frequencyOutput.textContent = frequencyLabel;
 
         if (!totalCents || !count || count < 1 || !firstDate) {
@@ -560,13 +589,19 @@
         }
 
         const fragment = document.createDocumentFragment();
+        const dueDates = plannedDueDates(firstDate, frequencyInput.value, count);
+        if (dueDates.length !== count) {
+            captionOutput.textContent =
+                "Configurá al menos un día de cobranza para calcular las cuotas diarias.";
+            emptyOutput.hidden = false;
+            tableOutput.hidden = true;
+            rowsOutput.replaceChildren();
+            return;
+        }
         for (let number = 1; number <= count; number += 1) {
             const amountCents =
                 number === count ? totalCents - regularCents * (count - 1) : regularCents;
-            const dueDate = isMonthly ? addUtcMonths(firstDate, number - 1) : new Date(firstDate);
-            if (!isMonthly) {
-                dueDate.setUTCDate(firstDate.getUTCDate() + (number - 1) * interval);
-            }
+            const dueDate = dueDates[number - 1];
 
             const row = document.createElement("tr");
             const numberCell = document.createElement("td");
@@ -600,9 +635,14 @@
         }
 
         rowsOutput.replaceChildren(fragment);
-        captionOutput.textContent = isMonthly
-            ? `${count} cuotas · una por mes`
-            : `${count} cuotas · cada ${interval} días`;
+        const scheduleCaption = {
+            daily: `${count} cuotas · días de cobranza habilitados`,
+            weekly: `${count} cuotas · una por semana`,
+            biweekly: `${count} cuotas · cada 2 semanas`,
+            monthly: `${count} cuotas · una por mes`,
+        };
+        captionOutput.textContent =
+            scheduleCaption[frequencyInput.value] || `${count} cuotas`;
         emptyOutput.hidden = true;
         tableOutput.hidden = false;
     }
@@ -640,12 +680,18 @@
         if (!hasDownPayment) downPaymentMethodInput.value = "";
         if (loanInterestRateInput) {
             loanInterestRateInput.readOnly = isLoan() && usesCustomTotal;
-            loanInterestRateInput.classList.toggle("is-calculated", isLoan() && usesCustomTotal);
+            loanInterestRateInput.classList.toggle(
+                "is-calculated",
+                isLoan() && usesCustomTotal
+            );
             if (isLoan() && usesCustomTotal && productPriceCents > 0) {
                 const totalCents = parseMoneyToCents(financedInput.value);
                 if (totalCents >= productPriceCents) {
-                    const effectiveRate = ((totalCents - productPriceCents) * 100) / productPriceCents;
-                    loanInterestRateInput.value = effectiveRate.toFixed(2).replace(".", ",");
+                    const effectiveRate =
+                        ((totalCents - productPriceCents) * 100) / productPriceCents;
+                    loanInterestRateInput.value = effectiveRate
+                        .toFixed(2)
+                        .replace(".", ",");
                 }
             }
         }
@@ -675,6 +721,7 @@
 
     function synchronizeOperationType() {
         const loan = isLoan();
+        form.classList.toggle("is-loan-operation", loan);
         productOnlyElements.forEach((element) => { element.hidden = loan; });
         loanOnlyElements.forEach((element) => { element.hidden = !loan; });
         if (productInput) productInput.required = !loan;
@@ -684,36 +731,71 @@
         }
         if (loanInterestRateInput) loanInterestRateInput.disabled = !loan;
 
-        cashPriceLabel.textContent = loan ? "Dinero prestado" : "Precio del producto";
-        financedAmountLabel.textContent = loan ? "Total a devolver" : "Total en cuotas";
-        operationDescriptionLabel.textContent = loan
-            ? "Detalle o motivo del préstamo (opcional)"
-            : "Descripción en esta venta";
-        customTotalLabel.textContent = loan
-            ? "Usar otro total a devolver"
-            : "Usar otro total en cuotas";
-        customTotalHelp.textContent = loan
-            ? "Activá esta opción si acordaste directamente un importe final, en lugar de un porcentaje."
-            : "Solo activalo si el total acordado será distinto de precio menos pago inicial aparte.";
-        deliveryDateLabel.textContent = loan
-            ? "Fecha en que se entregó el dinero"
-            : "Fecha de entrega";
-        sameDayDueLabel.textContent = loan
-            ? "La cuota 1 vence el día en que se entrega el dinero"
-            : "La cuota 1 vence el día de la entrega";
+        if (cashPriceLabel) {
+            cashPriceLabel.textContent = loan ? "Dinero prestado" : "Precio del producto";
+        }
+        if (financedAmountLabel) {
+            financedAmountLabel.textContent = loan ? "Total a devolver" : "Total en cuotas";
+        }
+        if (operationDescriptionLabel) {
+            operationDescriptionLabel.textContent = loan
+                ? "Detalle o motivo del préstamo (opcional)"
+                : "Descripción en esta venta";
+        }
+        if (customTotalLabel) {
+            customTotalLabel.textContent = loan
+                ? "Usar otro total a devolver"
+                : "Usar otro total en cuotas";
+        }
+        if (customTotalHelp) {
+            customTotalHelp.textContent = loan
+                ? "Activá esta opción si acordaste directamente un importe final, en lugar de un porcentaje."
+                : "Solo activalo si el total acordado será distinto de precio menos pago inicial aparte.";
+        }
+        if (deliveryDateLabel) {
+            deliveryDateLabel.textContent = loan
+                ? "Fecha en que se entregó el dinero"
+                : "Fecha de entrega";
+        }
+        if (sameDayDueLabel) {
+            sameDayDueLabel.textContent = loan
+                ? "La cuota 1 vence el día en que se entrega el dinero"
+                : "La cuota 1 vence el día de la entrega";
+        }
+        if (deliveryInstallmentQuestion) {
+            deliveryInstallmentQuestion.textContent = loan
+                ? "¿Qué pasó con la cuota 1 al entregar el dinero?"
+                : "¿Qué pasó con la cuota 1 al entregar el producto?";
+        }
+        if (deliveryInstallmentHelp) {
+            deliveryInstallmentHelp.textContent = loan
+                ? "Esta opción registra la cuota; no modifica el capital entregado."
+                : "El pago inicial aparte, si existe, no reemplaza esta cuota.";
+        }
         if (firstInstallmentPaidLabel) {
             const input = firstInstallmentPaidLabel.querySelector("input");
             const text = loan
                 ? "Pagó la cuota 1 al recibir el dinero"
                 : "Pagó la cuota 1 al recibir el producto";
             firstInstallmentPaidLabel.replaceChildren();
-            if (input) firstInstallmentPaidLabel.append(input, document.createTextNode(` ${text}`));
+            if (input) {
+                firstInstallmentPaidLabel.append(
+                    input,
+                    document.createTextNode(` ${text}`)
+                );
+            }
         }
-        previewTotalLabel.textContent = loan ? "Total a devolver" : "Total en cuotas";
-        previewPriceLabel.textContent = loan ? "Capital prestado" : "Precio del producto";
-        previewOperationTotalLabel.textContent = loan
-            ? "Total final a devolver"
-            : "Total final de la venta";
+        if (previewTotalLabel) {
+            previewTotalLabel.textContent = loan ? "Total a devolver" : "Total en cuotas";
+        }
+        if (previewPriceLabel) {
+            previewPriceLabel.textContent = loan ? "Capital prestado" : "Precio del producto";
+        }
+        if (previewOperationTotalLabel) {
+            previewOperationTotalLabel.textContent = loan
+                ? "Total final a devolver"
+                : "Total final de la venta";
+        }
         productPriceInput.placeholder = loan ? "Ej. 300000" : "Ej. 400000";
         descriptionInput.placeholder = loan
             ? "Ej. Préstamo personal"
@@ -1018,7 +1100,7 @@
         else synchronizeFinancing();
         if (submitButton && form.checkValidity()) {
             submitButton.disabled = true;
-            submitButton.textContent = "Guardando venta…";
+            submitButton.textContent = "Guardando operación…";
         }
     });
 

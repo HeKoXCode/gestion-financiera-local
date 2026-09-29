@@ -29,8 +29,8 @@
     <div class="segmented-control">
         <a class="{% if state == 'active' %}is-active{% endif %}" href="?q={{ query|urlencode }}&estado=active">Activas</a>
         <a class="{% if state == 'completed' %}is-active{% endif %}" href="?q={{ query|urlencode }}&estado=completed">Finalizadas</a>
-        <a class="{% if state == 'cancelled' %}is-active{% endif %}" href="?q={{ query|urlencode }}&estado=cancelled">Canceladas</a>
         <a class="{% if state == 'all' %}is-active{% endif %}" href="?q={{ query|urlencode }}&estado=all">Todas</a>
+        <a href="{% url 'core:secure_archive' %}?tipo=cancelled">Archivo seguro</a>
     </div>
 </section>
 
@@ -45,7 +45,7 @@
     <div class="table-wrap">
         <table class="data-table responsive-table sales-table">
             <thead>
-                <tr>
+                <tr{% if sale.is_loan %} class="is-loan-row"{% endif %}>
                     <th>Cliente y operación</th>
                     <th>Fecha</th>
                     <th>Plan</th>
@@ -63,7 +63,7 @@
                             {{ sale.customer.full_name }}
                         </a>
                         <small>{{ sale.product_description }}</small>
-                        <span class="badge badge-neutral">{{ sale.operation_name }}</span>
+                        <span class="badge {% if sale.is_loan %}badge-loan{% else %}badge-neutral{% endif %}">{{ sale.operation_name }}</span>
                     </td>
                     <td data-label="Fecha">{{ sale.delivery_date|date:"d/m/Y" }}</td>
                     <td data-label="Plan">

@@ -102,9 +102,24 @@ Remove-Item -LiteralPath $safeStagingRoot -Recurse -Force
 
 $zipInfo = Get-Item -LiteralPath $safeUpdateZip
 $hash = (Get-FileHash -LiteralPath $safeUpdateZip -Algorithm SHA256).Hash
+$checksumPath = Join-Path $projectDirectory "portable\SHA256SUMS.txt"
+$checksumEntry = "$hash  $($zipInfo.Name)"
+$existingChecksumLines = @()
+if (Test-Path -LiteralPath $checksumPath -PathType Leaf) {
+    $existingChecksumLines = @(
+        Get-Content -LiteralPath $checksumPath |
+            Where-Object {
+                $_ -notmatch ("\s{2}" + [Regex]::Escape($zipInfo.Name) + "$")
+            }
+    )
+}
+@($existingChecksumLines + $checksumEntry) |
+    Set-Content -LiteralPath $checksumPath -Encoding utf8
+
 Write-Host ""
 Write-Host "Paquete de actualización validado:"
 Write-Host "  $($zipInfo.FullName)"
 Write-Host ("  Tamaño: {0:N2} MB" -f ($zipInfo.Length / 1MB))
 Write-Host "  Entradas: $entryCount"
 Write-Host "  SHA256: $hash"
+Write-Host "  Checksums: $checksumPath"

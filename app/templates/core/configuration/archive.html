@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% load finance %}
+
+{% block title %}Archivo seguro · Gestión Financiera{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <div>
+        <a class="back-link" href="{% url 'core:configuration' %}">‹ Volver a Configuración</a>
+        <p class="eyebrow">Registro protegido</p>
+        <h1>Archivo seguro</h1>
+        <p class="page-subtitle">Consultá información retirada de las pantallas de trabajo. Estos registros no pueden editarse ni borrarse.</p>
+    </div>
+</header>
+
+<section class="archive-summary-grid">
+    <a class="archive-summary-card {% if section == 'customers' %}is-active{% endif %}" href="?tipo=customers">
+        <span>Clientes borrados</span><strong>{{ counts.customers }}</strong><small>Datos e historial completos</small>
+    </a>
+    <a class="archive-summary-card {% if section == 'customer_revisions' %}is-active{% endif %}" href="?tipo=customer_revisions">
+        <span>Cambios de clientes</span><strong>{{ counts.customer_revisions }}</strong><small>Datos anteriores a cada corrección</small>
+    </a>
+    <a class="archive-summary-card {% if section == 'cancelled' %}is-active{% endif %}" href="?tipo=cancelled">
+        <span>Operaciones canceladas</span><strong>{{ counts.cancelled }}</strong><small>Fuera de cobranza</small>
+    </a>
+    <a class="archive-summary-card {% if section == 'revisions' %}is-active{% endif %}" href="?tipo=revisions">
+        <span>Versiones anteriores</span><strong>{{ counts.revisions }}</strong><small>Copias previas a cada edición</small>
+    </a>
+    <a class="archive-summary-card {% if section == 'collectors' %}is-active{% endif %}" href="?tipo=collectors">
+        <span>Cobradores borrados</span><strong>{{ counts.collectors }}</strong><small>Historial y cobros conservados</small>
+    </a>
+</section>
+
+<section class="toolbar-card">
+    <form class="search-form" method="get">
+        <input type="hidden" name="tipo" value="{{ section }}">
+        <label class="sr-only" for="archive-search">Buscar en el archivo</label>
+        <div class="search-input">
+            <span aria-hidden="true">⌕</span>
+            <input id="archive-search" name="q" value="{{ query }}" placeholder="Buscar por cliente, operación o motivo">
+        </div>
+        <button class="btn btn-secondary" type="submit">Buscar</button>
+        {% if query %}<a class="btn btn-ghost" href="?tipo={{ section }}">Limpiar</a>{% endif %}
+    </form>
+</section>
+
+<section class="panel">
+    <div class="panel-header compact">
+        <div>
+            {% if section == "customers" %}<p class="eyebrow">Solo lectura</p><h2>Clientes borrados</h2>{% endif %}
+            {% if section == "customer_revisions" %}<p class="eyebrow">Solo lectura</p><h2>Versiones anteriores de clientes</h2>{% endif %}
+            {% if section == "cancelled" %}<p class="eyebrow">Solo lectura</p><h2>Operaciones canceladas</h2>{% endif %}
+            {% if section == "revisions" %}<p class="eyebrow">Solo lectura</p><h2>Versiones anteriores de operaciones</h2>{% endif %}
+            {% if section == "collectors" %}<p class="eyebrow">Solo lectura</p><h2>Cobradores borrados</h2>{% endif %}
+        </div>
+        <span class="record-count">{{ page.paginator.count }} registro{{ page.paginator.count|pluralize }}</span>
+    </div>
+
+    {% if page.object_list %}
+    <div class="table-wrap">
+        <table class="data-table responsive-table">
+            {% if section == "customers" %}
+            <thead><tr><th>Cliente</th><th>Domicilio</th><th>Borrado</th><th>Motivo</th><th></th></tr></thead>
+            <tbody>
+                {% for customer in page %}
+                <tr>
+                    <td data-label="Cliente"><a class="table-primary" href="{% url 'core:customer_detail' customer.pk %}">{{ customer.full_name }}</a><small>{% if customer.dni %}DNI {{ customer.dni }}{% else %}Sin DNI{% endif %}</small></td>
+                    <td data-label="Domicilio">{{ customer.address }}</td>
+                    <td data-label="Borrado">{{ customer.deleted_at|date:"d/m/Y H:i" }}</td>
+                    <td data-label="Motivo">{{ customer.deletion_reason }}</td>
+                    <td class="row-action"><a class="icon-button" href="{% url 'core:customer_detail' customer.pk %}" aria-label="Ver registro">›</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% elif section == "customer_revisions" %}
+            <thead><tr><th>Cliente actual</th><th>Versión anterior</th><th>Archivada</th><th>Motivo</th><th></th></tr></thead>
+            <tbody>
+                {% for revision in page %}
+                <tr>
+                    <td data-label="Cliente"><a class="table-primary" href="{% url 'core:customer_detail' revision.customer.pk %}">{{ revision.customer.full_name }}</a><small>Cliente #{{ revision.customer.pk }}</small></td>
+                    <td data-label="Versión">Antes de la edición {{ revision.revision_number }}</td>
+                    <td data-label="Archivada">{{ revision.archived_at|date:"d/m/Y H:i" }}</td>
+                    <td data-label="Motivo">{{ revision.reason }}</td>
+                    <td class="row-action"><a class="icon-button" href="{% url 'core:customer_revision_detail' revision.pk %}" aria-label="Ver versión anterior">›</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% elif section == "cancelled" %}
+            <thead><tr><th>Cliente y operación</th><th>Fecha</th><th>Cancelada</th><th>Motivo</th><th class="align-right">Total acordado</th><th></th></tr></thead>
+            <tbody>
+                {% for sale in page %}
+                <tr>
+                    <td data-label="Operación"><a class="table-primary" href="{% url 'core:sale_detail' sale.pk %}">{{ sale.customer.full_name }}</a><small>{{ sale.product_description }} · {{ sale.operation_name }}</small></td>
+                    <td data-label="Entrega">{{ sale.delivery_date|date:"d/m/Y" }}</td>
+                    <td data-label="Cancelada">{{ sale.cancelled_on|date:"d/m/Y" }}</td>
+                    <td data-label="Motivo">{{ sale.cancellation_reason }}</td>
+                    <td data-label="Total en cuotas" class="money-cell">{{ sale.financed_amount|ars }}</td>
+                    <td class="row-action"><a class="icon-button" href="{% url 'core:sale_detail' sale.pk %}" aria-label="Ver registro">›</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% elif section == "revisions" %}
+            <thead><tr><th>Operación actual</th><th>Versión anterior</th><th>Archivada</th><th>Motivo</th><th></th></tr></thead>
+            <tbody>
+                {% for revision in page %}
+                <tr>
+                    <td data-label="Operación"><a class="table-primary" href="{% url 'core:sale_detail' revision.sale.pk %}">{{ revision.sale.operation_name }} #{{ revision.sale.pk }}</a><small>{{ revision.sale.customer.full_name }} · {{ revision.sale.product_description }}</small></td>
+                    <td data-label="Versión">Antes de la edición {{ revision.revision_number }}</td>
+                    <td data-label="Archivada">{{ revision.archived_at|date:"d/m/Y H:i" }}</td>
+                    <td data-label="Motivo">{{ revision.reason }}</td>
+                    <td class="row-action"><a class="icon-button" href="{% url 'core:sale_revision_detail' revision.pk %}" aria-label="Ver versión anterior">›</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% else %}
+            <thead><tr><th>Cobrador</th><th>Borrado</th><th>Motivo</th><th></th></tr></thead>
+            <tbody>
+                {% for collector in page %}
+                <tr>
+                    <td data-label="Cobrador"><a class="table-primary" href="{% url 'core:collector_detail' collector.pk %}">{{ collector.name }}</a><small>Historial completo conservado</small></td>
+                    <td data-label="Borrado">{{ collector.archived_at|date:"d/m/Y H:i" }}</td>
+                    <td data-label="Motivo">{{ collector.archive_reason }}</td>
+                    <td class="row-action"><a class="icon-button" href="{% url 'core:collector_detail' collector.pk %}" aria-label="Ver historial del cobrador">›</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% endif %}
+        </table>
+    </div>
+    {% include "core/partials/pagination.html" %}
+    {% else %}
+    <div class="empty-state compact">
+        <span class="empty-icon" aria-hidden="true">▣</span>
+        <h3>Sin registros en esta sección</h3>
+        <p>Cuando se borre o corrija un cliente o cobrador, o se cancele o corrija una operación, aparecerá aquí.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

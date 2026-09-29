@@ -29,6 +29,7 @@ DATA_DIR = _external_directory("GESTION_DATA_DIR", "data")
 BACKUP_DIR = _external_directory("GESTION_BACKUP_DIR", "backups")
 EXPORT_DIR = _external_directory("GESTION_EXPORT_DIR", "exports")
 MEDIA_ROOT = _external_directory("GESTION_MEDIA_DIR", "media")
+STORAGE_DIR = _external_directory("GESTION_STORAGE_DIR", "storage")
 
 
 def _load_or_create_secret_key() -> str:
@@ -55,13 +56,14 @@ GESTION_AUTH_REQUIRED = _environment_flag(
     GESTION_DEPLOYMENT_MODE == "multiuser",
 )
 GESTION_LAN_IP = os.environ.get("GESTION_LAN_IP", "").strip()
-GESTION_MOBILE_ACCESS_ENABLED = (
-    os.environ.get("GESTION_MOBILE_ACCESS_ENABLED", "0") == "1"
-)
+GESTION_MOBILE_ACCESS_ENABLED = os.environ.get("GESTION_MOBILE_ACCESS_ENABLED", "0") == "1"
 GESTION_MOBILE_ACCESS_TOKEN = os.environ.get(
     "GESTION_MOBILE_ACCESS_TOKEN",
     "",
 )
+# Los préstamos forman parte de esta edición y reutilizan el mismo motor de
+# cuotas, cobranza, recargos, pagos, reportes y copias de seguridad.
+LOANS_ENABLED = True
 ALLOWED_HOSTS = _environment_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
 if DEBUG:
     ALLOWED_HOSTS.append("testserver")
@@ -85,6 +87,7 @@ MIDDLEWARE = [
     "modules.core.middleware.MobileAccessMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "modules.core.middleware.RoleAccessMiddleware",
+    "modules.core.middleware.LocalDataSafetyMiddleware",
     "modules.core.middleware.AuditTrailMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -147,7 +150,12 @@ elif DATABASE_ENGINE == "sqlite":
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": DATA_DIR / "gestion_financiera.sqlite3",
-            "OPTIONS": {"timeout": 20},
+            "OPTIONS": {
+                "timeout": 20,
+                # Reserve the SQLite writer at the beginning of an atomic operation.
+                # A second Chrome tab waits instead of failing with "database is locked".
+                "transaction_mode": "IMMEDIATE",
+            },
         }
     }
 else:
@@ -201,10 +209,30 @@ LOGGING = {
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "standard",
-        }
+        },
+        "file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": STORAGE_DIR / "gestion_financiera.log",
+            "maxBytes": 2 * 1024 * 1024,
+            "backupCount": 5,
+            "encoding": "utf-8",
+            "formatter": "standard",
+        },
     },
     "root": {
-        "handlers": ["console"],
+        "handlers": ["console", "file"],
         "level": LOG_LEVEL,
+    },
+    "loggers": {
+        "django.request": {
+            "handlers": ["console", "file"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "modules": {
+            "handlers": ["console", "file"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
     },
 }

@@ -165,7 +165,11 @@ if (-not $OmitirZip) {
             "GestionFinanciera/GestionFinanciera.exe",
             "GestionFinanciera/Restaurador.exe",
             "GestionFinanciera/ArchivarYReiniciar.exe",
+            "GestionFinanciera/DatosPrueba.exe",
             "GestionFinanciera/ARCHIVAR_Y_REINICIAR.bat",
+            "GestionFinanciera/1_CARGAR_DATOS_FICTICIOS.bat",
+            "GestionFinanciera/2_LIMPIAR_BASE_DE_PRUEBA.bat",
+            "GestionFinanciera/3_RESTAURAR_BASE_ORIGINAL.bat",
             "GestionFinanciera/LEEME_PRIMERO.txt",
             "GestionFinanciera/MANIFEST_SHA256.txt",
             "GestionFinanciera/VERSION.txt"

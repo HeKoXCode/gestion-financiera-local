@@ -1,8 +1,8 @@
 GESTIÓN FINANCIERA — LEEME PRIMERO
 =================================
 
-Este sistema sirve para guardar clientes, ventas y préstamos en cuotas, vencimientos,
-recargos, pagos y recorridos de cobranza. Está pensado para una sola persona y
+Este sistema sirve para guardar clientes, ventas en cuotas, préstamos,
+vencimientos, recargos, pagos y recorridos de cobranza. Está pensado para una sola persona y
 funciona en esta computadora, sin necesitar Internet.
 
 
@@ -13,6 +13,13 @@ Conservá completa la carpeta GestionFinanciera.
 Hacé doble clic en INICIAR.bat o GestionFinanciera.exe.
 Cuando aparezca el panel, presioná “Abrir sistema”.
 Dejá ese panel abierto mientras trabajás.
+
+Después del primer clic, el botón mostrará “Sistema abierto”. Si lo presionás
+otra vez, no abrirá otra pestaña sin avisar. Elegí abrirla nuevamente solamente
+si cerraste la pestaña anterior.
+
+Si volvés a ejecutar GestionFinanciera.exe mientras el sistema está iniciado,
+Windows enfocará el panel existente en lugar de iniciar otra copia.
 
 La pantalla de trabajo se abre en el navegador, pero los datos permanecen en
 esta PC. No necesita Python, Docker, una base de datos externa ni Internet.
@@ -35,18 +42,31 @@ Abrí “Configuración” y revisá:
 
 - nombre del negocio;
 - logo opcional;
-- recargo diario;
+- recargo diario por atraso;
 - días habilitados para cobrar;
-- frecuencias: semanal, quincenal y mensual;
+- frecuencias: diaria, semanal, cada 2 semanas y mensual;
 - medios de pago;
 - cantidad máxima de cuotas;
-- recargo durante los domingos;
-- recargo después de un pago parcial;
 - permiso para pagos adelantados;
 - texto que se prepara para WhatsApp.
 
-Los cambios del recargo se aplican a ventas nuevas. Una venta anterior conserva
-el recargo que tenía cuando fue creada.
+El recargo aumenta una vez por cada día que la operación permanece atrasada. Si hay
+varias cuotas vencidas, sus capitales se suman, pero existe una sola cuenta de
+recargo diario para toda la operación. Los cambios del importe se aplican a
+operaciones nuevas; una operación anterior conserva el valor que tenía al ser creada.
+
+PAGO ADELANTADO
+
+Desde Cobranza, usá “Registrar pago adelantado” y buscá por cliente, DNI o
+producto. También podés entrar en Clientes, abrir la persona, elegir su venta y
+usar “Adelantar esta cuota” en el calendario semanal, quincenal o mensual.
+
+El sistema propone el saldo completo de la próxima cuota. Podés reemplazarlo por
+un importe parcial o por un monto que cubra varias cuotas. El pago se registra
+con la fecha real de hoy. No mueve ningún vencimiento y no concede días de
+gracia. Si una cuota queda parcialmente pagada, el resto vence en la fecha que
+ya tenía acordada. Si existe deuda de hoy o anterior, primero debe registrarse
+como pago normal.
 
 
 3. QUÉ HACE CADA SECCIÓN
@@ -60,7 +80,7 @@ Muestra rápidamente:
 - cuánto está pendiente hasta la fecha;
 - cuántos clientes están atrasados;
 - cuánto dinero ya se recibió;
-- cuánto queda pendiente en todas las ventas activas;
+- cuánto queda pendiente en todas las operaciones activas;
 - avance de la cobranza;
 - clientes prioritarios;
 - próximos vencimientos y últimos pagos.
@@ -71,8 +91,10 @@ CLIENTES
 
 Permite crear, buscar y editar clientes. Se puede guardar nombre, apellido, DNI
 opcional, teléfono, dirección, barrio, referencia del domicilio y observaciones.
+Cada vez que se corrigen esos datos, la versión anterior queda protegida en
+Configuración > Archivo seguro > Cambios de clientes.
 
-Al abrir un cliente se ve su historial completo: productos, ventas, préstamos, cuotas,
+Al abrir un cliente se ve su historial completo: ventas, préstamos, cuotas,
 recargos, pagos, anulaciones, visitas, total abonado y saldo.
 
 Hay tres acciones para entregar el estado de cuenta al cliente:
@@ -86,55 +108,26 @@ contacto. En una computadora, el PDF queda en Descargas y se abre el chat del
 número guardado; adjuntá ese archivo desde WhatsApp. Una página web no puede
 adjuntar sola un archivo a un chat específico.
 
-El resumen para entregar muestra nombre, ventas, cuotas, vencimientos, recargos,
+El resumen para entregar muestra nombre, operaciones, cuotas, vencimientos, recargos,
 pagos y saldo. No muestra DNI, teléfono, domicilio, referencias, observaciones
 internas, visitas de cobranza, medios de pago ni motivos de anulación. Esos datos
 siguen disponibles solamente dentro del historial del sistema.
 
-“Archivar” no borra al cliente. Solamente deja de ofrecerlo para ventas nuevas y
-conserva todo su historial. Después puede reactivarse.
+“Borrar cliente” lo retira de las pantallas de trabajo, pero no destruye su
+información. Se exige escribir un motivo y queda guardado definitivamente en
+Configuración > Archivo seguro, junto con todo su historial. Desde allí solo se
+puede consultar: no se puede editar ni volver a borrar.
+
+Si el cliente todavía tiene una operación activa, la pantalla de borrado muestra
+cuál es y permite abrirla. Primero hay que terminar de cobrarla o cancelarla.
+Así ninguna deuda queda separada de su titular por error.
 
 PRODUCTOS
 
 Es el catálogo que se usa al registrar ventas. Cada producto tiene nombre y
 descripción. También puede archivarse y reactivarse sin alterar ventas viejas.
 
-VENTAS Y PRÉSTAMOS
-
-Desde la misma pantalla se registra una venta de producto o un préstamo de
-dinero. Ambas operaciones crean sus cuotas y después se cobran de la misma forma.
-
-Al comenzar elegí:
-
-- “Venta de producto” para vender un artículo del catálogo;
-- “Préstamo de dinero” para entregar efectivo o hacer una transferencia.
-
-PRÉSTAMOS
-
-Un préstamo no necesita crear un producto ficticio. Elegí el cliente y completá:
-
-- dinero prestado: el capital que recibió el cliente;
-- cómo se entregó: efectivo, transferencia u otro medio configurado;
-- interés total: porcentaje aplicado una sola vez al capital;
-- frecuencia, cantidad de cuotas y primer vencimiento.
-
-Ejemplo:
-
-Dinero prestado:       $100.000
-Interés total:              20%
-Total a devolver:      $120.000
-10 cuotas:              $12.000 cada una
-
-El interés no es mensual: 20% significa $20.000 sobre todo el préstamo. Si ya
-se acordó directamente el importe final, activá “Usar otro total a devolver” y
-escribilo. También podés indicar cantidad y monto de cada cuota; el sistema
-calculará el total a devolver y el porcentaje efectivo.
-
-Después de guardarlo, el préstamo aparece en el historial del cliente, Cobranza,
-Semana, planilla diaria y saldos generales. Los reportes muestran un resumen de
-capital prestado y no cuentan el préstamo como un producto vendido.
-
-VENTAS DE PRODUCTOS
+OPERACIONES — VENTAS Y PRÉSTAMOS
 
 Una venta elige cliente y producto, registra el acuerdo y crea todas las cuotas.
 
@@ -144,7 +137,7 @@ Los datos principales son:
 - precio del producto;
 - pago inicial aparte, si entregó una parte;
 - total que se pagará en cuotas;
-- frecuencia semanal, cada 2 semanas o mensual;
+- frecuencia diaria, semanal, cada 2 semanas o mensual;
 - cantidad de cuotas;
 - vencimiento de la cuota 1.
 
@@ -162,6 +155,26 @@ Saldo del producto:   $400.000
 10 cuotas:             $40.000 cada una
 
 El total en cuotas se calcula solo como precio menos pago inicial aparte.
+
+Para registrar dinero entregado sin producto, elegí “Préstamo de dinero”. En
+ese modo no se pide producto ni pago inicial aparte. Se completa:
+
+- medio usado para entregar el dinero;
+- dinero prestado;
+- interés total acordado;
+- total final a devolver;
+- frecuencia, cantidad de cuotas y vencimiento de la cuota 1.
+
+Ejemplo de préstamo:
+
+Dinero prestado:       $300.000
+Interés total:              20%
+Total a devolver:      $360.000
+12 cuotas:              $30.000 cada una
+
+El interés se aplica una sola vez sobre el dinero prestado; no es interés
+mensual. Si se acordó directamente un monto final, activá “Usar otro total a
+devolver”. La vista previa recalcula el porcentaje equivalente.
 
 Si se conoce el monto habitual de la cuota, también puede completarse “Cantidad
 de cuotas” y “Monto de cada cuota”. Por ejemplo, 10 cuotas de $50.000 calculan
@@ -206,27 +219,65 @@ Si tocás una cuota que vence hoy, una cuota futura o la cuota 1 ya registrada e
 la entrega, el sistema explicará por qué todavía no puede marcarse con atraso.
 Así ningún botón queda sin respuesta.
 
-Una venta o préstamo puede cancelarse escribiendo un motivo. Dejará de aparecer para
-cobrar, pero su información no se borra.
+Una operación puede cancelarse escribiendo un motivo. Dejará de aparecer para
+cobrar y de la lista habitual de Operaciones, pero su información no se borra. Se
+consulta en Configuración > Archivo seguro > Operaciones canceladas.
+Tampoco aparecerán esa operación, sus cuotas, pagos o visitas en el cliente, en el
+resumen para imprimir, en el PDF ni en los totales y reportes habituales.
+
+Una operación activa puede corregirse como máximo dos veces desde su pantalla de
+detalle. Antes de guardar cada corrección, el sistema conserva una copia de la
+versión anterior en el Archivo seguro. Allí se pueden revisar sus condiciones,
+cuotas y movimientos, pero no modificar ni borrar esa copia.
+
+Para proteger importes ya cobrados, una operación con pagos de cuotas o visitas solo
+puede corregirse con la herramienta excepcional de Configuración. Es una función
+avanzada para casos poco frecuentes: exige escribir HABILITAR, luego RECALCULAR,
+conserva los pagos originales y se desactiva sola después de usarla. Si los pagos
+o visitas anteriores no pueden coincidir con el plan corregido, no guarda ningún
+cambio. El pago inicial aparte también queda incluido en la copia protegida.
 
 COBRANZA
 
-Muestra lo que corresponde cobrar en la fecha elegida y también las cuotas
-anteriores que siguen impagas. Indica cliente, domicilio, operación, cuotas,
-recargos, total y atraso.
+Muestra lo que corresponde cobrar en la fecha elegida. Por cada operación suma las
+cuotas vencidas y presenta un solo recargo diario acumulado, contado desde la
+cuota impaga más antigua.
 
 Acciones:
 
 - “Registrar pago”: acepta el total o una parte. El saldo restante queda
   guardado automáticamente.
+- Para cargar un pago olvidado de un día anterior, abrí ese día con “Día
+  anterior” o “Cambiar fecha” y elegí “Registrar pago”. El sistema muestra una
+  advertencia antes de continuar y recalcula el recargo diario hasta esa fecha.
 - “No pagó”: deja anotado que se hizo la visita, sin crear un pago.
 - “Otro resultado”: permite anotar, por ejemplo, “no estaba” o “volver el
   viernes”.
 - “Abrir WhatsApp”: prepara un mensaje. Vos decidís si lo enviás; no se manda
   automáticamente.
 - “Ver detalle”: abre la venta completa.
-- “Imprimir planilla”: prepara la hoja A4 del cobrador con espacio para firma y
-  observaciones.
+- “Preparar planillas”: permite buscar y marcar los clientes del día, asignarlos
+  a un cobrador y crear el cobrador ahí mismo escribiendo solamente su nombre.
+
+Cada cliente puede pertenecer a un solo cobrador en esa fecha. Si una persona
+tiene dos o más ventas pendientes, ocupa una sola entrada y los importes se
+suman. Después de guardar, se puede imprimir una planilla individual o todas
+las del día. Cada hoja muestra el nombre del cobrador y admite hasta 10 clientes,
+con espacio para firma y observaciones.
+
+Los pagos y resultados de visita se vinculan solos con el cobrador asignado. En
+“Historial de cobradores” se pueden revisar los días con recorridos, cuántos
+clientes recibió cada uno, cuánto debía cobrar, cuánto cobró y a qué clientes
+fue asignado más veces.
+
+Para borrar un cobrador, abrí su historial, indicá el motivo y elegí “Borrar y
+guardar en Archivo seguro”. Deja de aparecer para planillas nuevas, pero no se
+elimina: sus días, clientes y cobros permanecen en Configuración > Archivo
+seguro > Cobradores borrados.
+
+Si la venta ya tiene un pago de cuotas posterior, el sistema no permite
+insertar otro pago antes de ese movimiento. Primero revisá o anulá el pago
+posterior para conservar correctamente el orden de la cuenta.
 
 Un pago cargado por error puede anularse indicando el motivo. Queda visible en
 el historial y el saldo vuelve a calcularse.
@@ -254,9 +305,18 @@ Permite revisar:
 
 CONFIGURACIÓN
 
-Permite cambiar los datos del negocio, reglas de cobranza, frecuencias, medios
-de pago, máximo de cuotas, opciones de recargo, adelantos y mensaje de WhatsApp
-sin modificar el sistema.
+Permite cambiar los datos del negocio, el recargo diario por atraso, días de
+cobranza, frecuencias, medios de pago, máximo de cuotas, adelantos y mensaje de
+WhatsApp sin modificar el sistema.
+
+El botón “Archivo seguro” abre cuatro registros de solo lectura:
+
+- Clientes borrados: datos, fecha y motivo del borrado.
+- Cambios de clientes: datos que existían antes de cada corrección.
+- Ventas canceladas: condiciones, fecha y motivo de cancelación.
+- Versiones anteriores: copia completa tomada antes de cada corrección de venta.
+
+Nada de lo guardado allí puede editarse ni borrarse desde el sistema.
 
 DATOS Y RESPALDO
 
@@ -374,7 +434,31 @@ Para volver a esos datos, cerrá el sistema, abrí RESTAURAR_DATOS.bat, elegí
 carpeta storage.
 
 
-10. CAMBIAR DE COMPUTADORA
+10. PROBAR CON DATOS FICTICIOS SIN PERDER LA BASE REAL
+------------------------------------------------------
+
+Estos tres archivos son para demostraciones o pruebas controladas. Cerrá el
+sistema antes de usar cualquiera:
+
+1) 1_CARGAR_DATOS_FICTICIOS.bat
+   Guarda primero la base actual en storage\datos_prueba y comprueba la copia.
+   Después carga al menos 50 clientes, 70 ventas y 5 cobradores con recorridos,
+   pagos y visitas inventados.
+
+2) 2_LIMPIAR_BASE_DE_PRUEBA.bat
+   Guarda una copia de los datos ficticios y deja vacía la base visible. La
+   base original protegida no se toca.
+
+3) 3_RESTAURAR_BASE_ORIGINAL.bat
+   Verifica la copia original mediante SHA-256, crea una copia preventiva de
+   lo que va a reemplazar y recupera la base que existía antes de la prueba.
+
+No muevas ni borres storage\datos_prueba mientras haya una prueba pendiente.
+Si volvés a ejecutar el primer archivo antes de restaurar, reutiliza la copia
+original ya protegida y nunca la reemplaza por la base ficticia o vacía.
+
+
+11. CAMBIAR DE COMPUTADORA
 --------------------------
 
 La forma más sencilla es:
@@ -389,7 +473,7 @@ También se puede instalar una carpeta limpia, copiar un .sqlite3.zip a backups
 y ejecutar RESTAURAR_DATOS.bat.
 
 
-11. COSAS IMPORTANTES QUE HAY QUE SABER
+12. COSAS IMPORTANTES QUE HAY QUE SABER
 ----------------------------------------
 
 - Está pensado para una persona; no tiene usuarios ni contraseñas internas.
@@ -399,11 +483,14 @@ y ejecutar RESTAURAR_DATOS.bat.
 - El celular depende de que la PC y el sistema estén abiertos.
 - No hay actualizaciones automáticas.
 - Una copia CSV es para Excel; una copia .sqlite3.zip es para restaurar.
-- Archivar un cliente o producto conserva su historial.
-- Cancelar o anular conserva el motivo y no borra la operación.
+- Borrar un cliente lo lleva al Archivo seguro y conserva su historial.
+- Borrar un cobrador lo lleva al Archivo seguro y conserva recorridos y cobros.
+- Archivar un producto conserva su historial y permite reactivarlo.
+- Cancelar, corregir o anular conserva el motivo y no borra la operación.
+- Los pagos de una venta cancelada o de un cliente borrado son de solo lectura.
 
 
-12. SI EL SISTEMA NO ABRE
+13. SI EL SISTEMA NO ABRE
 -------------------------
 
 1) Comprobá que GestionFinanciera.exe y _internal sigan juntos.

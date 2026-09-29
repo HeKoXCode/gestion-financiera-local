@@ -4,7 +4,11 @@
 {% block title %}{{ customer.full_name }} · Historial{% endblock %}
 
 {% block content %}
+{% if customer.is_deleted %}
+<a class="back-link" href="{% url 'core:secure_archive' %}?tipo=customers">‹ Volver al Archivo seguro</a>
+{% else %}
 <a class="back-link" href="{% url 'core:customer_list' %}">‹ Volver al listado</a>
+{% endif %}
 
 <section class="profile-hero customer-history-hero">
     <div class="profile-avatar" aria-hidden="true">
@@ -13,7 +17,14 @@
     <div class="profile-main">
         <div class="title-with-badge">
             <h1>{{ customer.full_name }}</h1>
-            {% if customer.is_active %}<span class="badge badge-success">Activo</span>{% else %}<span class="badge badge-neutral">Archivado</span>{% endif %}
+            {% if customer.is_deleted %}
+                <span class="badge badge-cancelled">Borrado · Archivo seguro</span>
+            {% elif customer.is_active %}
+                <span class="badge badge-success">Activo</span>
+            {% else %}
+                <span class="badge badge-neutral">Archivado</span>
+            {% endif %}
+            {% if habitual_collector_link %}<span class="badge badge-collector">Cobrador: {{ habitual_collector_link.collector.name }}</span>{% endif %}
         </div>
         <p>
             {% if customer.dni %}DNI {{ customer.dni }}{% else %}DNI no informado{% endif %}
@@ -39,23 +50,26 @@
             {% endif %}
             <a class="btn btn-secondary" href="{% url 'core:customer_statement_pdf' customer.pk %}" download>Guardar resumen PDF</a>
             <a class="btn btn-secondary" href="{% url 'core:customer_print' customer.pk %}?imprimir=1" target="_blank" rel="noopener">Imprimir resumen</a>
-            <a class="btn btn-secondary" href="{% url 'core:customer_edit' customer.pk %}">Editar datos</a>
-            {% if customer.is_active %}<a class="btn btn-primary" href="{% url 'core:sale_create' %}?cliente={{ customer.pk }}">Nueva operación</a>{% endif %}
+            {% if not customer.is_deleted %}
+                <a class="btn btn-secondary" href="{% url 'core:customer_edit' customer.pk %}">Editar datos</a>
+                {% if customer.is_active %}<a class="btn btn-primary" href="{% url 'core:sale_create' %}?cliente={{ customer.pk }}">Nueva operación</a>{% endif %}
+            {% endif %}
+            {% if customer_revision_count %}<a class="btn btn-ghost" href="{% url 'core:secure_archive' %}?tipo=customer_revisions&q={{ customer.pk }}">Ver {% if customer_revision_count == 1 %}la versión anterior{% else %}las {{ customer_revision_count }} versiones anteriores{% endif %}</a>{% endif %}
         </div>
         <small class="statement-share-status" data-share-status aria-live="polite"></small>
     </div>
 </section>
 
 <section class="customer-kpis">
-    <article><span>Total vendido en cuotas</span><strong>{{ total_installments|ars }}</strong><small>{{ product_count }} producto{{ product_count|pluralize }} diferente{{ product_count|pluralize }}</small></article>
+    <article><span>Total acordado en cuotas</span><strong>{{ total_installments|ars }}</strong><small>{{ operation_count }} {% if operation_count == 1 %}operación registrada{% else %}operaciones registradas{% endif %}</small></article>
     <article class="is-success"><span>Total abonado</span><strong>{{ total_paid|ars }}</strong><small>Pagos no anulados</small></article>
-    <article class="{% if total_balance > 0 %}is-warning{% endif %}"><span>Saldo pendiente</span><strong>{{ total_balance|ars }}</strong><small>{{ active_sales }} venta{{ active_sales|pluralize }} activa{{ active_sales|pluralize }}</small></article>
+    <article class="{% if total_balance > 0 %}is-warning{% endif %}"><span>Saldo pendiente</span><strong>{{ total_balance|ars }}</strong><small>{{ active_sales }} {% if active_sales == 1 %}operación activa{% else %}operaciones activas{% endif %}</small></article>
     <article class="{% if overdue_installments %}is-danger{% endif %}"><span>Cuotas atrasadas</span><strong>{{ overdue_installments }}</strong><small>{{ paid_installments }} cuota{{ paid_installments|pluralize }} pagada{{ paid_installments|pluralize }}{% if paid_late_installments %} · {{ paid_late_installments }} con atraso{% endif %}</small></article>
 </section>
 
 <nav class="section-nav" aria-label="Secciones del historial">
     <a href="#datos">Datos</a>
-    <a href="#ventas">Ventas</a>
+    <a href="#ventas">Operaciones</a>
     <a href="#cuotas">Cuotas</a>
     <a href="#pagos">Pagos</a>
     <a href="#actividad">Actividad</a>
@@ -69,46 +83,61 @@
             <div><dt>Dirección</dt><dd>{{ customer.address }}</dd></div>
             <div><dt>Barrio</dt><dd>{{ customer.neighborhood|default:"No informado" }}</dd></div>
             <div><dt>Referencia del domicilio</dt><dd>{{ customer.address_reference|default:"Sin referencia" }}</dd></div>
+            <div><dt>Cobrador habitual</dt><dd>{% if habitual_collector_link %}{{ habitual_collector_link.collector.name }}{% else %}Sin asignar{% endif %}</dd></div>
             <div class="detail-wide"><dt>Observaciones</dt><dd>{{ customer.notes|default:"Sin observaciones"|linebreaksbr }}</dd></div>
         </dl>
+        {% if collector_link_history %}
+        <details class="pause-history">
+            <summary>Ver historial de cobradores</summary>
+            <ul>
+                {% for link in collector_link_history %}
+                <li><strong>{{ link.collector.name }}</strong><span>Desde {{ link.started_at|date:"d/m/Y" }}{% if link.ended_at %} hasta {{ link.ended_at|date:"d/m/Y" }}{% else %} · actual{% endif %}</span></li>
+                {% endfor %}
+            </ul>
+        </details>
+        {% endif %}
     </section>
 
     <aside class="panel action-card">
         <p class="eyebrow">Disponibilidad</p>
-        <h2>{% if customer.is_active %}Archivar cliente{% else %}Reactivar cliente{% endif %}</h2>
-        <p>
-            {% if customer.is_active %}
-                Dejará de aparecer en ventas nuevas. El historial permanecerá intacto.
-            {% else %}
-                Volverá a estar disponible para nuevas ventas.
-            {% endif %}
-        </p>
-        <form method="post" action="{% url 'core:customer_toggle' customer.pk %}">
-            {% csrf_token %}
-            <button class="btn {% if customer.is_active %}btn-danger-ghost{% else %}btn-secondary{% endif %}" type="submit">
-                {% if customer.is_active %}Archivar{% else %}Reactivar{% endif %}
-            </button>
-        </form>
+        {% if customer.is_deleted %}
+            <h2>Registro protegido</h2>
+            <p>Fue borrado el {{ customer.deleted_at|date:"d/m/Y H:i" }}. No puede editarse, reactivarse ni eliminarse del registro.</p>
+            <strong>{{ customer.deletion_reason }}</strong>
+        {% elif customer.is_active %}
+            <h2>Borrar cliente</h2>
+            <p>Dejará las pantallas de trabajo y pasará al Archivo seguro. Su historial no se perderá.</p>
+            {% if deletion_block_reason %}<p class="field-help">{{ deletion_block_reason }}</p>{% endif %}
+            <a class="btn btn-danger-ghost" href="{% url 'core:customer_delete' customer.pk %}">Borrar cliente</a>
+        {% else %}
+            <h2>Cliente archivado</h2>
+            <p>Podés reactivarlo o enviarlo definitivamente al Archivo seguro.</p>
+            <form method="post" action="{% url 'core:customer_toggle' customer.pk %}">
+                {% csrf_token %}
+                <button class="btn btn-secondary" type="submit">Reactivar</button>
+            </form>
+            <a class="btn btn-danger-ghost" href="{% url 'core:customer_delete' customer.pk %}">Borrar cliente</a>
+        {% endif %}
     </aside>
 </div>
 
 <section class="panel" id="ventas">
     <div class="panel-header">
         <div><p class="eyebrow">Historial comercial</p><h2>Ventas y préstamos</h2></div>
-        {% if customer.is_active %}<a class="btn btn-primary btn-compact" href="{% url 'core:sale_create' %}?cliente={{ customer.pk }}">＋ Nueva operación</a>{% endif %}
+        {% if customer.is_active and not customer.is_deleted %}<a class="btn btn-primary btn-compact" href="{% url 'core:sale_create' %}?cliente={{ customer.pk }}">＋ Nueva operación</a>{% endif %}
     </div>
     {% if sale_rows %}
     <div class="table-wrap">
         <table class="data-table responsive-table">
-            <thead><tr><th>Fecha</th><th>Operación</th><th>Plan</th><th>Estado</th><th class="align-right">Total acordado</th><th class="align-right">Pendiente hasta hoy</th><th></th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Operación</th><th>Plan de pago</th><th>Estado</th><th class="align-right">Total acordado</th><th class="align-right">Pendiente hasta hoy</th><th></th></tr></thead>
             <tbody>
                 {% for row in sale_rows %}
-                <tr>
-                    <td data-label="Fecha de entrega">{{ row.sale.delivery_date|date:"d/m/Y" }}</td>
-                    <td data-label="Operación"><a class="table-primary" href="{% url 'core:sale_detail' row.sale.pk %}">{{ row.sale.product_description }}</a><small>{{ row.sale.operation_name }}</small></td>
-                    <td data-label="Plan">{{ row.sale.installment_count }} cuotas<small>{{ row.sale.get_frequency_display }}</small></td>
+                <tr{% if row.sale.is_loan %} class="is-loan-row"{% endif %}>
+                    <td data-label="Fecha">{{ row.sale.delivery_date|date:"d/m/Y" }}</td>
+                    <td data-label="Operación"><a class="table-primary" href="{% url 'core:sale_detail' row.sale.pk %}">{{ row.sale.product_description }}</a><small><span class="badge {% if row.sale.is_loan %}badge-loan{% else %}badge-neutral{% endif %}">{{ row.sale.operation_name }}</span></small></td>
+                    <td data-label="Plan de pago"><strong>{{ row.sale.installment_count }} cuotas</strong><small>Frecuencia: {{ row.sale.get_frequency_display }}</small></td>
                     <td data-label="Estado"><span class="badge badge-{{ row.sale.status }}">{{ row.sale.get_status_display }}</span></td>
-                    <td data-label="Total en cuotas" class="money-cell">{{ row.sale.financed_amount|ars }}</td>
+                    <td data-label="Total acordado" class="money-cell">{{ row.sale.financed_amount|ars }}</td>
                     <td data-label="Pendiente hasta hoy" class="money-cell">
                         {{ row.exigible_total|ars }}
                         {% if row.sale.status == "cancelled" %}<small>Fuera de cobranza</small>{% endif %}
@@ -120,7 +149,7 @@
         </table>
     </div>
     {% else %}
-    <div class="empty-state compact"><span class="empty-icon" aria-hidden="true">▤</span><h3>Sin ventas registradas</h3><p>La actividad comercial aparecerá aquí.</p></div>
+    <div class="empty-state compact"><span class="empty-icon" aria-hidden="true">▤</span><h3>Sin operaciones registradas</h3><p>Las ventas y préstamos aparecerán aquí.</p></div>
     {% endif %}
 </section>
 
@@ -166,7 +195,7 @@
                 {% for payment in payments %}
                 <tr>
                     <td data-label="Fecha">{{ payment.payment_date|date:"d/m/Y" }}</td>
-                    <td data-label="Tipo">{{ payment.get_kind_display }}</td>
+                    <td data-label="Tipo">{{ payment.movement_label }}</td>
                     <td data-label="Operación"><a class="table-primary" href="{% url 'core:sale_detail' payment.sale_id %}">{{ payment.sale.product_description }}</a></td>
                     <td data-label="Medio de pago">{{ payment.payment_method }}</td>
                     <td data-label="Estado">
@@ -180,7 +209,7 @@
         </table>
     </div>
     {% else %}
-    <div class="empty-state compact"><span class="empty-icon" aria-hidden="true">$</span><h3>Sin pagos</h3><p>Los pagos iniciales y los pagos de cuotas aparecerán aquí.</p></div>
+    <div class="empty-state compact"><span class="empty-icon" aria-hidden="true">$</span><h3>Sin pagos</h3><p>Los pagos registrados aparecerán aquí.</p></div>
     {% endif %}
 </section>
 
@@ -203,7 +232,7 @@
         {% endfor %}
     </div>
     {% else %}
-    <div class="empty-state compact"><span class="empty-icon" aria-hidden="true">⌁</span><h3>Sin actividad</h3><p>Ventas, pagos y visitas formarán esta línea de tiempo.</p></div>
+    <div class="empty-state compact"><span class="empty-icon" aria-hidden="true">⌁</span><h3>Sin actividad</h3><p>Ventas, préstamos, pagos y visitas formarán esta línea de tiempo.</p></div>
     {% endif %}
 </section>
 {% endblock %}

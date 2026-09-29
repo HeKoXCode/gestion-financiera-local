@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+{% load finance %}
+
+{% block title %}Planillas por cobrador · Gestión Financiera{% endblock %}
+
+{% block content %}
+<header class="page-header route-planner-header">
+    <div>
+        <p class="eyebrow">Planillas por cobrador</p>
+        <h1>Preparar planillas del {{ selected_date|date:"d/m/Y" }}</h1>
+        <p class="page-subtitle">
+            Asigná cada cliente a un cobrador. Cada cliente puede quedar en una sola planilla por día.
+        </p>
+    </div>
+    <div class="route-header-actions">
+        <a class="btn btn-secondary" href="{% url 'core:collector_list' %}">Historial de cobradores</a>
+        <a class="btn btn-secondary" href="{% url 'core:collection_list' %}?fecha={{ selected_date|date:'Y-m-d' }}">Volver a cobranza</a>
+        {% if route_summaries %}
+        <a class="btn btn-primary" href="{% url 'core:collection_routes_print' %}?fecha={{ selected_date|date:'Y-m-d' }}">Imprimir planillas guardadas</a>
+        {% endif %}
+    </div>
+</header>
+
+<section class="route-day-summary">
+    <div><span>Clientes a cobrar</span><strong>{{ due_client_count }}</strong></div>
+    <div><span>Ya asignados</span><strong>{{ assigned_client_count|default:0 }}</strong></div>
+    <div><span>Sin asignar</span><strong>{{ unassigned_count }}</strong></div>
+    <div class="route-date-control">
+        <nav class="route-day-navigation" aria-label="Cambiar el día de las planillas">
+            <a href="?fecha={{ previous_date|date:'Y-m-d' }}">‹ Día anterior</a>
+            {% if selected_date != today %}<a class="is-today" href="?fecha={{ today|date:'Y-m-d' }}">Hoy</a>{% endif %}
+            <a href="?fecha={{ next_date|date:'Y-m-d' }}">Día siguiente ›</a>
+        </nav>
+        <form class="date-picker" method="get">
+            <label for="route-date">Ir a una fecha</label>
+            <div>
+                <input id="route-date" class="form-control" type="date" name="fecha"
+                       value="{{ selected_date|date:'Y-m-d' }}">
+                <button class="btn btn-secondary" type="submit">Mostrar fecha</button>
+            </div>
+        </form>
+    </div>
+</section>
+
+{% if route_summaries or unprepared_collector_rows %}
+<section class="route-summary-grid" aria-label="Cobradores y planillas del día">
+    {% for summary in route_summaries %}
+    <article class="route-summary-card {% if selected_route.pk == summary.route.pk %}is-selected{% endif %}"
+             {% if selected_route.pk == summary.route.pk %}aria-current="true"{% endif %}>
+        {% if summary.route.collector.is_active %}
+        <form class="collector-archive-shortcut" method="post"
+              action="{% url 'core:collector_toggle' summary.route.collector.pk %}"
+              onsubmit="return confirm('¿Enviar a {{ summary.route.collector.name|escapejs }} al Archivo seguro? Ya no podrá elegirse para planillas nuevas.') && confirm('Confirmación final: sus planillas y cobros se conservarán. ¿Querés continuar?');">
+            {% csrf_token %}
+            <input type="hidden" name="reason" value="Borrado desde Preparar planillas">
+            <input type="hidden" name="next" value="{{ planner_return_url }}">
+            <button class="route-card-delete" type="submit"
+                    aria-label="Borrar a {{ summary.route.collector.name }} y guardar en Archivo seguro"
+                    title="Borrar cobrador">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5" />
+                </svg>
+            </button>
+        </form>
+        {% endif %}
+        <div>
+            <span class="route-card-label">Cobrador{% if not summary.route.collector.is_active %} · En Archivo seguro{% endif %}</span>
+            <h2>{{ summary.route.collector.name }}</h2>
+            <p>{{ summary.assignment_count }} cliente{{ summary.assignment_count|pluralize }} · {{ summary.expected_amount|ars }} previsto</p>
+            <small>{{ summary.collected_amount|ars }} cobrado · {{ summary.visit_count }} visita{{ summary.visit_count|pluralize }} sin cobro</small>
+            <div class="collector-card-stats" aria-label="Resumen histórico">
+                <span><strong>{{ summary.collector_stats.habitual_client_count|default:0 }}</strong> habituales</span>
+                <span><strong>{{ summary.collector_stats.days_worked|default:0 }}</strong> días trabajados</span>
+                <span><strong>{{ summary.collector_stats.unique_clients|default:0 }}</strong> clientes históricos</span>
+            </div>
+        </div>
+        <div class="route-card-actions">
+            <a class="btn btn-ghost" href="?fecha={{ selected_date|date:'Y-m-d' }}&recorrido={{ summary.route.pk }}">Cambiar clientes</a>
+            <a class="btn btn-primary" href="{% url 'core:collection_route_print' summary.route.pk %}">Imprimir planilla</a>
+        </div>
+    </article>
+    {% endfor %}
+    {% for collector_row in unprepared_collector_rows %}
+    {% with collector=collector_row.collector stats=collector_row.stats %}
+    <article class="route-summary-card is-unprepared {% if selected_collector.pk == collector.pk %}is-selected{% endif %}"
+             {% if selected_collector.pk == collector.pk %}aria-current="true"{% endif %}>
+        <form class="collector-archive-shortcut" method="post"
+              action="{% url 'core:collector_toggle' collector.pk %}"
+              onsubmit="return confirm('¿Enviar a {{ collector.name|escapejs }} al Archivo seguro? Ya no podrá elegirse para planillas nuevas.') && confirm('Confirmación final: sus planillas y cobros anteriores se conservarán. ¿Querés continuar?');">
+            {% csrf_token %}
+            <input type="hidden" name="reason" value="Borrado desde Preparar planillas">
+            <input type="hidden" name="next" value="{{ planner_return_url }}">
+            <button class="route-card-delete" type="submit"
+                    aria-label="Borrar a {{ collector.name }} y guardar en Archivo seguro"
+                    title="Borrar cobrador">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5" />
+                </svg>
+            </button>
+        </form>
+        <div>
+            <span class="route-card-label">Cobrador · Sin planilla para este día</span>
+            <h2>{{ collector.name }}</h2>
+            <p>{{ stats.habitual_client_count|default:0 }} clientes habituales</p>
+            <small>{{ stats.days_worked|default:0 }} días trabajados · {{ stats.total_collected|default:0|ars }} cobrado</small>
+            <div class="collector-card-stats" aria-label="Resumen histórico">
+                <span><strong>{{ stats.assignment_count|default:0 }}</strong> visitas asignadas</span>
+                <span><strong>{{ stats.unique_clients|default:0 }}</strong> clientes históricos</span>
+            </div>
+        </div>
+        <div class="route-card-actions">
+            <a class="btn btn-primary" href="?fecha={{ selected_date|date:'Y-m-d' }}&cobrador={{ collector.pk }}#elegir-clientes">Elegir clientes</a>
+        </div>
+    </article>
+    {% endwith %}
+    {% endfor %}
+</section>
+{% endif %}
+
+<div class="route-planner-layout">
+    <section class="panel route-selection-panel" id="elegir-clientes">
+        <div class="panel-header route-selection-heading">
+            <div>
+                <p class="eyebrow">{% if selected_route %}Editar planilla{% else %}Nueva planilla{% endif %}</p>
+                <h2>{% if selected_route %}Planilla de {{ selected_route.collector.name }}{% elif selected_collector %}Elegí clientes para {{ selected_collector.name }}{% else %}Elegí un cobrador para preparar su planilla{% endif %}</h2>
+            </div>
+            {% if selected_route %}
+            <div class="route-edit-actions">
+                <a class="text-link" href="?fecha={{ selected_date|date:'Y-m-d' }}">Preparar otra planilla</a>
+                <form method="post" onsubmit="return confirm('¿Descartar esta planilla? Solo se permitirá si todavía no tiene pagos ni visitas.');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_route">
+                    <input type="hidden" name="fecha" value="{{ selected_date|date:'Y-m-d' }}">
+                    <input type="hidden" name="route_id" value="{{ selected_route.pk }}">
+                    <button class="text-button danger" type="submit">Descartar planilla</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+
+        <form method="post" class="route-assignment-form" data-route-form>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_route">
+            <input type="hidden" name="fecha" value="{{ selected_date|date:'Y-m-d' }}">
+            {% if selected_route %}
+            <input type="hidden" name="route_id" value="{{ selected_route.pk }}">
+            <input type="hidden" name="collector" value="{{ selected_route.collector_id }}">
+            {% elif selected_collector %}
+            <input type="hidden" name="collector" value="{{ selected_collector.pk }}">
+            {% endif %}
+
+            {% if selected_route or selected_collector %}
+            <div class="route-form-toolbar">
+                <label class="route-search-field">
+                    <span>Buscar cliente</span>
+                    <input class="form-control" type="search" placeholder="Nombre, DNI, dirección o barrio" data-route-search>
+                </label>
+                <button class="btn btn-ghost" type="button" data-select-visible>Seleccionar visibles</button>
+            </div>
+
+            <p class="route-selection-note">
+                <strong>La selección es por cliente.</strong>
+                Si una persona tiene varias operaciones pendientes, aparecen juntas y se incluyen en una sola visita.
+            </p>
+
+            <div class="route-client-list" data-route-list>
+                {% for row in planner_rows %}
+                <label class="route-client-option {% if row.assignment and row.assignment.route_id != selected_route.pk %}is-locked{% endif %}"
+                       data-route-client
+                       data-search="{{ row.customer.full_name|lower }} {{ row.customer.dni|default:''|lower }} {{ row.customer.address|lower }} {{ row.customer.neighborhood|lower }} {{ row.product_summary|lower }}">
+                    <input type="checkbox" name="customers" value="{{ row.customer.pk }}"
+                           {% if row.selected_for_route %}checked{% endif %}
+                           {% if row.assignment and row.assignment.route_id != selected_route.pk %}disabled{% endif %}>
+                    <span class="route-check" aria-hidden="true">✓</span>
+                    <span class="route-client-main">
+                        <span class="route-client-heading">
+                            <strong>{{ row.customer.full_name }}</strong>
+                            <span class="route-client-badges">
+                                {% if row.assignment and row.assignment.route_id != selected_route.pk %}
+                                <span class="route-assigned-badge is-other">Asignado a cobrador “{{ row.assignment.route.collector.name }}”</span>
+                                {% elif row.selected_for_route %}
+                                <span class="route-assigned-badge is-own">En esta planilla</span>
+                                {% endif %}
+                                {% if row.habitual_collector %}
+                                <span class="route-habitual-badge">Cobrador habitual: {{ row.habitual_collector.name }}</span>
+                                {% endif %}
+                                {% if row.already_processed and not row.assignment or row.already_processed and row.assignment.route_id == selected_route.pk %}
+                                <span class="route-assigned-badge is-processed">Ya tuvo actividad</span>
+                                {% endif %}
+                            </span>
+                        </span>
+                        <small>{{ row.customer.address }}{% if row.customer.neighborhood %} · {{ row.customer.neighborhood }}{% endif %}</small>
+                        <em><span>Operaciones pendientes:</span> {{ row.product_summary }}</em>
+                    </span>
+                    <span class="route-client-amount">
+                        <strong>{{ row.total_due|ars }}</strong>
+                        {% if row.days_overdue %}<small>{{ row.days_overdue }} día{{ row.days_overdue|pluralize }} de atraso</small>{% else %}<small>Vence en la fecha</small>{% endif %}
+                    </span>
+                </label>
+                {% empty %}
+                <div class="empty-state compact">
+                    <span class="empty-icon" aria-hidden="true">✓</span>
+                    <h3>No hay clientes para asignar</h3>
+                    <p>No existen cobros pendientes para la fecha elegida.</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if planner_rows %}
+            <footer class="route-form-footer">
+                <span data-selection-count>0 clientes seleccionados</span>
+                <div class="route-form-actions">
+                    <button class="btn btn-secondary" type="submit">Guardar</button>
+                    <button class="btn btn-primary" type="submit" name="after_save" value="print">
+                        Guardar e imprimir
+                    </button>
+                </div>
+            </footer>
+            {% endif %}
+            {% else %}
+            <div class="route-choose-collector">
+                <span aria-hidden="true">↑</span>
+                <h3>Elegí una tarjeta de cobrador</h3>
+                <p>Después vas a poder buscar clientes, confirmar los habituales y preparar la planilla.</p>
+            </div>
+            {% endif %}
+        </form>
+    </section>
+
+    <aside class="panel collector-quick-create">
+        <p class="eyebrow">Alta rápida</p>
+        <h2>Agregar cobrador</h2>
+        <p>Solo hace falta el nombre. No crea un usuario ni una contraseña.</p>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create_collector">
+            <input type="hidden" name="fecha" value="{{ selected_date|date:'Y-m-d' }}">
+            <label for="{{ collector_form.name.id_for_label }}">{{ collector_form.name.label }}</label>
+            {{ collector_form.name }}
+            {% for error in collector_form.name.errors %}<small class="form-error">{{ error }}</small>{% endfor %}
+            <button class="btn btn-secondary" type="submit">Crear cobrador</button>
+        </form>
+        <div class="route-help">
+            <strong>Cómo funciona</strong>
+            <p>La planilla guarda quién debía visitar a cada cliente. Los pagos y visitas de ese día se vinculan automáticamente.</p>
+        </div>
+    </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    const form = document.querySelector("[data-route-form]");
+    if (!form) return;
+    const search = form.querySelector("[data-route-search]");
+    const rows = [...form.querySelectorAll("[data-route-client]")];
+    const count = form.querySelector("[data-selection-count]");
+    const selectVisible = form.querySelector("[data-select-visible]");
+    const updateCount = () => {
+        const total = form.querySelectorAll('input[name="customers"]:checked').length;
+        if (count) {
+            count.textContent = `${total} cliente${total === 1 ? "" : "s"} seleccionado${total === 1 ? "" : "s"}`;
+        }
+    };
+    search?.addEventListener("input", () => {
+        const term = search.value.trim().toLocaleLowerCase("es");
+        rows.forEach((row) => {
+            row.hidden = term && !row.dataset.search.includes(term);
+        });
+    });
+    selectVisible?.addEventListener("click", () => {
+        rows.filter((row) => !row.hidden).forEach((row) => {
+            const checkbox = row.querySelector('input[name="customers"]');
+            if (checkbox && !checkbox.disabled) checkbox.checked = true;
+        });
+        updateCount();
+    });
+    form.addEventListener("change", updateCount);
+    updateCount();
+})();
+</script>
+{% endblock %}

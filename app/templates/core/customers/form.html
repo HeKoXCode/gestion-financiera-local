@@ -5,7 +5,7 @@
 {% block content %}
 <header class="page-header">
     <div>
-        <a class="back-link" href="{% if return_to_sale %}{% url 'core:sale_create' %}?restaurar=1{% elif customer %}{% url 'core:customer_detail' customer.pk %}{% else %}{% url 'core:customer_list' %}{% endif %}">‹ {% if return_to_sale %}Volver a la venta{% else %}Volver a clientes{% endif %}</a>
+        <a class="back-link" href="{% if return_to_sale %}{% url 'core:sale_create' %}?restaurar=1{% elif customer %}{% url 'core:customer_detail' customer.pk %}{% else %}{% url 'core:customer_list' %}{% endif %}">‹ {% if return_to_sale %}Volver a la operación{% else %}Volver a clientes{% endif %}</a>
         <p class="eyebrow">Ficha personal</p>
         <h1>{{ title }}</h1>
         <p class="page-subtitle">{{ subtitle }}</p>
@@ -14,6 +14,7 @@
 
 <form method="post" class="form-layout" novalidate>
     {% csrf_token %}
+    {% if customer %}{{ form.operation_key }}{% endif %}
     {% include "core/partials/form_errors.html" %}
 
     <section class="form-card">
@@ -79,6 +80,24 @@
             </div>
         </div>
     </section>
+
+    {% if customer %}
+    <section class="form-card archive-edit-card">
+        <div class="form-section-heading">
+            <span>03</span>
+            <div>
+                <h2>Motivo y resguardo</h2>
+                <p>Los datos anteriores quedarán guardados en el Archivo seguro.</p>
+            </div>
+        </div>
+        <div class="field">
+            <label for="{{ form.edit_reason.id_for_label }}">Motivo de la corrección</label>
+            {{ form.edit_reason }}
+            <p class="field-help">Ejemplo: “se corrigió el teléfono informado”. Esta explicación no podrá editarse ni borrarse.</p>
+            {% for error in form.edit_reason.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+        </div>
+    </section>
+    {% endif %}
 
     <div class="form-actions">
         <a class="btn btn-ghost" href="{% if return_to_sale %}{% url 'core:sale_create' %}?restaurar=1{% elif customer %}{% url 'core:customer_detail' customer.pk %}{% else %}{% url 'core:customer_list' %}{% endif %}">Cancelar</a>

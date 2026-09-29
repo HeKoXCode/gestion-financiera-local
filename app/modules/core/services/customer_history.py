@@ -12,14 +12,21 @@ from modules.core.services.balances import (
 from modules.core.services.money import ZERO, as_money
 
 
-def build_customer_history(*, customer: Customer, as_of: date) -> dict:
+def build_customer_history(
+    *,
+    customer: Customer,
+    as_of: date,
+    include_cancelled_sales: bool = False,
+) -> dict:
+    sales_query = customer.sales.select_related("product")
+    if not include_cancelled_sales:
+        sales_query = sales_query.exclude(status=Sale.Status.CANCELLED)
+
     sales = list(
-        customer.sales.select_related("product")
-        .prefetch_related(
+        sales_query.prefetch_related(
             "installments",
             *installment_balance_prefetches("installments"),
-        )
-        .order_by("-delivery_date", "-pk")
+        ).order_by("-delivery_date", "-pk")
     )
     sale_rows = []
     installment_rows = []
@@ -54,9 +61,7 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
                 if payment_timing.days_late:
                     status = "paid_late"
                     day_word = "día" if payment_timing.days_late == 1 else "días"
-                    status_label = (
-                        f"Pagada con {payment_timing.days_late} {day_word} de atraso"
-                    )
+                    status_label = f"Pagada con {payment_timing.days_late} {day_word} de atraso"
                     paid_late_installments += 1
                 else:
                     status = "paid"
@@ -85,14 +90,13 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
                 }
             )
 
-    payments = list(
-        customer.payments.select_related("sale").order_by("-payment_date", "-created_at", "-pk")
-    )
-    attempts = list(
-        customer.collection_attempts.select_related("sale").order_by(
-            "-attempt_date", "-created_at", "-pk"
-        )
-    )
+    payments_query = customer.payments.select_related("sale")
+    attempts_query = customer.collection_attempts.select_related("sale")
+    if not include_cancelled_sales:
+        payments_query = payments_query.exclude(sale__status=Sale.Status.CANCELLED)
+        attempts_query = attempts_query.exclude(sale__status=Sale.Status.CANCELLED)
+    payments = list(payments_query.order_by("-payment_date", "-created_at", "-pk"))
+    attempts = list(attempts_query.order_by("-attempt_date", "-created_at", "-pk"))
     total_paid = as_money(
         sum(
             (payment.amount for payment in payments if payment.status == Payment.Status.REGISTERED),
@@ -106,7 +110,9 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
             {
                 "date": sale.delivery_date,
                 "kind": "sale",
-                "title": "Venta entregada",
+                "title": (
+                    "Préstamo entregado" if sale.is_loan else "Venta entregada"
+                ),
                 "detail": sale.product_description,
                 "amount": sale.operation_total,
                 "sale": sale,
@@ -117,14 +123,16 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
                 {
                     "date": sale.cancelled_on,
                     "kind": "cancelled",
-                    "title": "Venta cancelada",
+                    "title": (
+                        "Préstamo cancelado" if sale.is_loan else "Venta cancelada"
+                    ),
                     "detail": sale.cancellation_reason,
                     "amount": None,
                     "sale": sale,
                 }
             )
     for payment in payments:
-        is_initial = payment.kind == Payment.Kind.INITIAL
+        payment_title = payment.movement_label
         events.append(
             {
                 "date": payment.payment_date,
@@ -132,9 +140,9 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
                     "payment" if payment.status == Payment.Status.REGISTERED else "payment_voided"
                 ),
                 "title": (
-                    ("Pago inicial" if is_initial else "Pago de cuota")
+                    payment_title
                     if payment.status == Payment.Status.REGISTERED
-                    else ("Pago inicial anulado" if is_initial else "Pago de cuota anulado")
+                    else f"{payment_title} anulado"
                 ),
                 "detail": payment.notes or payment.payment_method,
                 "amount": payment.amount,
@@ -169,6 +177,7 @@ def build_customer_history(*, customer: Customer, as_of: date) -> dict:
         "paid_installments": paid_installments,
         "paid_late_installments": paid_late_installments,
         "active_sales": sum(sale.status == Sale.Status.ACTIVE for sale in sales),
+        "operation_count": sum(sale.status != Sale.Status.CANCELLED for sale in sales),
         "product_count": len(
             {
                 sale.product_id

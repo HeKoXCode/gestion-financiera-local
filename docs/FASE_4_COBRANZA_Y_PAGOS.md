@@ -9,23 +9,23 @@ Fecha: 24/07/2026
 Completar el circuito financiero diario:
 
 ```text
-cuota vencida → recargo → cobranza → pago → aplicación → saldo
+cuotas vencidas → recargo diario único → cobranza → pago → aplicación → saldo
 ```
 
 El circuito funciona localmente, con importes decimales exactos y sin depender
 de Internet.
 
-## Actualización automática de recargos
+## Actualización automática del recargo diario
 
 Al abrir el sistema, el lanzador:
 
 1. aplica migraciones;
-2. genera los recargos faltantes hasta la fecha local;
+2. aplica, si corresponde, un recargo por día para cada venta atrasada;
 3. crea el backup de inicio;
 4. abre el panel local; el navegador se inicia únicamente al presionar
    “Abrir sistema”.
 
-La portada y la pantalla de cobranza también actualizan los recargos del día.
+La portada y la pantalla de cobranza también actualizan el recargo diario.
 Esto cubre el caso en que el sistema permanece abierto durante la noche.
 
 El proceso es idempotente: abrir o actualizar varias veces no duplica cargos.
@@ -39,9 +39,9 @@ muestra:
 - dirección, barrio y referencia;
 - producto;
 - primera cuota pendiente;
-- cantidad de cuotas exigibles;
-- días máximos de atraso;
-- capital pendiente;
+- cantidad de cuotas vencidas;
+- días de atraso desde la más antigua;
+- capital vencido acumulado;
 - recargos pendientes;
 - total a cobrar;
 - registrar pago;
@@ -81,17 +81,23 @@ Se admiten pagos completos y parciales. No se permite:
 - pago anterior a la entrega;
 - método no configurado;
 - pago superior a la deuda exigible;
-- pago adelantado mientras la opción permanezca desactivada;
+- intento de adelanto desde el pago normal o mientras la opción permanezca desactivada;
 - pago sobre una venta cancelada o finalizada.
 
 ## Distribución automática
 
 El pago se aplica en este orden:
 
-1. cuota exigible más antigua;
-2. recargos de esa cuota;
-3. capital de esa cuota;
-4. siguiente cuota exigible.
+1. recargo diario acumulado de la venta;
+2. capital pendiente de las cuotas vencidas, desde la más antigua.
+
+El pago normal suma todas las cuotas que ya vencieron, pero nunca invade cuotas
+futuras. El flujo separado de adelanto sólo está disponible cuando la venta está
+al día y aplica el dinero desde la próxima cuota futura pendiente.
+
+El adelanto puede cubrir una parte, una cuota completa o varias cuotas futuras.
+Las fechas semanales, quincenales o mensuales no se recalculan y no se agregan
+días de gracia. Si queda un saldo parcial, vence en su día original.
 
 Todas las aplicaciones se crean en la misma transacción que el pago. Si una
 validación falla, no queda un pago incompleto.
@@ -120,7 +126,7 @@ Un pago se anula indicando un motivo:
 - conserva importe, fecha, método y aplicaciones;
 - deja de descontarse del saldo;
 - una venta finalizada vuelve a activa si reaparece deuda;
-- se reconstruyen los recargos faltantes que correspondan.
+- se reconstruye la única cadena diaria de la venta.
 
 ## Intentos de cobranza
 
@@ -159,19 +165,21 @@ respondió `ok`.
 
 Se probaron:
 
-- recargos al abrir;
-- tres días de atraso;
+- recargo diario al abrir;
+- varias cuotas vencidas sin duplicar un mismo día;
 - recargo antes que capital;
-- pago distribuido entre dos cuotas;
+- rechazo de un pago que intentaría invadir la cuota siguiente;
 - pago parcial;
 - saldo restante;
 - rechazo de sobrepago;
-- rechazo de adelanto;
+- rechazo de un adelanto desde el pago común;
+- adelanto parcial y completo sin desplazar el cronograma;
+- adelanto de varias cuotas futuras en orden;
 - métodos inválidos;
 - prevención de duplicados;
 - finalización automática;
 - anulación y reactivación;
-- reconstrucción de recargos;
+- reconstrucción del recargo diario único;
 - agrupación de cobranza;
 - historial por fecha;
 - “No pagó” sin modificar saldo;

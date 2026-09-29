@@ -1,12 +1,13 @@
 import uuid
 from datetime import date, timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 import pytest
 from django.urls import reverse
 from django.utils import timezone
 
-from modules.core.models import Customer, LateFee, Payment, Product, Sale
+from modules.core.models import CollectionAttempt, Customer, LateFee, Payment, Product, Sale
 from modules.core.services.balances import get_installment_balance
 from modules.core.services.installments import add_months, create_installments
 from modules.core.services.late_fees import generate_missing_late_fees
@@ -73,9 +74,7 @@ def test_customer_summary_is_printable_and_contains_account_history(client):
 
     detail = client.get(reverse("core:customer_detail", args=[sale.customer_id]))
     response = client.get(reverse("core:customer_print", args=[sale.customer_id]))
-    pdf_response = client.get(
-        reverse("core:customer_statement_pdf", args=[sale.customer_id])
-    )
+    pdf_response = client.get(reverse("core:customer_statement_pdf", args=[sale.customer_id]))
     detail_content = detail.content.decode()
     content = response.content.decode()
 
@@ -130,6 +129,115 @@ def test_customer_without_phone_keeps_pdf_actions_and_disables_whatsapp(client):
     assert "data-statement-share" not in content
 
 
+def test_cancelled_sale_is_excluded_from_customer_screen_print_and_pdf(client):
+    today = timezone.localdate()
+    customer = make_customer(first_name="Florencia", last_name="Reguera")
+    active_product = make_product(name="Producto vigente")
+    cancelled_product = make_product(name="Producto cancelado")
+    active_sale = make_sale(
+        customer=customer,
+        product=active_product,
+        product_description="Producto vigente visible",
+        cash_price=Decimal("20000.00"),
+        financed_amount=Decimal("20000.00"),
+        installment_count=1,
+        delivery_date=today,
+        first_due_date=today,
+        daily_late_fee=Decimal("0.00"),
+    )
+    cancelled_sale = make_sale(
+        customer=customer,
+        product=cancelled_product,
+        product_description="Producto cancelado protegido",
+        cash_price=Decimal("30000.00"),
+        financed_amount=Decimal("30000.00"),
+        installment_count=1,
+        delivery_date=today,
+        first_due_date=today,
+        daily_late_fee=Decimal("0.00"),
+    )
+    create_installments(active_sale)
+    create_installments(cancelled_sale)
+    register_payment(
+        sale=active_sale,
+        amount=Decimal("5000.00"),
+        payment_date=today,
+        payment_method="Efectivo",
+        operation_key=uuid.uuid4(),
+    )
+    register_payment(
+        sale=cancelled_sale,
+        amount=Decimal("10000.00"),
+        payment_date=today,
+        payment_method="Transferencia",
+        operation_key=uuid.uuid4(),
+    )
+    CollectionAttempt.objects.create(
+        customer=customer,
+        sale=cancelled_sale,
+        attempt_date=today,
+        result=CollectionAttempt.Result.DID_NOT_PAY,
+        notes="Visita perteneciente al archivo",
+    )
+    cancelled_sale.status = Sale.Status.CANCELLED
+    cancelled_sale.cancelled_on = today
+    cancelled_sale.cancellation_reason = "Carga duplicada"
+    cancelled_sale.save()
+
+    detail = client.get(reverse("core:customer_detail", args=[customer.pk]))
+    printable = client.get(reverse("core:customer_print", args=[customer.pk]))
+    detail_content = detail.content.decode()
+    printable_content = printable.content.decode()
+
+    assert [row["sale"] for row in detail.context["sale_rows"]] == [active_sale]
+    assert len(detail.context["installment_rows"]) == 1
+    assert [payment.sale for payment in detail.context["payments"]] == [active_sale]
+    assert detail.context["attempts"] == []
+    assert detail.context["total_installments"] == Decimal("20000.00")
+    assert detail.context["total_paid"] == Decimal("5000.00")
+    assert detail.context["total_balance"] == Decimal("15000.00")
+    assert "Producto vigente visible" in detail_content
+    assert "Producto cancelado protegido" not in detail_content
+    assert "Producto cancelado protegido" not in printable_content
+    assert "Visita perteneciente al archivo" not in detail_content
+
+    with patch("modules.core.views.build_customer_statement_pdf", return_value=b"%PDF-test") as pdf:
+        response = client.get(reverse("core:customer_statement_pdf", args=[customer.pk]))
+    pdf_history = pdf.call_args.kwargs["history"]
+    assert response.status_code == 200
+    assert [row["sale"] for row in pdf_history["sale_rows"]] == [active_sale]
+    assert [payment.sale for payment in pdf_history["payments"]] == [active_sale]
+    assert pdf_history["total_paid"] == Decimal("5000.00")
+
+    archive = client.get(reverse("core:secure_archive"), {"tipo": "cancelled"})
+    archived_detail = client.get(reverse("core:sale_detail", args=[cancelled_sale.pk]))
+    assert "Producto cancelado protegido" in archive.content.decode()
+    assert "Volver al Archivo seguro" in archived_detail.content.decode()
+
+
+def test_customer_and_product_lists_do_not_count_cancelled_sales(client):
+    customer = make_customer(first_name="Cliente", last_name="Con corrección")
+    product = make_product(name="Producto compartido")
+    make_sale(customer=customer, product=product)
+    cancelled_sale = make_sale(customer=customer, product=product)
+    cancelled_sale.status = Sale.Status.CANCELLED
+    cancelled_sale.cancelled_on = timezone.localdate()
+    cancelled_sale.cancellation_reason = "Venta duplicada"
+    cancelled_sale.save()
+
+    customer_response = client.get(reverse("core:customer_list"), {"estado": "all"})
+    product_response = client.get(reverse("core:product_list"), {"estado": "all"})
+    listed_customer = next(
+        item for item in customer_response.context["page"] if item.pk == customer.pk
+    )
+    listed_product = next(
+        item for item in product_response.context["page"] if item.pk == product.pk
+    )
+
+    assert listed_customer.sales_count == 1
+    assert listed_product.sales_count == 1
+
+
 def test_historical_weekly_sale_marks_eleven_of_twelve_installments_paid(client):
     today = timezone.localdate()
     first_due = today - timedelta(weeks=11)
@@ -163,9 +271,7 @@ def test_historical_weekly_sale_marks_eleven_of_twelve_installments_paid(client)
     ]
     assert {payment.amount for payment in historical_payments} == {Decimal("40000.00")}
     assert historical_payments[0].notes == "Cuota 1 pagada al recibir el producto."
-    assert all(
-        "Carga histórica" in payment.notes for payment in historical_payments[1:]
-    )
+    assert all("Carga histórica" in payment.notes for payment in historical_payments[1:])
     assert all(
         get_installment_balance(installment, as_of=today).total_due == Decimal("0.00")
         for installment in installments[:11]
@@ -206,16 +312,10 @@ def test_historical_import_records_exact_late_installments_and_days(client):
     }
 
     assert len(payments_by_installment) == 10
-    assert payments_by_installment[2].payment_date == installments[1].due_date + timedelta(
-        days=10
-    )
+    assert payments_by_installment[2].payment_date == installments[1].due_date + timedelta(days=10)
     assert payments_by_installment[3].payment_date == installments[2].due_date
-    assert payments_by_installment[6].payment_date == installments[5].due_date + timedelta(
-        days=1
-    )
-    assert payments_by_installment[10].payment_date == installments[9].due_date + timedelta(
-        days=4
-    )
+    assert payments_by_installment[6].payment_date == installments[5].due_date + timedelta(days=1)
+    assert payments_by_installment[10].payment_date == installments[9].due_date + timedelta(days=4)
     assert payments_by_installment[2].amount == Decimal("60000.00")
     assert payments_by_installment[6].amount == Decimal("15000.00")
     assert payments_by_installment[10].amount == Decimal("30000.00")
@@ -234,7 +334,7 @@ def test_historical_import_records_exact_late_installments_and_days(client):
     assert "Pagada con 10 días de atraso" in detail_content
     assert "Pagada con 4 días de atraso" in printable_content
     assert detail.context["paid_late_installments"] == 3
-    assert "$ 50.000,00" in detail_content
+    assert "$ 5.000,00" in detail_content
 
 
 def test_historical_late_days_cannot_create_a_future_payment(client):
@@ -298,18 +398,14 @@ def test_historical_import_preserves_biweekly_and_monthly_payment_dates(
     )
     sale = Sale.objects.get()
     installments = list(sale.installments.order_by("number"))
-    payments = list(
-        sale.payments.filter(kind=Payment.Kind.INSTALLMENT).order_by("payment_date")
-    )
+    payments = list(sale.payments.filter(kind=Payment.Kind.INSTALLMENT).order_by("payment_date"))
 
     assert response.status_code == 302
     assert [payment.payment_date for payment in payments] == [
         installment.due_date for installment in installments[:2]
     ]
     assert all(payment.amount == Decimal("30000.00") for payment in payments)
-    assert get_installment_balance(installments[2], as_of=today).total_due == Decimal(
-        "30000.00"
-    )
+    assert get_installment_balance(installments[2], as_of=today).total_due == Decimal("30000.00")
 
 
 def test_historical_import_rejects_installments_that_have_not_yet_become_due(client):
@@ -363,9 +459,7 @@ def test_same_day_checkbox_recalculates_dates_amounts_and_first_daily_fee(client
     assert sale.first_due_date == today
     assert sale.financed_amount == Decimal("400000.00")
     assert first_installment.due_date == today
-    assert set(sale.installments.values_list("original_amount", flat=True)) == {
-        Decimal("40000.00")
-    }
+    assert set(sale.installments.values_list("original_amount", flat=True)) == {Decimal("40000.00")}
 
     generate_missing_late_fees(as_of=today, sale=sale)
     assert first_installment.late_fees.count() == 0
@@ -413,9 +507,7 @@ def test_delivery_can_register_first_installment_and_initial_payment_separately(
     assert installment_payment.payment_method == "Transferencia"
     assert installment_payment.payment_date == today
     assert installment_payment.notes == "Cuota 1 pagada al recibir el producto."
-    assert get_installment_balance(first_installment, as_of=today).total_due == Decimal(
-        "0.00"
-    )
+    assert get_installment_balance(first_installment, as_of=today).total_due == Decimal("0.00")
     assert installment_payment.allocations.get().installment_id == first_installment.pk
 
 
@@ -510,14 +602,12 @@ def test_installment_amount_can_calculate_product_price_and_total_on_server(clie
     assert response.status_code == 302
     assert sale.cash_price == Decimal("600000.00")
     assert sale.financed_amount == Decimal("500000.00")
-    assert set(sale.installments.values_list("original_amount", flat=True)) == {
-        Decimal("50000.00")
-    }
+    assert set(sale.installments.values_list("original_amount", flat=True)) == {Decimal("50000.00")}
 
 
 def test_create_customer_or_product_returns_to_preserved_sale(client):
     customer_response = client.post(
-        f'{reverse("core:customer_create")}?volver=venta',
+        f"{reverse('core:customer_create')}?volver=venta",
         {
             "first_name": "Cliente",
             "last_name": "Creado desde venta",
@@ -533,16 +623,16 @@ def test_create_customer_or_product_returns_to_preserved_sale(client):
 
     assert customer_response.status_code == 302
     assert customer_response["Location"] == (
-        f'{reverse("core:sale_create")}?cliente={customer.pk}&restaurar=1'
+        f"{reverse('core:sale_create')}?cliente={customer.pk}&restaurar=1"
     )
 
     product_response = client.post(
-        f'{reverse("core:product_create")}?volver=venta',
+        f"{reverse('core:product_create')}?volver=venta",
         {"name": "Producto creado desde venta", "description": ""},
     )
     product = Product.objects.get(name="Producto creado desde venta")
 
     assert product_response.status_code == 302
     assert product_response["Location"] == (
-        f'{reverse("core:sale_create")}?producto={product.pk}&restaurar=1'
+        f"{reverse('core:sale_create')}?producto={product.pk}&restaurar=1"
     )

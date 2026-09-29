@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Versión anterior del cliente · Archivo seguro{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'core:secure_archive' %}?tipo=customer_revisions">‹ Volver al Archivo seguro</a>
+
+<header class="page-header archive-detail-header">
+    <div>
+        <p class="eyebrow">Copia protegida · Solo lectura</p>
+        <h1>{{ snapshot.full_name }} antes de la edición {{ revision.revision_number }}</h1>
+        <p class="page-subtitle">Archivada el {{ revision.archived_at|date:"d/m/Y H:i" }} porque: {{ revision.reason }}</p>
+    </div>
+    <a class="btn btn-secondary" href="{% url 'core:customer_detail' revision.customer_id %}">Ver cliente actual</a>
+</header>
+
+<div class="archive-lock-notice">
+    <strong>Registro inalterable</strong>
+    <p>Esta copia conserva exactamente los datos que tenía el cliente antes de la corrección. No puede editarse ni borrarse.</p>
+</div>
+
+<section class="panel detail-card">
+    <div class="panel-header compact"><h2>Datos anteriores</h2></div>
+    <dl class="detail-list">
+        <div><dt>Nombre</dt><dd>{{ snapshot.first_name }}</dd></div>
+        <div><dt>Apellido</dt><dd>{{ snapshot.last_name }}</dd></div>
+        <div><dt>DNI</dt><dd>{{ snapshot.dni|default:"No informado" }}</dd></div>
+        <div><dt>Teléfono</dt><dd>{{ snapshot.phone|default:"No informado" }}</dd></div>
+        <div><dt>Dirección</dt><dd>{{ snapshot.address }}</dd></div>
+        <div><dt>Barrio</dt><dd>{{ snapshot.neighborhood|default:"No informado" }}</dd></div>
+        <div class="detail-wide"><dt>Referencia del domicilio</dt><dd>{{ snapshot.address_reference|default:"Sin referencia" }}</dd></div>
+        <div class="detail-wide"><dt>Observaciones</dt><dd>{{ snapshot.notes|default:"Sin observaciones"|linebreaksbr }}</dd></div>
+        <div><dt>Estado</dt><dd>{% if snapshot.is_active %}Activo{% else %}Archivado{% endif %}</dd></div>
+        <div><dt>Cliente creado</dt><dd>{{ snapshot.created_at_display|default:snapshot.created_at|default:"No disponible" }}</dd></div>
+    </dl>
+</section>
+{% endblock %}

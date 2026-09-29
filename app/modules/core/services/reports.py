@@ -5,6 +5,7 @@ from datetime import date, timedelta
 
 from modules.core.models import Payment, Sale
 from modules.core.services.balances import (
+    get_due_sale_balance,
     get_installment_balance,
     installment_balance_prefetches,
     registered_payment_filter,
@@ -16,6 +17,7 @@ from modules.core.services.money import ZERO, as_money
 def _sum_payments(*, start: date, end: date):
     amounts = Payment.objects.filter(
         registered_payment_filter(end),
+        sale_effective_filter(end, "sale"),
         payment_date__gte=start,
         payment_date__lte=end,
     ).values_list("amount", flat=True)
@@ -58,9 +60,7 @@ def build_reports(*, as_of: date) -> dict:
             (installment, get_installment_balance(installment, as_of=as_of))
             for installment in sale.installments.all()
         ]
-        sale_balance = as_money(
-            sum((balance.total_due for _, balance in balances), ZERO)
-        )
+        sale_balance = as_money(sum((balance.total_due for _, balance in balances), ZERO))
 
         if sale.is_loan:
             loans_count += 1
@@ -101,18 +101,22 @@ def build_reports(*, as_of: date) -> dict:
         row["total_balance"] += sale_balance
         row["open_sales"] += 1
 
-        for installment, balance in balances:
-            if installment.due_date <= as_of:
-                row["due_total"] += balance.total_due
-                due_total += balance.total_due
-            if installment.due_date < as_of and balance.total_due > ZERO:
-                row["overdue_total"] += balance.total_due
-                row["late_fees_due"] += balance.late_fees_due
+        due_balance = get_due_sale_balance(sale, as_of=as_of)
+        if due_balance.total_due > ZERO:
+            row["due_total"] += due_balance.total_due
+            due_total += due_balance.total_due
+            current_installment = next(
+                (installment for installment, balance in balances if balance.total_due > ZERO),
+                None,
+            )
+            if current_installment and current_installment.due_date < as_of:
+                row["overdue_total"] += due_balance.total_due
+                row["late_fees_due"] += due_balance.late_fees_due
                 row["max_days_overdue"] = max(
                     row["max_days_overdue"],
-                    balance.days_overdue,
+                    (as_of - current_installment.due_date).days,
                 )
-                overdue_total += balance.total_due
+                overdue_total += due_balance.total_due
 
     normalized_customers = []
     for row in customer_rows.values():
@@ -127,11 +131,7 @@ def build_reports(*, as_of: date) -> dict:
         )
 
     debtors = sorted(
-        (
-            row
-            for row in normalized_customers
-            if row["overdue_total"] > ZERO
-        ),
+        (row for row in normalized_customers if row["overdue_total"] > ZERO),
         key=lambda row: (
             -row["overdue_total"],
             -row["total_balance"],
@@ -140,11 +140,7 @@ def build_reports(*, as_of: date) -> dict:
         ),
     )
     up_to_date = sorted(
-        (
-            row
-            for row in normalized_customers
-            if row["overdue_total"] <= ZERO
-        ),
+        (row for row in normalized_customers if row["overdue_total"] <= ZERO),
         key=lambda row: (
             row["customer"].last_name,
             row["customer"].first_name,
@@ -173,6 +169,7 @@ def build_reports(*, as_of: date) -> dict:
 
     trend_payments = Payment.objects.filter(
         registered_payment_filter(as_of),
+        sale_effective_filter(as_of, "sale"),
         payment_date__gte=trend_start,
         payment_date__lte=as_of,
     )
@@ -196,6 +193,7 @@ def build_reports(*, as_of: date) -> dict:
     method_amounts = Counter()
     month_payments = Payment.objects.filter(
         registered_payment_filter(as_of),
+        sale_effective_filter(as_of, "sale"),
         payment_date__gte=month_start,
         payment_date__lte=as_of,
     )

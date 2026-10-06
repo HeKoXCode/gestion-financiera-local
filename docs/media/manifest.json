@@ -1,0 +1,25 @@
+{
+  "edition": "2026-10-06",
+  "media": [
+    {
+      "path": "docs/media/linkedin/gestion_p06_definicion_y_controles.pdf",
+      "bytes": 47156,
+      "sha256": "745e74d51be1930b48d6b4112fa145bffcfde6723ef8bdc986a8cd6ac98c91fb"
+    },
+    {
+      "path": "docs/media/linkedin/gestion_p11_aging_y_cohortes.pdf",
+      "bytes": 46119,
+      "sha256": "cef30af4bdad198967b8af9b36080ef59d72067185490f14eb91bc467a5abbe9"
+    },
+    {
+      "path": "docs/media/technical/gestion_analitica_conciliada_hq.pdf",
+      "bytes": 47387,
+      "sha256": "372a70e98a23582d18e0706e7406cca9a6d4b3ece36ec403002c42bcb5b1ecb2"
+    },
+    {
+      "path": "docs/media/technical/gestion_cliente_demo_resumen_nativo.pdf",
+      "bytes": 28370,
+      "sha256": "62859607020c536af63927aabe32d13e1539d4eda13ed68f0cd0fa3ee0600bff"
+    }
+  ]
+}

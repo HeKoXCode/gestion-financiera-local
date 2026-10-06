@@ -34,6 +34,10 @@ cantidad de clientes y la demostración usa una base ficticia aislada.
 
 ## 🖼️ Recorrido visual
 
+📄 [Analítica vectorial: aging, cohortes y conciliación](docs/media/technical/gestion_analitica_conciliada_hq.pdf) · [Estado de cuenta PDF nativo](docs/media/technical/gestion_cliente_demo_resumen_nativo.pdf).
+
+Renové las imágenes con una demo ficticia aislada al **01/10/2026**. Las capturas muestran el producto real; el apoyo vectorial presenta los mismos cálculos con mayor detalle y no se identifica como captura. Los importes de esta demo son ARS. El aging considera vencido lo anterior al corte; los indicadores operativos «hasta hoy» incluyen cuotas que vencen en la fecha de corte.
+
 Todas las capturas se generan con la base demo incluida. Los nombres,
 documentos, domicilios, teléfonos e importes son ficticios.
 
